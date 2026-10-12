@@ -127,6 +127,27 @@ class Cdp {
     await writeFile(file, Buffer.from(res.data, 'base64'))
   }
 
+  /**
+   * 在真实浏览器里用触摸事件模拟上滑解锁。
+   * 使用 Input.dispatchTouchEvent，走真实指针事件管线（而非直接调 JS）。
+   */
+  async swipeUp({ fromY = 620, toY = 420, x = 195, steps = 6 } = {}) {
+    const point = (y) => [{ x, y, radiusX: 6, radiusY: 6, force: 1, id: 1 }]
+    await this.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: point(fromY) })
+    for (let i = 1; i <= steps; i += 1) {
+      const y = fromY + ((toY - fromY) * i) / steps
+      await this.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: point(y) })
+      await sleep(16)
+    }
+    await this.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+    await sleep(300)
+  }
+
+  /** 锁屏是否仍然显示（用于断言未解锁）。 */
+  async isLocked() {
+    return this.eval(`return !!document.querySelector('.lock__surface')`)
+  }
+
   async setWidth(width) {
     await this.send('Emulation.setDeviceMetricsOverride', {
       width,
@@ -252,13 +273,21 @@ async function main() {
 
     await cdp.screenshot(path.join(shotsDir, '01-intro.png'))
     let text = await cdp.text()
-    record('开场显示标题', text.includes('反诈局中局：你的手机') && text.includes('开始体验'))
+    record(
+      '锁屏显示标题与上滑提示',
+      text.includes('反诈局中局：你的手机') && text.includes('上滑解锁'),
+    )
 
-    await cdp.click('开始体验')
+    // 轻微上滑（不足阈值）应回弹，不解锁
+    await cdp.swipeUp({ fromY: 620, toY: 600 })
+    record('轻微上滑不解锁', await cdp.isLocked())
+
+    // 上滑解锁（真实触摸事件）
+    await cdp.swipeUp({ fromY: 640, toY: 430 })
     await cdp.screenshot(path.join(shotsDir, '02-home.png'))
     text = await cdp.text()
     record(
-      '开始后先进入桌面并显示邀请通知',
+      '上滑解锁后进入桌面并显示邀请通知',
       text.includes('青屏 OS') && text.includes('一位学姐邀请你加入兼职群'),
     )
 
@@ -351,7 +380,7 @@ async function main() {
     await cdp.eval(`localStorage.clear(); return true`)
     await cdp.send('Page.navigate', { url: BASE })
     await sleep(700)
-    await cdp.click('开始体验')
+    await cdp.swipeUp({ fromY: 640, toY: 430 })
     await cdp.click('青讯')
     await cdp.click('进群看看')
     await cdp.click('接下任务')
@@ -368,7 +397,7 @@ async function main() {
     await cdp.eval(`localStorage.clear(); return true`)
     await cdp.send('Page.navigate', { url: BASE })
     await sleep(700)
-    await cdp.click('开始体验')
+    await cdp.swipeUp({ fromY: 640, toY: 430 })
     await cdp.click('一位学姐邀请你加入兼职群')
     await cdp.click('拒绝并举报')
     await sleep(200)
@@ -390,7 +419,7 @@ async function main() {
     await cdp.click('清掉，重来')
     await sleep(200)
     text = await cdp.text()
-    record('确认后回到开场', text.includes('开始体验') && text.includes('反诈局中局：你的手机'))
+    record('确认后回到锁屏', text.includes('上滑解锁') && text.includes('反诈局中局：你的手机'))
 
     // 7) 损坏存档回退
     await cdp.eval(`localStorage.setItem('fj-juzhongju:save:v1', '{"version":1,"node":"group","balance":999999}'); return true`)
@@ -398,7 +427,7 @@ async function main() {
     await sleep(700)
     text = await cdp.text()
     const cleared = await cdp.eval(`return localStorage.getItem('fj-juzhongju:save:v1') === null`)
-    record('损坏存档安全回退到开场', text.includes('开始体验') && cleared)
+    record('损坏存档安全回退到锁屏', text.includes('上滑解锁') && cleared)
 
     // 8) 减弱动效（prefers-reduced-motion）：消息直出、流程可完整推进
     await cdp.send('Emulation.setEmulatedMedia', {
@@ -412,7 +441,8 @@ async function main() {
     await cdp.eval(`localStorage.clear(); return true`)
     await cdp.send('Page.navigate', { url: BASE })
     await sleep(700)
-    await cdp.click('开始体验')
+    // 减弱动效下仍可用上滑解锁
+    await cdp.swipeUp({ fromY: 640, toY: 430 })
     await cdp.click('青讯')
     await cdp.click('进群看看')
     await sleep(120)
@@ -460,7 +490,7 @@ async function main() {
 
     const clockCheck = await cdp.eval(`
       // 只取可见的那一段（屏读文本在 sr-only 里，会污染 textContent）
-      const el = document.querySelector('.intro__clock [aria-hidden="true"]');
+      const el = document.querySelector('.lock__clock [aria-hidden="true"]');
       const shown = el ? el.textContent.trim() : '';
       const fmt = (tz) => new Intl.DateTimeFormat('zh-CN', {
         timeZone: tz, hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
@@ -479,7 +509,7 @@ async function main() {
 
     // 日期行同步显示北京日期
     const dateCheck = await cdp.eval(`
-      const el = document.querySelector('.intro__date');
+      const el = document.querySelector('.lock__date');
       const shown = el ? el.textContent.trim() : '';
       const beijingDate = new Intl.DateTimeFormat('zh-CN', {
         timeZone: 'Asia/Shanghai', month: 'long', day: 'numeric',
@@ -493,7 +523,7 @@ async function main() {
     )
 
     // 进入游戏后状态栏同样显示北京时间
-    await cdp.click('开始体验')
+    await cdp.swipeUp({ fromY: 640, toY: 430 })
     await sleep(200)
     const statusCheck = await cdp.eval(`
       const el = document.querySelector('.statusbar__time [aria-hidden="true"]');

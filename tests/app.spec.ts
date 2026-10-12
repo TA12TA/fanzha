@@ -60,9 +60,42 @@ async function flush(): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, 5))
 }
 
+/**
+ * 构造指针事件。
+ * jsdom 的 `clientY` 是只读 getter，无法通过 test-utils 的 trigger 选项赋值，
+ * 因此手动创建事件并用 defineProperty 注入坐标。
+ */
+function pointerEvent(type: string, clientY: number, pointerId = 1): Event {
+  const event = new Event(type, { bubbles: true, cancelable: true })
+  Object.defineProperty(event, 'clientY', { value: clientY })
+  Object.defineProperty(event, 'pointerId', { value: pointerId })
+  return event
+}
+
+/**
+ * 锁屏上滑解锁（指针事件）。
+ * 不依赖真实指针设备，直接在解锁面上派发 pointerdown / pointermove / pointerup。
+ */
+async function swipeUnlock(wrapper: VueWrapper): Promise<void> {
+  const surface = wrapper.find('.lock__surface')
+  expect(surface.exists(), '锁屏应有可上滑的解锁面').toBe(true)
+  const el = surface.element
+  el.dispatchEvent(pointerEvent('pointerdown', 600))
+  el.dispatchEvent(pointerEvent('pointermove', 480))
+  el.dispatchEvent(pointerEvent('pointerup', 480))
+  await flush()
+}
+
+/** 锁屏等效解锁：点击解锁面（不滑动也能进）。 */
+async function clickUnlock(wrapper: VueWrapper): Promise<void> {
+  const surface = wrapper.find('.lock__surface')
+  await surface.trigger('click')
+  await flush()
+}
+
 /** 开场 → 桌面 → 点通知进入邀请会话。 */
 async function startAndOpenInvite(wrapper: VueWrapper): Promise<void> {
-  await click(wrapper, '开始体验')
+  await swipeUnlock(wrapper)
   await click(wrapper, '一位学姐邀请你加入兼职群')
 }
 
@@ -89,11 +122,12 @@ beforeEach(() => {
 })
 
 describe('E. 整部手机的交互（B01–B14）', () => {
-  it('B01/B08 开场 → 桌面：先看到独立桌面与邀请通知，不是答题页', async () => {
+  it('B01/B08 锁屏上滑解锁 → 桌面：先看到独立桌面与邀请通知，不是答题页', async () => {
     const wrapper = mountApp()
     expect(wrapper.text()).toContain('反诈局中局：你的手机')
+    expect(wrapper.text()).toContain('上滑解锁')
 
-    await click(wrapper, '开始体验')
+    await swipeUnlock(wrapper)
     expect(wrapper.text()).toContain('青屏 OS')
     expect(wrapper.text()).toContain('一位学姐邀请你加入兼职群')
     for (const label of ['青讯', '安心钱包', '识骗手册']) {
@@ -103,20 +137,44 @@ describe('E. 整部手机的交互（B01–B14）', () => {
     expect(wrapper.findAll('a')).toHaveLength(0)
   })
 
+  it('G 解锁方式的等效性：轻微上滑不解锁，点击与键盘也能解锁', async () => {
+    // 轻微上滑（未达阈值）应回弹，仍停在锁屏
+    const shortSwipe = mountApp()
+    const surface = shortSwipe.find('.lock__surface')
+    const el = surface.element
+    el.dispatchEvent(pointerEvent('pointerdown', 600))
+    el.dispatchEvent(pointerEvent('pointermove', 590))
+    el.dispatchEvent(pointerEvent('pointerup', 590))
+    await flush()
+    expect(shortSwipe.text()).toContain('上滑解锁')
+    expect(shortSwipe.text()).not.toContain('青屏 OS')
+
+    // 点击解锁面即可进入（不依赖滑动）
+    const byClick = mountApp()
+    await clickUnlock(byClick)
+    expect(byClick.text()).toContain('青屏 OS')
+
+    // 键盘 Enter 同样可解锁
+    const byKey = mountApp()
+    await byKey.find('.lock__surface').trigger('keydown', { key: 'Enter' })
+    await flush()
+    expect(byKey.text()).toContain('青屏 OS')
+  })
+
   it('B01/B09 通知与消息图标是两条独立入口，都能到达邀请', async () => {
     const viaNotice = mountApp()
     await startAndOpenInvite(viaNotice)
     expect(viaNotice.text()).toContain('拒绝并举报')
 
     const viaIcon = mountApp()
-    await click(viaIcon, '开始体验')
+    await swipeUnlock(viaIcon)
     await click(viaIcon, '青讯')
     expect(viaIcon.text()).toContain('拒绝并举报')
   })
 
   it('B11 邀请可忽略：先看钱包/手册再回来，邀请仍在且未扣款', async () => {
     const wrapper = mountApp()
-    await click(wrapper, '开始体验')
+    await swipeUnlock(wrapper)
 
     await click(wrapper, '安心钱包')
     expect(wrapper.text()).toContain('没有待处理的钱')
@@ -193,7 +251,7 @@ describe('E. 整部手机的交互（B01–B14）', () => {
 
   it('B12/B14 钱包平时不能绕过剧情付款', async () => {
     const wrapper = mountApp()
-    await click(wrapper, '开始体验')
+    await swipeUnlock(wrapper)
     await click(wrapper, '安心钱包')
     expect(wrapper.text()).toContain('没有待处理的钱')
     expect(findButton(wrapper, '确认垫付')).toBeUndefined()
@@ -259,7 +317,8 @@ describe('E. 整部手机的交互（B01–B14）', () => {
 
     await click(wrapper, '重新开始本局')
     await click(wrapper, '清掉，重来')
-    expect(wrapper.text()).toContain('开始体验')
+    // 重开后回到锁屏
+    expect(wrapper.text()).toContain('上滑解锁')
     expect(readSave()).toBeNull()
   })
 
@@ -301,10 +360,10 @@ describe('E. 整部手机的交互（B01–B14）', () => {
     expect(text).toContain('不保证')
   })
 
-  it('C04 损坏存档启动时安全回退到开场，页面仍可用', () => {
+  it('C04 损坏存档启动时安全回退到锁屏，页面仍可用', () => {
     globalThis.localStorage.setItem(SAVE_KEY, '{"version":1,"node":"group","balance":999999}')
     const wrapper = mountApp({ keepSave: true })
-    expect(wrapper.text()).toContain('开始体验')
+    expect(wrapper.text()).toContain('上滑解锁')
     expect(readSave()).toBeNull()
   })
 
@@ -333,7 +392,7 @@ describe('E. 整部手机的交互（B01–B14）', () => {
 
   it('B14 状态栏与只读应用都有响应', async () => {
     const wrapper = mountApp()
-    await click(wrapper, '开始体验')
+    await swipeUnlock(wrapper)
 
     await click(wrapper, '打开通知')
     expect(wrapper.text()).toContain('通知')
@@ -349,7 +408,7 @@ describe('E. 整部手机的交互（B01–B14）', () => {
 
   it('B06 动效与音频都不是必要交互：键盘可完成关键选择', async () => {
     const wrapper = mountApp()
-    await click(wrapper, '开始体验')
+    await swipeUnlock(wrapper)
     // 跳过消息动画后立即可看到选项
     await click(wrapper, '青讯')
     await click(wrapper, '进群看看')
@@ -371,9 +430,9 @@ describe('E. 整部手机的交互（B01–B14）', () => {
     globalThis.dispatchEvent(new PopStateEvent('popstate'))
     await flush()
 
-    // 回到桌面，仍在游戏内（开场锁屏不出现）
+    // 回到桌面，仍在游戏内（不回锁屏）
     expect(wrapper.text()).toContain('青屏 OS')
-    expect(wrapper.text()).not.toContain('开始体验')
+    expect(wrapper.text()).not.toContain('上滑解锁')
 
     // 剧情与金额完全未变，待确认请求仍在
     const after = readSave()
