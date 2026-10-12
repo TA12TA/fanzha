@@ -400,6 +400,56 @@ async function main() {
     const cleared = await cdp.eval(`return localStorage.getItem('fj-juzhongju:save:v1') === null`)
     record('损坏存档安全回退到开场', text.includes('开始体验') && cleared)
 
+    // 8) 减弱动效（prefers-reduced-motion）：消息直出、流程可完整推进
+    await cdp.send('Emulation.setEmulatedMedia', {
+      features: [{ name: 'prefers-reduced-motion', value: 'reduce' }],
+    })
+    const mediaMatches = await cdp.eval(
+      `return window.matchMedia('(prefers-reduced-motion: reduce)').matches`,
+    )
+    record('浏览器已切换到减弱动效模式', mediaMatches === true)
+
+    await cdp.eval(`localStorage.clear(); return true`)
+    await cdp.send('Page.navigate', { url: BASE })
+    await sleep(700)
+    await cdp.click('开始体验')
+    await cdp.click('青讯')
+    await cdp.click('进群看看')
+    await sleep(120)
+    text = await cdp.text()
+    // 减弱动效下不做逐条延迟：全部消息立即可见，且选项可用
+    record(
+      '减弱动效下消息直出且可继续操作',
+      text.includes('群规很简单') && text.includes('名额有限') && text.includes('接下任务'),
+    )
+
+    await cdp.click('接下任务')
+    await cdp.click('确认模拟垫付 100 元')
+    await sleep(200)
+    text = await cdp.text()
+    record('减弱动效下仍可完成付款流程', text.includes('700') && text.includes('平台内显示（未兑现，不可提现）'))
+
+    // 9) 键盘可操作性：关键操作均为 button，可聚焦并触发
+    const keyboardOk = await cdp.eval(`
+      const btns = [...document.querySelectorAll('button')];
+      if (btns.length === 0) return { ok: false, reason: 'no buttons' };
+      const target = btns.find(b => (b.textContent || '').includes('到此为止'));
+      if (!target) return { ok: false, reason: 'missing option button' };
+      target.focus();
+      const focused = document.activeElement === target;
+      target.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      target.click();
+      return { ok: focused, tag: target.tagName };
+    `)
+    await sleep(200)
+    text = await cdp.text()
+    record(
+      '关键选项可用键盘聚焦并触发',
+      keyboardOk.ok === true && text.includes('及时止损'),
+      `聚焦成功=${keyboardOk.ok} 标签=${keyboardOk.tag}`,
+    )
+
+    await cdp.send('Emulation.setEmulatedMedia', { features: [] })
     await cdp.eval(`localStorage.clear(); return true`)
   } finally {
     if (cdp) {

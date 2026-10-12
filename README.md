@@ -65,7 +65,7 @@ scripts/verify-edge.mjs  # Edge headless + CDP 端到端验证
 - **防重复扣款**：确认按钮即时禁用 + 引擎一次性选项校验；连点、浏览器返回、旧按钮复现均不会二次扣款。
 - **按经历复盘**：只引用玩家实际遇到的环节（早拒绝者不会看到「解冻费」「追加」），结尾给出 2–3 条行动建议，明确不承诺追回。
 - **存档**：版本化 localStorage，校验字段、金额不变式与历史-节点一致性；损坏/旧版存档自动清档回退开场；重开需二次确认并清除存档。
-- **无障碍与适配**：100dvh + `env(safe-area-inset-*)`，320px 无横向溢出，桌面居中限宽 430px，点击区 ≥44px，`prefers-reduced-motion` 时消息直出，重要操作全部为真实 `<button>`。
+- **无障碍与适配**：100dvh + `env(safe-area-inset-*)`，320px 无横向溢出，桌面居中限宽 430px，点击区 ≥44px，`prefers-reduced-motion` 时消息直出（已实测），重要操作全部为真实 `<button>`（已实测可键盘聚焦触发）。
 
 实际运行的命令与结果（本机 Node v24.19.0 / npm 11.17.0 / Windows）：
 
@@ -75,9 +75,9 @@ scripts/verify-edge.mjs  # Edge headless + CDP 端到端验证
 | `npm run typecheck` | 通过，无错误 |
 | `npm test` | **54 项全部通过**（engine 17 / storage 10 / debrief 10 / app 17） |
 | `npm run build` | 成功，`dist/assets/index-*.js` 113.59 kB（gzip 42.01 kB） |
-| `npm run verify` | **26 项全部通过**（Edge 155.0.4283.45 headless） |
+| `npm run verify` | **30 项全部通过**（Edge 155.0.4283.45 headless） |
 
-`npm run verify` 覆盖：320/375/390px 无横向溢出、三条结局路径、自由探索回切、资料弹层、金额 800→700→400、平台 130 不入账、早拒绝复盘不含未经历话术、重开二次确认、损坏存档回退、验证后服务释放。产物：`.verify/report.json` 与 7 张截图（开场/桌面/群聊/钱包/结局/复盘）。
+`npm run verify` 覆盖：320/375/390px 无横向溢出、三条结局路径、自由探索回切、资料弹层、金额 800→700→400、平台 130 不入账、早拒绝复盘不含未经历话术、重开二次确认、损坏存档回退、`prefers-reduced-motion` 下消息直出并仍可完成付款、关键选项可键盘聚焦触发、验证后服务释放。产物：`.verify/report.json` 与 7 张截图（开场/桌面/群聊/钱包/结局/复盘）。
 
 ## 已知问题与未完成项
 
