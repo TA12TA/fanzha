@@ -65,6 +65,9 @@ export const NODES: Record<NodeId, StoryNode> = {
 
 /**
  * 转移表。金额变更只在此处声明，并由 `engine.choose` 事务式应用一次。
+ *
+ * `label` / `hint` 是供界面与测试引用的稳定文案；实际渲染文案在各场景组件中，
+ * 修改界面用语时需同步这里，避免两处漂移。
  */
 export const OPTIONS: Record<OptionId, StoryOption> = {
   start: {
@@ -72,7 +75,7 @@ export const OPTIONS: Record<OptionId, StoryOption> = {
     label: '开始体验',
     from: 'intro',
     to: 'invite',
-    hint: '开始第一关剧情模拟，进入虚构手机桌面',
+    hint: '进入虚构手机桌面',
   },
   'reject-invite': {
     id: 'reject-invite',
@@ -104,7 +107,7 @@ export const OPTIONS: Record<OptionId, StoryOption> = {
   },
   'view-profile': {
     id: 'view-profile',
-    label: '查看对方资料',
+    label: '群主资料',
     from: 'group',
     to: 'group',
     // 效果本身幂等（标记去重），因此可反复打开而不产生额外影响。
@@ -113,14 +116,14 @@ export const OPTIONS: Record<OptionId, StoryOption> = {
   },
   'cancel-100': {
     id: 'cancel-100',
-    label: '取消，停止参与',
+    label: '取消，不参与',
     from: 'transfer-100',
     to: 'end-stop',
     effect: { addTags: ['stopped-before-pay'] },
   },
   'confirm-100': {
     id: 'confirm-100',
-    label: `确认模拟垫付 ${FIRST_PAD_AMOUNT} 元`,
+    label: `确认垫付 ${FIRST_PAD_AMOUNT} 元`,
     from: 'transfer-100',
     to: 'rebate',
     effect: {
@@ -165,7 +168,7 @@ export const OPTIONS: Record<OptionId, StoryOption> = {
   },
   'confirm-300': {
     id: 'confirm-300',
-    label: `确认模拟垫付 ${EXTRA_PAD_AMOUNT} 元`,
+    label: `确认垫付 ${EXTRA_PAD_AMOUNT} 元`,
     from: 'transfer-300',
     to: 'end-loss',
     effect: {
@@ -177,7 +180,7 @@ export const OPTIONS: Record<OptionId, StoryOption> = {
   },
   review: {
     id: 'review',
-    label: '查看我的反诈复盘',
+    label: '看复盘',
     from: 'end-stop',
     to: 'debrief',
     hint: '结局和复盘都可以离开，随时从桌面或识骗手册再次进入',
