@@ -72,6 +72,8 @@ scripts/verify-edge.mjs  # Edge headless + CDP 端到端验证
 | 命令 | 结果 |
 |---|---|
 | `npm install` | 成功，119 个包 |
+| `npm run dev` | 成功，`http://127.0.0.1:5173/` 返回 200 且已注入 Vite 客户端 |
+| `npm run preview` | 成功，`http://127.0.0.1:4173/` 返回构建产物（引用 hashed 资源） |
 | `npm run typecheck` | 通过，无错误 |
 | `npm test` | **56 项全部通过**（engine 17 / storage 10 / debrief 10 / app 19） |
 | `npm run build` | 成功，`dist/assets/index-*.js` 113.59 kB（gzip 42.01 kB） |
