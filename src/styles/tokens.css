@@ -1,0 +1,63 @@
+:root {
+  /* 尺寸与安全区 */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --phone-max-width: 430px;
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --tap-min: 44px;
+
+  /* 字号 */
+  --font-xs: 12px;
+  --font-sm: 13px;
+  --font-base: 15px;
+  --font-md: 16px;
+  --font-lg: 19px;
+  --font-xl: 24px;
+
+  /* 间距 */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 28px;
+
+  /* 颜色：桌面深色 / 消息浅色 / 钱包冷色 / 风险暖色 */
+  --c-bg-outer: #0b1017;
+  --c-desktop-1: #16233a;
+  --c-desktop-2: #0d1626;
+  --c-surface: #ffffff;
+  --c-surface-2: #f4f6fa;
+  --c-chat-bg: #eef1f6;
+  --c-wallet-bg: #eaf1f8;
+  --c-manual-bg: #f3f1ea;
+  --c-line: #dbe1ea;
+  --c-text: #16202e;
+  --c-text-soft: #55637a;
+  --c-text-invert: #f7fafc;
+  --c-primary: #1f6feb;
+  --c-primary-soft: #e4eefc;
+  --c-accent: #0f9d7a;
+  --c-danger: #c2412f;
+  --c-warn-bg: #fdf2e3;
+  --c-warn-line: #e8b877;
+  --c-warn-text: #7a4a12;
+  --c-sim-bg: #1b2634;
+  --c-sim-text: #9fd8ff;
+
+  --shadow-card: 0 2px 10px rgb(16 30 54 / 10%);
+  --shadow-sheet: 0 -6px 24px rgb(10 20 36 / 22%);
+  --dur-fast: 140ms;
+  --dur-base: 220ms;
+  --dur-slow: 300ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-fast: 0ms;
+    --dur-base: 0ms;
+    --dur-slow: 0ms;
+  }
+}
