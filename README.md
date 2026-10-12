@@ -44,6 +44,7 @@ src/
   app/navigation.ts      # UI 导航状态（应用/会话/待付款推导），不含剧情与金额
   app/clock.ts           # 北京时间时钟（固定 Asia/Shanghai，分钟对齐刷新）
   app/unlock.ts          # 上滑解锁判定（纯函数：位移、阈值、回弹）
+  app/notifications.ts   # 通知队列（预警/消息两类，独立时长，自动关闭，纯函数入队出队）
   app/settings.ts        # 版本化玩家设置（音效、顶部提醒开关）
   app/sound.ts           # Web Audio 合成音效（无音频文件，失败静默降级）
   app/useGame.ts         # 组合式封装：dispatch 是唯一写入口，负责存档
@@ -56,7 +57,7 @@ src/
   scenes/                # Intro / Home / Chat / Wallet / Manual / Ending / Review / PlainApp
   components/            # 状态栏、底部导航、应用标题栏、弹层、气泡、模拟声明
   styles/                # 设计令牌与基础样式（含 prefers-reduced-motion）
-tests/                   # engine / storage / debrief / clock / unlock / settings / app 七套测试
+tests/                   # engine / storage / debrief / clock / unlock / settings / notifications / app 八套测试
 scripts/verify-edge.mjs  # Edge headless + CDP 端到端验证
 ```
 
@@ -66,7 +67,10 @@ scripts/verify-edge.mjs  # Edge headless + CDP 端到端验证
 
 - **整页手机**：锁屏（上滑解锁）→ 桌面（状态栏、壁纸、图标、邀请通知）→ 青讯（邀请/群聊/资料/返利/提现异常）→ 安心钱包 → 识骗手册 → 手机内结局 → 手机内复盘，全程无外层网页、无第二层手机外框。
 - **锁屏上滑解锁**：整屏可上滑，拖过阈值即解锁；同时提供点击与键盘（Enter / 空格 / 上箭头）等效触发，不依赖手势；未达阈值回弹，尊重 `prefers-reduced-motion`。
-- **顶部反诈提醒**：进入关键节点时，从手机画面上方滑入「国家反诈中心提醒您」通知横幅（自绘盾牌图标、可点击查看、可关闭、7 秒自动收起）。只在剧情关键节点弹出，不刷屏；关闭后提醒仍收进通知中心。
+- **顶部通知（两类分开）**：从手机画面上方滑入的通知横幅分两种类型，视觉与时长都不同——
+  - **反诈预警**（深色警示卡片 + 盾牌图标）：标题「国家反诈中心提醒您」，进入关键节点触发，7 秒自动关闭；受设置里「顶部弹出提醒」开关控制。
+  - **消息通知**（浅色卡片 + 气泡图标）：如学姐邀请、群消息，4.5 秒自动关闭；不受该开关影响（那是预警开关，不是消息免打扰）。
+  - 两类通知走同一队列逐条展示，互不覆盖，等待中的条数用 `+N` 角标提示；点关闭或超时后自动轮到下一条；全部通知在通知中心按「国家反诈中心 / 消息」分组保留。
 - **音效**：点击、消息、确认、取消、解锁、提醒各有独立提示音，用 Web Audio 实时合成，**不引入任何音频文件**；浏览器拒绝播放时静默降级，静音下可完整游玩。
 - **设置**：真实的开关按钮（音效、顶部弹出提醒），`role="switch"` 可键盘操作，写入版本化本地设置并立即生效；与剧情存档分开保存，重开本局不会重置偏好。
 - **自由探索**：任一剧情阶段可回桌面、切钱包/手册/相册/通知/设置再返回；桌面有「继续当前事项」入口；结局与复盘可离开并从桌面或手册再次进入。
@@ -85,11 +89,11 @@ scripts/verify-edge.mjs  # Edge headless + CDP 端到端验证
 | `npm run dev` | 成功，`http://127.0.0.1:5173/` 返回 200 且已注入 Vite 客户端 |
 | `npm run preview` | 成功，`http://127.0.0.1:4173/` 返回构建产物（引用 hashed 资源） |
 | `npm run typecheck` | 通过，无错误 |
-| `npm test` | **82 项全部通过**（engine 17 / storage 10 / debrief 10 / clock 5 / unlock 6 / settings 11 / app 23） |
+| `npm test` | **91 项全部通过**（engine 17 / storage 10 / debrief 10 / clock 5 / unlock 6 / settings 11 / notifications 7 / app 25） |
 | `npm run build` | 成功，`dist/assets/index-*.js` 113.59 kB（gzip 42.01 kB） |
-| `npm run verify` | **43 项全部通过**（Edge 155.0.4283.45 headless） |
+| `npm run verify` | **46 项全部通过**（Edge 155.0.4283.45 headless） |
 
-`npm run verify` 覆盖：320/375/390px 无横向溢出、真实触摸事件上滑解锁（含轻微上滑不解锁）、三条结局路径、自由探索回切、资料弹层、金额 800→700→400、平台 130 不入账、早拒绝复盘不含未经历话术、重开二次确认、损坏存档回退、`prefers-reduced-motion` 下消息直出并仍可完成付款、关键选项可键盘聚焦触发、北京时间显示（浏览器时区改为纽约时仍显示北京时间）、顶部提醒横幅位置与文案、状态栏无「模拟」字样、音效实测（拦截 AudioContext 计数振荡器：解锁与点击确实发声、关闭开关后不再发声）、验证后服务释放。产物：`.verify/report.json` 与 7 张截图。
+`npm run verify` 覆盖：320/375/390px 无横向溢出、真实触摸事件上滑解锁（含轻微上滑不解锁）、三条结局路径、自由探索回切、资料弹层、金额 800→700→400、平台 130 不入账、早拒绝复盘不含未经历话术、重开二次确认、损坏存档回退、`prefers-reduced-motion` 下消息直出并仍可完成付款、关键选项可键盘聚焦触发、北京时间显示（浏览器时区改为纽约时仍显示北京时间）、**两类通知分开推送与定时自动关闭**（消息 4.5s → 预警自动接上 → 7s 后清空）、通知中心按类型分组、状态栏无「模拟」字样、音效实测（拦截 AudioContext 计数振荡器：解锁与点击确实发声、关闭开关后不再发声）、验证后服务释放。产物：`.verify/report.json` 与 7 张截图。
 
 浏览器返回键的行为由 `tests/app.spec.ts` 覆盖（jsdom 中派发 `popstate`）：返回只回到桌面，剧情与金额不变，已确认的付款按钮不复现。
 

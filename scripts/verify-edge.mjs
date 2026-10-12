@@ -555,33 +555,75 @@ async function main() {
       `${stable.first} → ${stable.second}`,
     )
 
-    // 9) 顶部反诈提醒横幅与音效（先恢复真实时区，避免影响时间断言）
+    // 9) 顶部通知：两类分开 + 定时自动关闭
     await cdp.send('Emulation.setTimezoneOverride', { timezoneId: '' })
     await cdp.eval(`localStorage.clear(); return true`)
     await cdp.send('Page.navigate', { url: BASE })
     await sleep(700)
     await cdp.swipeUp({ fromY: 640, toY: 430 })
 
-    text = await cdp.text()
-    record(
-      '解锁后顶部弹出反诈提醒',
-      text.includes('国家反诈中心提醒您') && text.includes('正规兼职不会通过陌生私聊招人'),
-    )
-
-    const bannerPos = await cdp.eval(`
+    const firstBanner = await cdp.eval(`
       const el = document.querySelector('.banner');
       if (!el) return null;
-      const r = el.getBoundingClientRect();
-      const bar = document.querySelector('.statusbar').getBoundingClientRect();
-      return { top: Math.round(r.top), bannerTop: Math.round(bar.bottom), width: Math.round(r.width), viewport: window.innerWidth };
+      return { cls: el.className, text: el.textContent };
     `)
     record(
-      '横幅位于状态栏下方且横向留边',
-      bannerPos !== null && bannerPos.top >= bannerPos.bannerTop && bannerPos.width < bannerPos.viewport,
-      bannerPos ? `横幅top=${bannerPos.top} 状态栏底=${bannerPos.bannerTop} 宽=${bannerPos.width}/${bannerPos.viewport}` : '未找到横幅',
+      '解锁后先弹出消息类通知（学姐邀请）',
+      firstBanner !== null &&
+        firstBanner.cls.includes('banner--message') &&
+        firstBanner.text.includes('一位学姐邀请你加入兼职群'),
+      firstBanner ? firstBanner.cls : '无横幅',
+    )
+
+    // 队列角标提示还有预警在等待
+    const queued = await cdp.eval(`
+      const el = document.querySelector('.banner__queued');
+      return el ? el.textContent.trim() : null;
+    `)
+    record('队列角标提示还有通知在等待', queued !== null, `角标=${queued}`)
+
+    // 等待消息类通知自动关闭（默认 4.5 秒），预警自动接上
+    await sleep(5200)
+    const secondBanner = await cdp.eval(`
+      const el = document.querySelector('.banner');
+      if (!el) return null;
+      return { cls: el.className, text: el.textContent };
+    `)
+    record(
+      '消息通知定时自动关闭后，反诈预警自动接上',
+      secondBanner !== null &&
+        secondBanner.cls.includes('banner--antifraud') &&
+        secondBanner.text.includes('国家反诈中心提醒您'),
+      secondBanner ? secondBanner.cls : '无横幅',
+    )
+
+    // 等待预警也自动关闭（默认 7 秒），顶部不再有横幅
+    await sleep(7600)
+    const anyBanner = await cdp.eval(`return !!document.querySelector('.banner')`)
+    record('预警也会定时自动关闭，无需手动点', anyBanner === false)
+
+    // 两类通知在通知中心分组保留
+    await cdp.click('桌面')
+    await cdp.eval(`
+      const b = [...document.querySelectorAll('.apps .app')].find(x => (x.textContent||'').includes('通知'));
+      if (b) b.click();
+      return !!b;
+    `)
+    await sleep(400)
+    const centerText = await cdp.text()
+    const groups = await cdp.eval(`
+      return [...document.querySelectorAll('.center__group')].map(g => g.textContent.trim());
+    `)
+    record(
+      '通知中心按类型分组保留两类通知',
+      groups.includes('国家反诈中心') &&
+        groups.includes('消息') &&
+        centerText.includes('一位学姐邀请你加入兼职群'),
+      `分组=${JSON.stringify(groups)}`,
     )
 
     // 状态栏不应再有「模拟」字样
+    await cdp.click('桌面')
     const statusText = await cdp.eval(`
       const el = document.querySelector('.statusbar');
       return el ? el.textContent : '';

@@ -14,10 +14,12 @@ import ReviewScene from '@/scenes/ReviewScene.vue'
 import SettingsScene from '@/scenes/SettingsScene.vue'
 import WalletScene from '@/scenes/WalletScene.vue'
 import { hasOutcome, pendingAmount, preferredChatView } from '@/app/navigation'
+import { useNotifications } from '@/app/notifications'
 import { useSettings } from '@/app/settings'
 import { playSound, setSoundEnabled } from '@/app/sound'
 import { useGame } from '@/app/useGame'
 import { REMINDER_TITLE, reminderFor } from '@/data/antifraud'
+import { BRAND } from '@/data/level01'
 import type { OptionId } from '@/game/types'
 
 /**
@@ -44,6 +46,7 @@ type ViewId =
 const game = useGame()
 const { state } = game
 const { settings } = useSettings()
+const notices = useNotifications()
 
 /** 音效总开关跟随设置。 */
 watch(
@@ -59,61 +62,67 @@ const confirmRestart = ref(false)
 /** 提交后立即禁用按钮，避免连点导致二次扣款。 */
 const submitting = ref(false)
 
-/** 顶部反诈提醒横幅状态。 */
-const banner = ref<{ body: string; leaving: boolean } | null>(null)
-let bannerTimer: ReturnType<typeof setTimeout> | null = null
-let bannerLeaveTimer: ReturnType<typeof setTimeout> | null = null
+/** 当前展示的通知与等待条数。 */
+const currentNotice = computed(() => notices.current.value)
+const queuedCount = computed(() => Math.max(0, notices.pendingCount.value - 1))
+/** 是否正在退场（点关闭时给一次动画）。 */
+const noticeLeaving = ref(false)
 
-/** 已收到的提醒（供通知中心查看）。 */
-const reminders = ref<{ id: number; title: string; body: string }[]>([])
-let reminderSeq = 0
-
-function clearBannerTimers(): void {
-  if (bannerTimer) clearTimeout(bannerTimer)
-  if (bannerLeaveTimer) clearTimeout(bannerLeaveTimer)
-  bannerTimer = null
-  bannerLeaveTimer = null
+/** 预警通知是否已被玩家在设置里关闭弹出。 */
+function pushAntifraud(node = state.value.node): void {
+  const body = reminderFor(node)
+  if (!body) return
+  // 提醒始终进入通知中心；是否弹横幅由设置决定。
+  notices.push({ kind: 'antifraud', title: REMINDER_TITLE, body })
+  if (settings.value.banner) playSound('alert')
 }
 
-/** 关闭横幅（带退场动画）。 */
-function dismissBanner(): void {
-  clearBannerTimers()
-  if (!banner.value) return
-  banner.value.leaving = true
-  bannerLeaveTimer = setTimeout(() => {
-    banner.value = null
-  }, 220)
+/** 消息类通知（学姐邀请、群消息等），与预警分开。 */
+function pushMessage(title: string, body: string): void {
+  notices.push({ kind: 'message', title, body })
+  playSound('receive')
 }
 
-/** 玩家在设置里关掉顶部提醒时，立即收起当前正显示的横幅。 */
+/** 关闭当前通知（带退场动画后交给队列）。 */
+function dismissNotice(): void {
+  if (!currentNotice.value) return
+  noticeLeaving.value = true
+  setTimeout(() => {
+    noticeLeaving.value = false
+    notices.dismissCurrent()
+  }, 200)
+}
+
+/** 设置里关掉顶部提醒时，立即收起当前预警横幅（消息通知不受影响）。 */
 watch(
   () => settings.value.banner,
   (on) => {
-    if (!on) dismissBanner()
+    if (!on && currentNotice.value?.kind === 'antifraud') dismissNotice()
   },
 )
-
-/** 展示某个节点的反诈提醒。 */
-function showReminder(node = state.value.node): void {
-  const body = reminderFor(node)
-  if (!body) return
-  // 每次进入节点都收进通知中心，便于回看。
-  reminderSeq += 1
-  reminders.value = [{ id: reminderSeq, title: REMINDER_TITLE, body }, ...reminders.value].slice(0, 20)
-
-  if (!settings.value.banner) return
-
-  clearBannerTimers()
-  banner.value = { body, leaving: false }
-  playSound('alert')
-  // 停留一段时间后自动收起；玩家也可手动关闭。
-  bannerTimer = setTimeout(dismissBanner, 7000)
-}
 
 const pending = computed(() => pendingAmount(state.value.node))
 const isIntro = computed(() => view.value === 'intro')
 const atHome = computed(() => view.value === 'home')
 const canGoBack = computed(() => view.value !== 'home' && view.value !== 'intro')
+
+/**
+ * 是否应展示横幅：
+ * - 预警类受「顶部弹出提醒」设置控制
+ * - 消息类不受该设置影响（那是反诈提醒的开关，不是消息免打扰）
+ */
+const showBanner = computed(() => {
+  const item = currentNotice.value
+  if (!item || isIntro.value) return false
+  if (item.kind === 'antifraud' && !settings.value.banner) return false
+  return true
+})
+
+/** 通知中心：按类型分组（各自最新在前）。 */
+const antifraudNotices = computed(() =>
+  notices.history.value.filter((n) => n.kind === 'antifraud'),
+)
+const messageNotices = computed(() => notices.history.value.filter((n) => n.kind === 'message'))
 
 /** 桌面邀请通知：仅在 invite 节点可见（点开只切视图，不提交选项）。 */
 const showInviteNotice = computed(() => state.value.node === 'invite')
@@ -146,10 +155,12 @@ function submit(optionId: OptionId): void {
     // 开场解锁：先让玩家看到桌面与邀请通知，不直接跳进会话。
     if (optionId === 'start') {
       view.value = 'home'
-      showReminder(state.value.node)
+      // 先推消息（剧情事件），再推反诈预警（对该事件的提醒），顺序符合真实手机体验。
+      pushMessage(BRAND.chat, '一位学姐邀请你加入兼职群')
+      pushAntifraud(state.value.node)
     } else {
       syncViewToNode()
-      showReminder(state.value.node)
+      pushAntifraud(state.value.node)
     }
   }
   // 同一帧内的重复点击由 submitting 拦截；进入微任务队列后立即解锁，
@@ -266,8 +277,7 @@ function doRestart(): void {
   confirmRestart.value = false
   profileOpen.value = false
   noticeOpen.value = false
-  banner.value = null
-  reminders.value = []
+  notices.clear()
   view.value = 'intro'
 }
 
@@ -301,10 +311,16 @@ function openWallet(): void {
   view.value = 'wallet'
 }
 
-/** 点击顶部提醒横幅：进入通知中心查看完整内容。 */
+/** 点击顶部通知横幅：进入通知中心查看完整内容。 */
 function openBanner(): void {
-  dismissBanner()
+  const item = currentNotice.value
+  dismissNotice()
   playSound('tap')
+  // 消息类通知点开直接进对应应用；预警类进通知中心看全文。
+  if (item?.kind === 'message') {
+    view.value = 'chat'
+    return
+  }
   view.value = 'notifications'
 }
 
@@ -337,7 +353,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   globalThis.removeEventListener('popstate', onPopState)
   if (historyGuardActive) historyGuardActive = false
-  clearBannerTimers()
+  notices.dispose()
 })
 </script>
 
@@ -351,14 +367,16 @@ onBeforeUnmount(() => {
         @toggle-notice="noticeOpen = !noticeOpen"
       />
 
-      <!-- 顶部反诈提醒横幅：与手机内其他界面同一画风 -->
+      <!-- 顶部通知横幅：预警与消息两类视觉区分 -->
       <NotificationBanner
-        v-if="banner && !isIntro"
-        :title="REMINDER_TITLE"
-        :body="banner.body"
-        :leaving="banner.leaving"
+        v-if="showBanner && currentNotice"
+        :kind="currentNotice.kind"
+        :title="currentNotice.title"
+        :body="currentNotice.body"
+        :leaving="noticeLeaving"
+        :queued="queuedCount"
         @open="openBanner"
-        @dismiss="dismissBanner"
+        @dismiss="dismissNotice"
       />
 
       <main ref="mainRef" class="phone__viewport" tabindex="-1">
@@ -423,28 +441,52 @@ onBeforeUnmount(() => {
 
         <SettingsScene v-else-if="view === 'settings'" @back="goBack" />
 
-        <!-- 通知中心：包含反诈提醒历史 -->
+        <!-- 通知中心：预警与消息分组展示 -->
         <section v-else-if="view === 'notifications'" class="center" aria-label="通知中心">
           <header class="center__head">
             <button type="button" class="center__back" aria-label="返回上一层" @click="goBack">←</button>
             <span class="center__title">通知</span>
           </header>
           <div class="center__body">
-            <p v-if="reminders.length === 0" class="center__empty">暂时没有通知。</p>
-            <ul v-else class="center__list">
-              <li v-for="item in reminders" :key="item.id" class="center__item">
-                <p class="center__itemtitle">{{ item.title }}</p>
-                <p class="center__itembody">{{ item.body }}</p>
-              </li>
-            </ul>
-            <button
-              v-if="reminders.length"
-              type="button"
-              class="btn btn--secondary center__clear"
-              @click="reminders = []"
-            >
-              清空通知
-            </button>
+            <p v-if="notices.history.value.length === 0" class="center__empty">暂时没有通知。</p>
+
+            <template v-else>
+              <template v-if="antifraudNotices.length">
+                <h2 class="center__group">国家反诈中心</h2>
+                <ul class="center__list">
+                  <li
+                    v-for="item in antifraudNotices"
+                    :key="item.id"
+                    class="center__item center__item--antifraud"
+                  >
+                    <p class="center__itemtitle">{{ item.title }}</p>
+                    <p class="center__itembody">{{ item.body }}</p>
+                  </li>
+                </ul>
+              </template>
+
+              <template v-if="messageNotices.length">
+                <h2 class="center__group">消息</h2>
+                <ul class="center__list">
+                  <li
+                    v-for="item in messageNotices"
+                    :key="item.id"
+                    class="center__item center__item--message"
+                  >
+                    <p class="center__itemtitle">{{ item.title }}</p>
+                    <p class="center__itembody">{{ item.body }}</p>
+                  </li>
+                </ul>
+              </template>
+
+              <button
+                type="button"
+                class="btn btn--secondary center__clear"
+                @click="notices.clear()"
+              >
+                清空通知
+              </button>
+            </template>
           </div>
         </section>
 
@@ -573,6 +615,17 @@ onBeforeUnmount(() => {
   color: var(--c-text-soft);
 }
 
+.center__group {
+  margin: var(--space-2) 0 var(--space-1);
+  font-size: var(--font-sm);
+  font-weight: 700;
+  color: var(--c-text-soft);
+}
+
+.center__group:first-child {
+  margin-top: 0;
+}
+
 .center__list {
   display: flex;
   flex-direction: column;
@@ -587,6 +640,15 @@ onBeforeUnmount(() => {
   border-radius: var(--radius-md);
   background: var(--c-surface);
   box-shadow: var(--shadow-card);
+}
+
+/* 预警：深色卡片，与消息区分 */
+.center__item--antifraud {
+  border-left: 3px solid #4084e0;
+}
+
+.center__item--message {
+  border-left: 3px solid var(--c-accent);
 }
 
 .center__itemtitle {

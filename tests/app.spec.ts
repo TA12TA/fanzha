@@ -1,6 +1,7 @@
 import { mount, type VueWrapper } from '@vue/test-utils'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import AppShell from '@/app/AppShell.vue'
+import { DEFAULT_DURATIONS } from '@/app/notifications'
 import { findForbiddenClaim } from '@/game/debrief'
 import { SAVE_KEY, saveGame } from '@/game/storage'
 import { choose, createInitialState } from '@/game/engine'
@@ -148,30 +149,6 @@ describe('E. 整部手机的交互（B01–B14）', () => {
     expect(wrapper.findAll('a')).toHaveLength(0)
   })
 
-  it('J 解锁后顶部弹出反诈提醒，可关闭且进入通知中心', async () => {
-    const wrapper = mountApp()
-    await swipeUnlock(wrapper)
-
-    // 解锁后按当前节点弹出提醒
-    expect(wrapper.text()).toContain('国家反诈中心提醒您')
-    expect(wrapper.find('.banner').exists()).toBe(true)
-
-    // 点击横幅进入通知中心，可看到同一条提醒
-    await click(wrapper, '国家反诈中心提醒您')
-    expect(wrapper.find('.center__list').exists()).toBe(true)
-    expect(wrapper.text()).toContain('国家反诈中心提醒您')
-
-    // 关闭按钮可收起横幅
-    const fresh = mountApp()
-    await swipeUnlock(fresh)
-    const close = fresh.findAll('button').find((b) => b.attributes('aria-label') === '关闭提醒')
-    expect(close, '横幅应有可键盘访问的关闭按钮').toBeTruthy()
-    await close?.trigger('click')
-    // 退场动画后移除
-    await new Promise((r) => setTimeout(r, 320))
-    expect(fresh.find('.banner').exists()).toBe(false)
-  })
-
   it('G 解锁方式的等效性：轻微上滑不解锁，点击与键盘也能解锁', async () => {
     // 轻微上滑（未达阈值）应回弹，仍停在锁屏
     const shortSwipe = mountApp()
@@ -308,6 +285,97 @@ describe('E. 整部手机的交互（B01–B14）', () => {
     expect(saved?.paidTotal).toBe(100)
   })
 
+  it('J 解锁后两类通知分开推送：反诈预警与学姐消息', async () => {
+    const wrapper = mountApp()
+    await swipeUnlock(wrapper)
+
+    // 队列保证逐条展示：先看到第一条（学姐消息，先入队）
+    const first = wrapper.find('.banner')
+    expect(first.exists(), '解锁后应有通知横幅').toBe(true)
+    expect(first.classes()).toContain('banner--message')
+    expect(wrapper.text()).toContain('一位学姐邀请你加入兼职群')
+
+    // 队列里还有一条预警在等待，角标提示
+    expect(wrapper.find('.banner__queued').exists()).toBe(true)
+
+    // 手动关闭第一条，第二条（反诈预警）接上
+    const close = wrapper.findAll('button').find((b) => b.attributes('aria-label') === '关闭通知')
+    await close?.trigger('click')
+    await new Promise((r) => setTimeout(r, 320))
+
+    const second = wrapper.find('.banner')
+    expect(second.exists(), '关闭后应轮到第二条通知').toBe(true)
+    expect(second.classes()).toContain('banner--antifraud')
+    expect(wrapper.text()).toContain('国家反诈中心提醒您')
+  })
+
+  it('K 通知会自动关闭，无需玩家手动点', async () => {
+    vi.useFakeTimers()
+    try {
+      const wrapper = mountApp()
+      // 用假定时器时，锁屏解锁流程需手动推进
+      await wrapper.find('.lock__surface').trigger('click')
+      await vi.advanceTimersByTimeAsync(50)
+
+      expect(wrapper.find('.banner').exists(), '解锁后应出现通知').toBe(true)
+
+      // 消息类默认 4.5 秒后自动关闭，轮到预警
+      await vi.advanceTimersByTimeAsync(DEFAULT_DURATIONS.message + 250)
+      const afterMessage = wrapper.find('.banner')
+      expect(afterMessage.exists()).toBe(true)
+      expect(afterMessage.classes()).toContain('banner--antifraud')
+
+      // 预警默认 7 秒后自动关闭，队列清空
+      await vi.advanceTimersByTimeAsync(DEFAULT_DURATIONS.antifraud + 400)
+      expect(wrapper.find('.banner').exists(), '全部通知应已自动关闭').toBe(false)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('K 通知中心按类型分组，两类都能回看', async () => {
+    const wrapper = mountApp()
+    await swipeUnlock(wrapper)
+    // 让两条通知都入队
+    await new Promise((r) => setTimeout(r, 50))
+
+    await clickDesktopApp(wrapper, '通知')
+    expect(wrapper.text()).toContain('国家反诈中心')
+    expect(wrapper.text()).toContain('消息')
+    expect(wrapper.text()).toContain('国家反诈中心提醒您')
+    expect(wrapper.text()).toContain('一位学姐邀请你加入兼职群')
+
+    // 分组标题与条目分属不同类型
+    const groups = wrapper.findAll('.center__group').map((g) => g.text())
+    expect(groups).toContain('国家反诈中心')
+    expect(groups).toContain('消息')
+  })
+
+  it('J 消息类通知不受「顶部弹出提醒」开关影响，预警类受影响', async () => {
+    const wrapper = mountApp()
+    await swipeUnlock(wrapper)
+    await clickDesktopApp(wrapper, '设置')
+
+    // 关闭顶部弹出提醒
+    const bannerSwitch = wrapper
+      .findAll('button[role="switch"]')
+      .find((s) => s.attributes('aria-label') === '顶部弹出提醒')
+    await bannerSwitch?.trigger('click')
+    await new Promise((r) => setTimeout(r, 320))
+
+    // 回到桌面并推进剧情：预警不应再弹横幅
+    await click(wrapper, '桌面')
+    await click(wrapper, '继续当前事项')
+    await click(wrapper, '进群看看')
+    await flush()
+    const kinds = wrapper.findAll('.banner').map((b) => b.classes().join(' '))
+    expect(kinds.some((k) => k.includes('banner--antifraud'))).toBe(false)
+
+    // 但通知中心仍能看到预警
+    await click(wrapper, '桌面')
+    await clickDesktopApp(wrapper, '通知')
+    expect(wrapper.text()).toContain('国家反诈中心提醒您')
+  })
   it('B13 结局与复盘都可离开并从桌面/手册再次进入', async () => {
     const wrapper = mountApp()
     await startAndOpenInvite(wrapper)
@@ -437,14 +505,14 @@ describe('E. 整部手机的交互（B01–B14）', () => {
     expect(wrapper.text()).toContain('没有照片')
     await click(wrapper, '桌面')
 
-    await click(wrapper, '设置')
+    await clickDesktopApp(wrapper, '设置')
     expect(wrapper.text()).toContain('音效')
   })
 
   it('H 设置里的开关是真实可用按钮，且状态持久化', async () => {
     const wrapper = mountApp()
     await swipeUnlock(wrapper)
-    await click(wrapper, '设置')
+    await clickDesktopApp(wrapper, '设置')
 
     // 两个开关都是 role=switch 的真实按钮
     const switches = wrapper.findAll('button[role="switch"]')
@@ -463,39 +531,11 @@ describe('E. 整部手机的交互（B01–B14）', () => {
     // 重新挂载后设置被读回（有存档时直接进桌面，不回锁屏）
     const reopened = mountApp({ keepSave: true })
     expect(reopened.find('.lock__surface').exists()).toBe(false)
-    await click(reopened, '设置')
+    await clickDesktopApp(reopened, '设置')
     const soundAgain = reopened
       .findAll('button[role="switch"]')
       .find((s) => s.attributes('aria-label') === '音效')
     expect(soundAgain?.attributes('aria-checked')).toBe('false')
-  })
-
-  it('J 关闭顶部提醒后不再弹出，但提醒仍进入通知中心', async () => {
-    // 先在设置里关闭顶部提醒
-    const wrapper = mountApp()
-    await swipeUnlock(wrapper)
-    await click(wrapper, '设置')
-    const bannerSwitch = wrapper
-      .findAll('button[role="switch"]')
-      .find((s) => s.attributes('aria-label') === '顶部弹出提醒')
-    expect(bannerSwitch?.attributes('aria-checked')).toBe('true')
-    await bannerSwitch?.trigger('click')
-    expect(bannerSwitch?.attributes('aria-checked')).toBe('false')
-    // 关闭开关应立即收起当前正显示的横幅
-    await new Promise((r) => setTimeout(r, 320))
-    expect(wrapper.find('.banner').exists()).toBe(false)
-
-    // 回到桌面并推进剧情：不应再出现横幅
-    await click(wrapper, '桌面')
-    await click(wrapper, '继续当前事项')
-    await click(wrapper, '进群看看')
-    await flush()
-    expect(wrapper.find('.banner').exists()).toBe(false)
-
-    // 但通知中心仍能看到这条提醒
-    await click(wrapper, '桌面')
-    await clickDesktopApp(wrapper, '通知')
-    expect(wrapper.text()).toContain('国家反诈中心提醒您')
   })
 
   it('B06 动效与音频都不是必要交互：键盘可完成关键选择', async () => {
