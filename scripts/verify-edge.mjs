@@ -137,6 +137,20 @@ class Cdp {
   }
 }
 
+/** 结束子进程；Windows 下需要连同进程树一起结束，避免残留预览服务。 */
+async function killTree(child) {
+  if (!child || child.exitCode !== null) return
+  if (process.platform === 'win32') {
+    await new Promise((resolve) => {
+      const killer = spawn('taskkill', ['/PID', String(child.pid), '/T', '/F'], { stdio: 'ignore' })
+      killer.on('close', resolve)
+      killer.on('error', resolve)
+    })
+  } else {
+    child.kill('SIGTERM')
+  }
+}
+
 async function main() {
   await rm(outDir, { recursive: true, force: true })
   await mkdir(shotsDir, { recursive: true })
@@ -396,8 +410,20 @@ async function main() {
       }
     }
     await sleep(500)
-    if (browser && browser.exitCode === null) browser.kill()
-    if (server && server.exitCode === null) server.kill()
+    await killTree(browser)
+    await killTree(server)
+    // 浏览器用户目录体积较大，验证完成后删除。
+    await rm(userDataDir, { recursive: true, force: true }).catch(() => {})
+    // 确认预览端口已释放，避免残留服务影响后续运行。
+    await sleep(300)
+    let stillUp = true
+    try {
+      const res = await fetch(BASE, { signal: AbortSignal.timeout(1500) })
+      stillUp = res.ok
+    } catch {
+      stillUp = false
+    }
+    record('验证结束后预览服务已释放', !stillUp)
   }
 
   const report = {
