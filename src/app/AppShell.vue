@@ -57,49 +57,66 @@ watch(
 
 const view = ref<ViewId>(state.value.node === 'intro' ? 'intro' : 'home')
 const profileOpen = ref(false)
-const noticeOpen = ref(false)
 const confirmRestart = ref(false)
 /** 提交后立即禁用按钮，避免连点导致二次扣款。 */
 const submitting = ref(false)
 
 /** 当前展示的通知与等待条数。 */
 const currentNotice = computed(() => notices.current.value)
-const queuedCount = computed(() => Math.max(0, notices.pendingCount.value - 1))
-/** 是否正在退场（点关闭时给一次动画）。 */
-const noticeLeaving = ref(false)
+const waitingCount = computed(() => notices.waitingCount.value)
+/** 退场动画状态（由通知队列管理）。 */
+const noticeLeaving = computed(() => notices.leaving.value)
 
-/** 预警通知是否已被玩家在设置里关闭弹出。 */
+/**
+ * 推送反诈预警。
+ * 是否弹出横幅由设置控制；无论是否弹出，都会进入通知中心。
+ */
 function pushAntifraud(node = state.value.node): void {
   const body = reminderFor(node)
   if (!body) return
-  // 提醒始终进入通知中心；是否弹横幅由设置决定。
-  notices.push({ kind: 'antifraud', title: REMINDER_TITLE, body })
-  if (settings.value.banner) playSound('alert')
+  const item = { kind: 'antifraud' as const, title: REMINDER_TITLE, body }
+  if (!settings.value.banner) {
+    // 关闭弹出时只记录，不进入展示队列，避免不可见的通知占用队列与定时器。
+    notices.record(item)
+    return
+  }
+  notices.push(item)
+  playSound('alert')
 }
 
-/** 消息类通知（学姐邀请、群消息等），与预警分开。 */
-function pushMessage(title: string, body: string): void {
-  notices.push({ kind: 'message', title, body })
+/**
+ * 推送消息类通知（学姐邀请、群消息等），与预警分开。
+ * `silent` 为 true 时只记录不弹横幅（用于解锁瞬间：桌面卡片已经在提示同一件事）。
+ */
+function pushMessage(title: string, body: string, options: { silent?: boolean } = {}): void {
+  const item = { kind: 'message' as const, title, body }
+  if (options.silent || !settings.value.banner) {
+    notices.record(item)
+    return
+  }
+  notices.push(item)
   playSound('receive')
 }
 
-/** 关闭当前通知（带退场动画后交给队列）。 */
+/** 关闭当前通知（队列内部先停倒计时再动画出队，不会跳过下一条）。 */
 function dismissNotice(): void {
-  if (!currentNotice.value) return
-  noticeLeaving.value = true
-  setTimeout(() => {
-    noticeLeaving.value = false
-    notices.dismissCurrent()
-  }, 200)
+  notices.dismissCurrent()
 }
 
-/** 设置里关掉顶部提醒时，立即收起当前预警横幅（消息通知不受影响）。 */
+/** 设置里关掉顶部横幅时，立即收起当前通知。 */
 watch(
   () => settings.value.banner,
   (on) => {
-    if (!on && currentNotice.value?.kind === 'antifraud') dismissNotice()
+    if (!on) notices.dropCurrent()
   },
 )
+
+/** 切换视图时丢弃仍在展示的通知，避免过期横幅压住新页面内容。 */
+watch(view, (next) => {
+  if (next === 'notifications' || next === 'settings' || next === 'review') {
+    notices.dropCurrent()
+  }
+})
 
 const pending = computed(() => pendingAmount(state.value.node))
 const isIntro = computed(() => view.value === 'intro')
@@ -107,15 +124,14 @@ const atHome = computed(() => view.value === 'home')
 const canGoBack = computed(() => view.value !== 'home' && view.value !== 'intro')
 
 /**
- * 是否应展示横幅：
- * - 预警类受「顶部弹出提醒」设置控制
- * - 消息类不受该设置影响（那是反诈提醒的开关，不是消息免打扰）
+ * 是否应展示横幅。
+ * 设置里的「顶部弹出通知」是总开关：关闭后两类通知都不再弹横幅，
+ * 但通知仍会记入通知中心（推送时已按该开关决定是否入队）。
  */
 const showBanner = computed(() => {
   const item = currentNotice.value
   if (!item || isIntro.value) return false
-  if (item.kind === 'antifraud' && !settings.value.banner) return false
-  return true
+  return settings.value.banner
 })
 
 /** 通知中心：按类型分组（各自最新在前）。 */
@@ -155,8 +171,8 @@ function submit(optionId: OptionId): void {
     // 开场解锁：先让玩家看到桌面与邀请通知，不直接跳进会话。
     if (optionId === 'start') {
       view.value = 'home'
-      // 先推消息（剧情事件），再推反诈预警（对该事件的提醒），顺序符合真实手机体验。
-      pushMessage(BRAND.chat, '一位学姐邀请你加入兼职群')
+      // 桌面邀请卡已经在提示同一件事，横幅不再重复弹，只记入通知中心。
+      pushMessage(BRAND.chat, '一位学姐邀请你加入兼职群', { silent: true })
       pushAntifraud(state.value.node)
     } else {
       syncViewToNode()
@@ -240,7 +256,6 @@ function goHome(): void {
   playSound('tap')
   view.value = 'home'
   profileOpen.value = false
-  noticeOpen.value = false
 }
 
 function goBack(): void {
@@ -250,10 +265,6 @@ function goBack(): void {
   }
   if (profileOpen.value) {
     profileOpen.value = false
-    return
-  }
-  if (noticeOpen.value) {
-    noticeOpen.value = false
     return
   }
   playSound('tap')
@@ -276,8 +287,8 @@ function doRestart(): void {
   game.restart()
   confirmRestart.value = false
   profileOpen.value = false
-  noticeOpen.value = false
   notices.clear()
+  noticesReadAt.value = 0
   view.value = 'intro'
 }
 
@@ -290,7 +301,25 @@ function openOutcome(): void {
 /** 只读应用（相册 / 通知中心）。 */
 function openPlain(target: 'photos' | 'notifications'): void {
   playSound('tap')
+  if (target === 'notifications') {
+    markNoticesRead()
+  }
   view.value = target
+}
+
+/** 打开通知中心（状态栏与桌面图标共用同一入口，避免两个「通知」界面）。 */
+function openNotificationCenter(): void {
+  playSound('tap')
+  markNoticesRead()
+  view.value = 'notifications'
+}
+
+/** 已读标记：进入通知中心后清除未读圆点。 */
+const noticesReadAt = ref(0)
+const hasUnreadNotices = computed(() => notices.history.value.length > noticesReadAt.value)
+
+function markNoticesRead(): void {
+  noticesReadAt.value = notices.history.value.length
 }
 
 /** 打开设置。 */
@@ -335,8 +364,6 @@ function onPopState(): void {
     confirmRestart.value = false
   } else if (profileOpen.value) {
     profileOpen.value = false
-  } else if (noticeOpen.value) {
-    noticeOpen.value = false
   } else if (view.value !== 'home' && view.value !== 'intro') {
     view.value = 'home'
   }
@@ -363,8 +390,8 @@ onBeforeUnmount(() => {
       <PhoneStatusBar
         v-if="!isIntro"
         clickable
-        :expanded="noticeOpen"
-        @toggle-notice="noticeOpen = !noticeOpen"
+        :expanded="view === 'notifications'"
+        @toggle-notice="openNotificationCenter"
       />
 
       <!-- 顶部通知横幅：预警与消息两类视觉区分 -->
@@ -374,7 +401,7 @@ onBeforeUnmount(() => {
         :title="currentNotice.title"
         :body="currentNotice.body"
         :leaving="noticeLeaving"
-        :queued="queuedCount"
+        :queued="waitingCount"
         @open="openBanner"
         @dismiss="dismissNotice"
       />
@@ -386,7 +413,7 @@ onBeforeUnmount(() => {
           v-else-if="view === 'home'"
           :state="state"
           :show-invite-notice="showInviteNotice"
-          :notice-open="noticeOpen"
+          :has-unread="hasUnreadNotices"
           @open-chat="openChat"
           @open-wallet="openWallet"
           @open-manual="openManual"

@@ -55,15 +55,15 @@ function toggleBanner(): void {
         <h2 class="group__title">提醒</h2>
         <div class="row">
           <span class="row__text">
-            <span class="row__label">顶部弹出提醒</span>
-            <span class="row__hint">关闭后不再弹出，仍会收进通知</span>
+            <span class="row__label">顶部弹出通知</span>
+            <span class="row__hint">关闭后不再弹出横幅，通知仍会收进通知中心</span>
           </span>
           <button
             type="button"
             class="switch"
             role="switch"
             :aria-checked="settings.banner ? 'true' : 'false'"
-            aria-label="顶部弹出提醒"
+            aria-label="顶部弹出通知"
             :class="{ 'switch--on': settings.banner }"
             @click="toggleBanner"
           >

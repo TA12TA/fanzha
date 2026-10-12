@@ -7,8 +7,12 @@ import { computed, ref, type ComputedRef } from 'vue'
  * - `antifraud`：国家反诈中心预警（关键剧情节点触发）
  * - `message`：消息类通知（学姐邀请、群消息等）
  *
- * 同一时刻只展示一条，展示完自动关闭后轮到下一条，保证每条都能看全，
- * 也避免多条横幅在顶部互相遮挡。每条都有独立的自动关闭时长。
+ * 设计约束：
+ * - 同一时刻只展示一条，展示完自动关闭后轮到下一条，避免顶部互相遮挡。
+ * - 每条有独立的自动关闭时长。
+ * - 手动关闭与自动关闭**不会竞态**：手动关闭会先取消该条的倒计时，
+ *   再播放退场动画、最后出队，因此不会出现「点一下跳过两条」。
+ * - 退场动画时长由本模块统一管理，组件不再自己 setTimeout。
  */
 
 /** 通知类型。 */
@@ -28,10 +32,13 @@ export interface PhoneNotification {
 /** 各类通知的默认自动关闭时长。 */
 export const DEFAULT_DURATIONS: Record<NotificationKind, number> = {
   // 预警内容需要读完，停留久一些。
-  antifraud: 7000,
+  antifraud: 6000,
   // 消息类更短，避免干扰操作。
-  message: 4500,
+  message: 4000,
 }
+
+/** 退场动画时长（与 CSS 中的 --dur-base 对齐）。 */
+export const LEAVE_MS = 200
 
 /** 通知中心最多保留的条数。 */
 export const MAX_KEPT = 30
@@ -76,19 +83,27 @@ export function createIdFactory(start = 0): () => number {
 export interface NotificationApi {
   /** 当前正在展示的通知。 */
   current: ComputedRef<PhoneNotification | null>
-  /** 等待展示的队列长度。 */
+  /** 队列长度（含当前正在展示的一条）。 */
   pendingCount: ComputedRef<number>
+  /** 正在等待展示的条数（不含当前这条）。 */
+  waitingCount: ComputedRef<number>
+  /** 当前通知是否正在退场（用于播放动画）。 */
+  leaving: ComputedRef<boolean>
   /** 已收到的全部通知（倒序，最新在前），供通知中心查看。 */
   history: ComputedRef<PhoneNotification[]>
-  /** 推送一条通知。 */
+  /** 推送一条通知（进入展示队列，会弹横幅）。 */
   push: (input: {
     kind: NotificationKind
     title: string
     body: string
     durationMs?: number
   }) => void
-  /** 立即关闭当前通知，轮到下一条。 */
+  /** 只记入通知中心，不进入展示队列（用于关闭弹出、或避免与桌面提示重复）。 */
+  record: (input: { kind: NotificationKind; title: string; body: string }) => void
+  /** 玩家主动关闭当前通知（先停倒计时，再动画，最后出队）。 */
   dismissCurrent: () => void
+  /** 立即丢弃当前通知与整个队列，不播动画（用于切页/重开）。 */
+  dropCurrent: () => void
   /** 清空队列与历史。 */
   clear: () => void
   /** 卸载时清理定时器。 */
@@ -97,43 +112,73 @@ export interface NotificationApi {
 
 /**
  * 通知队列（响应式）。
- * 定时器只由这里管理，组件不自己 setTimeout。
+ * 所有定时器都由这里管理，组件不自己 setTimeout。
  */
 export function useNotifications(): NotificationApi {
   const queue = ref<PhoneNotification[]>([])
   const history = ref<PhoneNotification[]>([])
+  const leaving = ref(false)
   const nextId = createIdFactory()
-  let timer: ReturnType<typeof setTimeout> | null = null
+
+  /** 队首的自动关闭倒计时。 */
+  let autoTimer: ReturnType<typeof setTimeout> | null = null
+  /** 退场动画计时。 */
+  let leaveTimer: ReturnType<typeof setTimeout> | null = null
   let disposed = false
 
-  function clearTimer(): void {
-    if (timer) {
-      clearTimeout(timer)
-      timer = null
+  function clearAutoTimer(): void {
+    if (autoTimer) {
+      clearTimeout(autoTimer)
+      autoTimer = null
+    }
+  }
+
+  function clearLeaveTimer(): void {
+    if (leaveTimer) {
+      clearTimeout(leaveTimer)
+      leaveTimer = null
     }
   }
 
   const current = computed(() => head(queue.value))
   const pendingCount = computed(() => queue.value.length)
+  const waitingCount = computed(() => Math.max(0, queue.value.length - 1))
   /** 通知中心展示：最新在前。 */
   const historyView = computed(() => [...history.value].reverse())
 
+  /** 出队并让下一条开始计时。 */
+  function advanceNow(): void {
+    clearAutoTimer()
+    queue.value = dequeue(queue.value)
+    leaving.value = false
+    schedule()
+  }
+
   /** 为队首安排自动关闭。 */
   function schedule(): void {
-    clearTimer()
+    clearAutoTimer()
     if (disposed) return
     const top = head(queue.value)
     if (!top) return
-    timer = setTimeout(() => {
-      advance()
+    autoTimer = setTimeout(() => {
+      autoTimer = null
+      beginLeave()
     }, top.durationMs)
   }
 
-  /** 关闭队首，并让下一条接上。 */
-  function advance(): void {
-    clearTimer()
-    queue.value = dequeue(queue.value)
-    schedule()
+  /**
+   * 开始退场：先停掉倒计时（关键：避免与手动关闭竞态），
+   * 播放退场动画后再出队。
+   */
+  function beginLeave(): void {
+    if (!head(queue.value)) return
+    clearAutoTimer()
+    clearLeaveTimer()
+    leaving.value = true
+    leaveTimer = setTimeout(() => {
+      leaveTimer = null
+      advanceNow()
+    }, LEAVE_MS)
   }
 
   function push(input: {
@@ -156,23 +201,57 @@ export function useNotifications(): NotificationApi {
     if (wasEmpty) schedule()
   }
 
+  /**
+   * 只记入通知中心，不弹横幅。
+   * 用于「玩家关闭了顶部横幅」或「桌面已有同内容的持久提示」时，
+   * 保证通知中心仍留档，同时不占用展示队列与定时器。
+   */
+  function record(input: { kind: NotificationKind; title: string; body: string }): void {
+    const item: PhoneNotification = {
+      id: nextId(),
+      kind: input.kind,
+      title: input.title,
+      body: input.body,
+      durationMs: DEFAULT_DURATIONS[input.kind],
+    }
+    history.value = enqueue(history.value, item)
+  }
+
+  function dismissCurrent(): void {
+    beginLeave()
+  }
+
+  /** 立即丢弃队首（不播动画），用于切换视图时避免过期横幅压住新页面。 */
+  function dropCurrent(): void {
+    clearLeaveTimer()
+    leaving.value = false
+    advanceNow()
+  }
+
   function clear(): void {
-    clearTimer()
+    clearAutoTimer()
+    clearLeaveTimer()
+    leaving.value = false
     queue.value = []
     history.value = []
   }
 
   function dispose(): void {
     disposed = true
-    clearTimer()
+    clearAutoTimer()
+    clearLeaveTimer()
   }
 
   return {
     current,
     pendingCount,
+    waitingCount,
+    leaving: computed(() => leaving.value),
     history: historyView,
     push,
-    dismissCurrent: advance,
+    record,
+    dismissCurrent,
+    dropCurrent,
     clear,
     dispose,
   }

@@ -555,7 +555,7 @@ async function main() {
       `${stable.first} → ${stable.second}`,
     )
 
-    // 9) 顶部通知：两类分开 + 定时自动关闭
+    // 9) 顶部通知：两类分开、不重复、定时自动关闭
     await cdp.send('Emulation.setTimezoneOverride', { timezoneId: '' })
     await cdp.eval(`localStorage.clear(); return true`)
     await cdp.send('Page.navigate', { url: BASE })
@@ -568,41 +568,34 @@ async function main() {
       return { cls: el.className, text: el.textContent };
     `)
     record(
-      '解锁后先弹出消息类通知（学姐邀请）',
+      '解锁后先弹出反诈预警（桌面卡片已提示邀请，横幅不重复）',
       firstBanner !== null &&
-        firstBanner.cls.includes('banner--message') &&
-        firstBanner.text.includes('一位学姐邀请你加入兼职群'),
+        firstBanner.cls.includes('banner--antifraud') &&
+        firstBanner.text.includes('国家反诈中心提醒您'),
       firstBanner ? firstBanner.cls : '无横幅',
     )
 
-    // 队列角标提示还有预警在等待
-    const queued = await cdp.eval(`
-      const el = document.querySelector('.banner__queued');
-      return el ? el.textContent.trim() : null;
-    `)
-    record('队列角标提示还有通知在等待', queued !== null, `角标=${queued}`)
-
-    // 等待消息类通知自动关闭（默认 4.5 秒），预警自动接上
-    await sleep(5200)
-    const secondBanner = await cdp.eval(`
-      const el = document.querySelector('.banner');
-      if (!el) return null;
-      return { cls: el.className, text: el.textContent };
-    `)
+    // 横幅内容不应与桌面卡片逐字重复
+    const bannerBody = firstBanner ? firstBanner.text : ''
     record(
-      '消息通知定时自动关闭后，反诈预警自动接上',
-      secondBanner !== null &&
-        secondBanner.cls.includes('banner--antifraud') &&
-        secondBanner.text.includes('国家反诈中心提醒您'),
-      secondBanner ? secondBanner.cls : '无横幅',
+      '横幅不再重复桌面上同一句邀请文案',
+      !bannerBody.includes('一位学姐邀请你加入兼职群'),
+      bannerBody.slice(0, 40),
     )
 
-    // 等待预警也自动关闭（默认 7 秒），顶部不再有横幅
-    await sleep(7600)
-    const anyBanner = await cdp.eval(`return !!document.querySelector('.banner')`)
-    record('预警也会定时自动关闭，无需手动点', anyBanner === false)
+    // 桌面邀请卡仍然在（持久入口）
+    const desktopCard = await cdp.eval(`
+      const el = document.querySelector('.resume');
+      return el ? el.textContent : '';
+    `)
+    record('桌面仍有「继续当前事项」入口', desktopCard.includes('继续当前事项'), desktopCard.trim().slice(0, 40))
 
-    // 两类通知在通知中心分组保留
+    // 等待预警自动关闭（默认 6 秒 + 退场动画）
+    await sleep(6600)
+    const anyBanner = await cdp.eval(`return !!document.querySelector('.banner')`)
+    record('预警定时自动关闭，无需手动点', anyBanner === false)
+
+    // 两类通知在通知中心分组保留，且进入时横幅已收起、不遮挡标题
     await cdp.click('桌面')
     await cdp.eval(`
       const b = [...document.querySelectorAll('.apps .app')].find(x => (x.textContent||'').includes('通知'));
@@ -614,6 +607,7 @@ async function main() {
     const groups = await cdp.eval(`
       return [...document.querySelectorAll('.center__group')].map(g => g.textContent.trim());
     `)
+    const bannerInCenter = await cdp.eval(`return !!document.querySelector('.banner')`)
     record(
       '通知中心按类型分组保留两类通知',
       groups.includes('国家反诈中心') &&
@@ -621,6 +615,19 @@ async function main() {
         centerText.includes('一位学姐邀请你加入兼职群'),
       `分组=${JSON.stringify(groups)}`,
     )
+    record('通知中心内不再有横幅遮挡分组标题', bannerInCenter === false)
+
+    // 状态栏入口与桌面图标共用同一个通知中心（不再有第二个只读面板）
+    await cdp.click('桌面')
+    await cdp.eval(`
+      const b = document.querySelector('.statusbar__right');
+      if (b) b.click();
+      return !!b;
+    `)
+    await sleep(400)
+    const viaStatusBar = await cdp.eval(`return !!document.querySelector('.center')`)
+    record('状态栏入口打开同一个通知中心', viaStatusBar === true)
+    await cdp.click('返回')
 
     // 状态栏不应再有「模拟」字样
     await cdp.click('桌面')

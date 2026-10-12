@@ -66,6 +66,16 @@ export function saveSettings(settings: AppSettings, storage?: Storage | null): b
 /** 全局响应式设置。 */
 const state = ref<AppSettings>(loadSettings())
 
+/**
+ * 从存储重新加载全局设置。
+ * 供测试在用例之间复位单例状态，避免一个用例改设置影响后续用例；
+ * 运行时也可用于「恢复默认设置」后同步内存状态。
+ */
+export function reloadSettings(): AppSettings {
+  state.value = loadSettings()
+  return state.value
+}
+
 export function useSettings() {
   function update(patch: Partial<Pick<AppSettings, 'sound' | 'banner'>>): void {
     state.value = { ...state.value, ...patch, version: SETTINGS_VERSION }

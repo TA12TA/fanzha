@@ -13,8 +13,8 @@ const props = defineProps<{
   state: GameState
   /** 邀请通知是否可见（剧情到达 invite 且尚未处理）。 */
   showInviteNotice: boolean
-  /** 只读通知面板是否展开。 */
-  noticeOpen: boolean
+  /** 是否有未读通知（用于图标角标）。 */
+  hasUnread?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -59,6 +59,9 @@ const chatBadge = computed(() => {
   if (isPendingPayment(props.state.node) || outcome.value) return '!'
   return ''
 })
+
+/** 通知图标角标：有未读通知时显示圆点。 */
+const showNoticeDot = computed(() => props.hasUnread === true)
 </script>
 
 <template>
@@ -92,6 +95,11 @@ const chatBadge = computed(() => {
             <span class="app__glyph" aria-hidden="true">{{ app.glyph }}</span>
             <span class="app__label">{{ app.label }}</span>
             <span v-if="app.id === 'chat' && chatBadge" class="app__badge">{{ chatBadge }}</span>
+            <span
+              v-else-if="app.id === 'notifications' && showNoticeDot"
+              class="app__badge app__badge--dot"
+              aria-hidden="true"
+            ></span>
           </button>
         </li>
       </ul>
@@ -114,15 +122,6 @@ const chatBadge = computed(() => {
       <button type="button" class="home__restart" @click="emit('restart')">
         重新开始本局
       </button>
-    </div>
-
-    <!-- 只读通知面板 -->
-    <div v-if="noticeOpen" class="noticepanel" role="region" aria-label="通知面板">
-      <p class="noticepanel__title">通知</p>
-      <ul>
-        <li v-if="showInviteNotice">一位学姐邀请你加入兼职群</li>
-        <li>识骗手册有更新。</li>
-      </ul>
     </div>
   </section>
 </template>
@@ -244,6 +243,17 @@ const chatBadge = computed(() => {
   text-align: center;
 }
 
+/* 未读圆点：不带数字 */
+.app__badge--dot {
+  min-width: 0;
+  width: 10px;
+  height: 10px;
+  top: 8px;
+  right: 10px;
+  padding: 0;
+  border: 2px solid rgb(255 255 255 / 88%);
+}
+
 .resume {
   display: flex;
   flex-direction: column;
@@ -314,33 +324,6 @@ const chatBadge = computed(() => {
   background: transparent;
   color: #cddcee;
   font-size: var(--font-sm);
-}
-
-.noticepanel {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 20;
-  padding: var(--space-3);
-  background: rgb(8 14 24 / 96%);
-  border-bottom: 1px solid rgb(255 255 255 / 14%);
-  font-size: var(--font-sm);
-}
-
-.noticepanel__title {
-  margin-bottom: var(--space-2);
-  font-size: var(--font-xs);
-  color: var(--c-sim-text);
-}
-
-.noticepanel ul {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  margin: 0;
-  padding-left: 1.1em;
-  color: #d3dfee;
 }
 
 @keyframes notice-in {
