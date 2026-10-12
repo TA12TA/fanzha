@@ -192,12 +192,6 @@ export const OPTIONS: Record<OptionId, StoryOption> = {
   },
 }
 
-/**
- * `review` 在三个结局节点都可用，为保持「一个 OptionId 一条定义」的稳定标识，
- * 合法性以 `NODE_OPTIONS` 为准；`StoryOption.from` 仅作文档说明。
- */
-export const REVIEW_FROM_ENDINGS: NodeId[] = ['end-clear', 'end-stop', 'end-loss']
-
 /** 每个节点可用的选项 ID（顺序即界面展示顺序）。 */
 export const NODE_OPTIONS: Record<NodeId, OptionId[]> = {
   intro: ['start'],

@@ -9,6 +9,7 @@ import {
   GROUP_MESSAGES,
   INVITE_MESSAGES,
   PLATFORM_REBATE_DISPLAY,
+  PROFILE_INFO,
   REBATE_MESSAGES,
   type ChatMessage,
 } from '@/data/level01'
@@ -216,25 +217,15 @@ const pending = computed(() => {
           </button>
         </header>
         <div class="profilesheet__body">
-          <p class="profilesheet__name">{{ BRAND.senior }}</p>
-          <p class="profilesheet__account">账号 qx_****2048</p>
+          <p class="profilesheet__name">{{ PROFILE_INFO.nickname }}</p>
+          <p class="profilesheet__account">账号 {{ PROFILE_INFO.account }}</p>
           <dl class="profilesheet__fields">
-            <div>
-              <dt>注册时间</dt>
-              <dd>最近 7 天内</dd>
-            </div>
-            <div>
-              <dt>资料完整度</dt>
-              <dd>不完整：无学校、无实名信息</dd>
-            </div>
-            <div>
-              <dt>可核验线索</dt>
-              <dd>无。无法通过独立渠道确认其身份</dd>
+            <div v-for="field in PROFILE_INFO.fields" :key="field.label">
+              <dt>{{ field.label }}</dt>
+              <dd>{{ field.value }}</dd>
             </div>
           </dl>
-          <p class="profilesheet__notice">
-            头像与自称身份都不等于可信身份。涉及转账时，必须通过独立渠道（学校官方通知、当面或电话向本人）核实。
-          </p>
+          <p class="profilesheet__notice">{{ PROFILE_INFO.notice }}</p>
         </div>
         <footer class="profilesheet__foot">
           <button type="button" class="btn btn--primary" @click="emit('close-profile')">
