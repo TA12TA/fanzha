@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import BottomNav from '@/components/BottomNav.vue'
 import OverlaySheet from '@/components/OverlaySheet.vue'
 import PhoneStatusBar from '@/components/PhoneStatusBar.vue'
@@ -202,6 +202,37 @@ function openOutcome(): void {
 function openPlain(target: 'photos' | 'notifications' | 'settings'): void {
   view.value = target
 }
+
+/**
+ * 浏览器返回键：压入一条游戏内历史记录，使返回键执行「回桌面」而不是直接离开页面。
+ * 返回只改变视图，不撤销剧情、不重复提交选项、不产生扣款。
+ */
+let historyGuardActive = false
+
+function onPopState(): void {
+  if (confirmRestart.value) {
+    confirmRestart.value = false
+  } else if (profileOpen.value) {
+    profileOpen.value = false
+  } else if (noticeOpen.value) {
+    noticeOpen.value = false
+  } else if (view.value !== 'home' && view.value !== 'intro') {
+    view.value = 'home'
+  }
+  // 始终保持一条游戏内历史，避免返回键把玩家带出游戏。
+  globalThis.history.pushState({ phone: true }, '')
+}
+
+onMounted(() => {
+  globalThis.history.pushState({ phone: true }, '')
+  historyGuardActive = true
+  globalThis.addEventListener('popstate', onPopState)
+})
+
+onBeforeUnmount(() => {
+  globalThis.removeEventListener('popstate', onPopState)
+  if (historyGuardActive) historyGuardActive = false
+})
 </script>
 
 <template>

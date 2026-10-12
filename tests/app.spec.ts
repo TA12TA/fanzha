@@ -360,4 +360,45 @@ describe('E. 整部手机的交互（B01–B14）', () => {
     const accept = findButton(wrapper, '接下任务')
     expect(accept?.element.tagName).toBe('BUTTON')
   })
+
+  it('A08 浏览器返回：回到桌面而不离开游戏，且不重复提交选项', async () => {
+    const wrapper = mountApp()
+    await startAndReachPayment(wrapper)
+    const before = readSave()
+    expect(before?.node).toBe('transfer-100')
+
+    // 模拟浏览器返回键
+    globalThis.dispatchEvent(new PopStateEvent('popstate'))
+    await flush()
+
+    // 回到桌面，仍在游戏内（开场锁屏不出现）
+    expect(wrapper.text()).toContain('虚构桌面')
+    expect(wrapper.text()).not.toContain('开始体验')
+
+    // 剧情与金额完全未变，待确认请求仍在
+    const after = readSave()
+    expect(after?.node).toBe('transfer-100')
+    expect(after?.balance).toBe(800)
+    expect(after?.paidCount).toBe(0)
+
+    await click(wrapper, '继续当前事项')
+    expect(wrapper.text()).toContain('确认模拟垫付 100 元')
+  })
+
+  it('A08 已确认付款后，返回键不能让旧按钮重新可点', async () => {
+    const wrapper = mountApp()
+    await startAndReachPayment(wrapper)
+    await click(wrapper, '确认模拟垫付 100 元')
+    await flush()
+    expect(readSave()?.balance).toBe(700)
+
+    globalThis.dispatchEvent(new PopStateEvent('popstate'))
+    await flush()
+    globalThis.dispatchEvent(new PopStateEvent('popstate'))
+    await flush()
+
+    // 存档仍是已付款后的状态，且确认按钮不复现
+    expect(readSave()?.balance).toBe(700)
+    expect(findButton(wrapper, '确认模拟垫付 100 元')).toBeUndefined()
+  })
 })
