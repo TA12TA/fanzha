@@ -44,7 +44,10 @@ export const NODES: Record<NodeId, StoryNode> = {
   'transfer-100': { id: 'transfer-100' },
   rebate: {
     id: 'rebate',
-    onEnter: { addTags: ['saw-rebate-claim'] },
+    onEnter: {
+      addTags: ['saw-rebate-claim'],
+      platformDisplay: PLATFORM_REBATE_DISPLAY,
+    },
   },
   freeze: {
     id: 'freeze',
@@ -104,7 +107,8 @@ export const OPTIONS: Record<OptionId, StoryOption> = {
     label: '查看对方资料',
     from: 'group',
     to: 'group',
-    effect: { markProfileViewed: true, once: true },
+    // 效果本身幂等（标记去重），因此可反复打开而不产生额外影响。
+    effect: { markProfileViewed: true },
     hint: '打开资料弹层，只记录一次线索，不影响余额',
   },
   'cancel-100': {
@@ -183,6 +187,8 @@ export const OPTIONS: Record<OptionId, StoryOption> = {
     label: '再玩一次',
     from: 'debrief',
     to: 'intro',
+    // 清空全部进度并恢复初始模拟余额。
+    effect: { reset: true },
   },
 }
 

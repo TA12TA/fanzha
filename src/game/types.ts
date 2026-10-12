@@ -112,10 +112,14 @@ export interface OptionEffect {
   paidDelta?: number
   /** 追加的风险标记。 */
   addTags?: RiskTag[]
+  /** 设置平台内展示但**未兑现**的金额（永不计入 balance）。 */
+  platformDisplay?: number
   /** 是否将 viewedProfile 置为 true。 */
   markProfileViewed?: boolean
   /** 是否为不可重复的一次性效果。 */
   once?: boolean
+  /** 是否清空全部进度并回到开场（仅 `restart` 使用）。 */
+  reset?: boolean
 }
 
 /** 剧情选项定义。 */

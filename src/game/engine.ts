@@ -73,8 +73,14 @@ function applyEffect(state: GameState, effect: OptionEffect | undefined): boolea
     state.paidCount += 1
     moneyChanged = true
   }
+  if (typeof effect.platformDisplay === 'number') {
+    // 平台展示数字只是页面数字，绝不进入 balance。
+    state.platformDisplayed = effect.platformDisplay
+  }
   if (effect.markProfileViewed) {
     state.viewedProfile = true
+    // 资料线索同时记为风险标记，供复盘按经历引用（去重，因此可反复打开）。
+    pushTags(['viewed-profile'], state.riskTags)
   }
   pushTags(effect.addTags, state.riskTags)
 
@@ -103,6 +109,16 @@ export function choose(state: GameState, optionId: string): TransitionResult {
     return { ok: false, reason: 'already-applied', state, optionId }
   }
 
+  // `restart`：清空全部进度，恢复初始模拟余额与空历史。
+  if (option.effect?.reset) {
+    return {
+      ok: true,
+      state: createInitialState(),
+      optionId: option.id,
+      effect: option.effect,
+    }
+  }
+
   const next = clone(state)
   const moneyChanged = applyEffect(next, option.effect)
 
@@ -124,15 +140,16 @@ export function choose(state: GameState, optionId: string): TransitionResult {
     applyEffect(next, targetNode.onEnter)
   }
   next.node = option.to
-  next.ending = targetNode?.ending ?? null
+  // 结局一旦产生就记录下来，进入复盘后仍然保留，供桌面/手册再次进入本局结果。
+  next.ending = targetNode?.ending ?? state.ending
 
   return { ok: true, state: next, optionId: option.id, effect: option.effect ?? null }
 }
 
-/** 便捷封装：只要结果状态（失败时返回原状态）。 */
+/** 便捷封装：只要结果状态（失败时原样返回输入状态）。 */
 export function chooseOrKeep(state: GameState, optionId: string): GameState {
   const result = choose(state, optionId)
-  return result.ok ? result.state : result.state
+  return result.state
 }
 
 /** 判断状态是否满足内部不变式。开发期断言与存档校验共用。 */
@@ -145,11 +162,14 @@ export function isStateConsistent(state: GameState): boolean {
   if (state.balance !== INITIAL_BALANCE - state.paidTotal) return false
   if (![0, 130].includes(state.platformDisplayed)) return false
   if (state.paidCount < 0) return false
-  // 平台展示金额永不计入余额：展示 130 时余额只能是 700（已垫付 100）。
-  if (state.platformDisplayed === 130 && state.balance !== 700) return false
+  // 平台展示金额永不计入余额：它只能在首次垫付之后出现，且不影响 balance。
+  if (state.platformDisplayed === 130 && state.paidTotal < 100) return false
   const ending = state.ending
   if (ending !== null && NODES[ending]?.ending !== ending) return false
-  if (ending !== null && state.node !== ending) return false
+  // 结局节点本身，或结局之后进入的复盘节点，都允许保留已记录的结局。
+  if (ending !== null && state.node !== ending && state.node !== 'debrief') return false
+  // 复盘必须已经有结局，避免通过伪造存档进入复盘。
+  if (state.node === 'debrief' && ending === null) return false
   if (state.node === 'intro' && state.history.length > 0 && state.paidTotal !== 0) return false
   return true
 }
