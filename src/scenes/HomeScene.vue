@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import SimulationBadge from '@/components/SimulationBadge.vue'
 import { BRAND, INITIAL_BALANCE } from '@/data/level01'
 import { resumeLabel } from '@/game/engine'
 import { hasOutcome, isPendingPayment, pendingAmount } from '@/app/navigation'
@@ -29,11 +28,11 @@ const emit = defineEmits<{
 
 const apps = [
   { id: 'chat', label: BRAND.chat, glyph: '✉', hint: '打开消息应用' },
-  { id: 'wallet', label: BRAND.wallet, glyph: '◈', hint: '查看模拟余额' },
+  { id: 'wallet', label: BRAND.wallet, glyph: '◈', hint: '查看余额' },
   { id: 'manual', label: BRAND.manual, glyph: '▤', hint: '反诈手册与复盘' },
-  { id: 'photos', label: '相册', glyph: '▣', hint: '只读虚构内容' },
-  { id: 'notifications', label: '通知', glyph: '☰', hint: '只读模拟通知' },
-  { id: 'settings', label: '设置', glyph: '⚙', hint: '只读模拟设置' },
+  { id: 'photos', label: '相册', glyph: '▣', hint: '打开相册' },
+  { id: 'notifications', label: '通知', glyph: '☰', hint: '打开通知' },
+  { id: 'settings', label: '设置', glyph: '⚙', hint: '打开设置' },
 ] as const
 
 /** 桌面「继续当前事项」文案；仅导航，不自动选择剧情。 */
@@ -57,7 +56,7 @@ const chatBadge = computed(() => {
     <div class="home__wall" aria-hidden="true"></div>
 
     <div class="home__scroll">
-      <p class="home__greeting">青屏 OS · 虚构桌面</p>
+      <p class="home__greeting">青屏 OS</p>
 
       <!-- 邀请通知：可忽略，不阻止使用其他应用 -->
       <button
@@ -101,16 +100,15 @@ const chatBadge = computed(() => {
       <button v-if="showResume" type="button" class="resume" @click="emit('resume')">
         <span class="resume__label">继续当前事项</span>
         <span class="resume__text">{{ resumeText }}</span>
-        <span v-if="pending" class="resume__amount">待确认模拟垫付 {{ pending }} 元</span>
+        <span v-if="pending" class="resume__amount">还有一笔 {{ pending }} 元待确认</span>
       </button>
 
       <div class="walletcard">
-        <p class="walletcard__label">{{ BRAND.wallet }} · 模拟余额</p>
+        <p class="walletcard__label">{{ BRAND.wallet }}</p>
         <p class="walletcard__amount">{{ state.balance }} <span>元</span></p>
         <p class="walletcard__note">
-          初始模拟生活费 {{ INITIAL_BALANCE }} 元，已确认模拟垫付 {{ state.paidTotal }} 元
+          生活费 {{ INITIAL_BALANCE }} 元，已垫付 {{ state.paidTotal }} 元
         </p>
-        <SimulationBadge text="游戏模拟金额 · 无真实交易" />
       </div>
 
       <button type="button" class="home__restart" @click="emit('restart')">
@@ -118,13 +116,12 @@ const chatBadge = computed(() => {
       </button>
     </div>
 
-    <!-- 只读模拟通知面板 -->
-    <div v-if="noticeOpen" class="noticepanel" role="region" aria-label="只读模拟通知面板">
-      <p class="noticepanel__title">模拟通知（只读）</p>
+    <!-- 只读通知面板 -->
+    <div v-if="noticeOpen" class="noticepanel" role="region" aria-label="通知面板">
+      <p class="noticepanel__title">通知</p>
       <ul>
         <li v-if="showInviteNotice">一位学姐邀请你加入兼职群</li>
-        <li>青屏 OS 提示：本机为剧情模拟环境，所有金额与交易均为虚构。</li>
-        <li>识骗手册已更新通用防诈提醒。</li>
+        <li>识骗手册有更新。</li>
       </ul>
     </div>
   </section>

@@ -200,23 +200,23 @@ export function resumeLabel(node: NodeId): string {
     case 'intro':
       return '开始体验'
     case 'invite':
-      return '有一条兼职邀请'
+      return '有人拉你进兼职群'
     case 'group':
-      return '继续群聊'
+      return '回群里看看'
     case 'transfer-100':
-      return '待确认的模拟垫付 100 元'
+      return '有一笔 100 元等你处理'
     case 'rebate':
-      return '查看任务结果'
+      return '看看任务结果'
     case 'freeze':
-      return '查看提现异常'
+      return '提现出了点问题'
     case 'transfer-300':
-      return '待确认的模拟垫付 300 元'
+      return '有一笔 300 元等你处理'
     case 'end-clear':
     case 'end-stop':
     case 'end-loss':
-      return '查看本局结果与复盘'
+      return '看本局结果与复盘'
     case 'debrief':
-      return '查看本局结果与复盘'
+      return '看本局结果与复盘'
     default:
       return '继续当前事项'
   }

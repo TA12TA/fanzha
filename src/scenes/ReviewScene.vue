@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import AppHeader from '@/components/AppHeader.vue'
-import SimulationBadge from '@/components/SimulationBadge.vue'
 import { BRAND } from '@/data/level01'
 import { buildDebrief, riskLabelsOf } from '@/game/debrief'
 import type { GameState } from '@/game/types'
@@ -24,54 +23,52 @@ const labels = computed(() => riskLabelsOf(props.state))
 <template>
   <section class="review" aria-label="反诈复盘">
     <AppHeader
-      :title="`${BRAND.manual} · 本局复盘`"
-      subtitle="按你实际经历的环节生成"
+      :title="`${BRAND.manual} · 复盘`"
+      subtitle="按你这局实际遇到的"
       show-back
       @back="emit('back')"
     />
 
     <div class="review__body">
-      <SimulationBadge text="复盘内容为反诈教育提示 · 不承诺追回损失" />
-
       <article class="summary">
-        <p class="summary__label">本局结果</p>
+        <p class="summary__label">这局结果</p>
         <p class="summary__ending">{{ debrief.endingLabel }}</p>
         <p class="summary__text">{{ debrief.summary }}</p>
       </article>
 
-      <section v-if="labels.length" class="tags" aria-label="本局经历标注">
-        <h2 class="tags__title">本局经历标注</h2>
+      <section v-if="labels.length" class="tags" aria-label="本局经历">
+        <h2 class="tags__title">你碰到的</h2>
         <ul class="tags__list">
           <li v-for="label in labels" :key="label" class="tag tags__item">{{ label }}</li>
         </ul>
       </section>
 
       <section class="items" aria-label="按经历复盘">
-        <h2 class="items__title">你遇到的环节与风险</h2>
+        <h2 class="items__title">逐条看</h2>
         <ol class="items__list">
           <li v-for="item in debrief.items" :key="item.id" class="card items__item">
             <h3 class="items__itemtitle">{{ item.title }}</h3>
             <p class="items__observation">{{ item.observation }}</p>
-            <p class="items__risk"><span class="items__key">风险：</span>{{ item.risk }}</p>
-            <p class="items__advice"><span class="items__key">正确做法：</span>{{ item.advice }}</p>
+            <p class="items__risk"><span class="items__key">问题在哪：</span>{{ item.risk }}</p>
+            <p class="items__advice"><span class="items__key">该怎么做：</span>{{ item.advice }}</p>
           </li>
         </ol>
       </section>
 
       <section class="actions" aria-label="行动建议">
-        <h2 class="actions__title">记住这几步</h2>
+        <h2 class="actions__title">记住三件事</h2>
         <ol class="actions__list">
           <li v-for="action in debrief.actions" :key="action">{{ action }}</li>
         </ol>
         <p class="actions__note">
-          报警不保证追回损失，但停止付款、保存证据并及时求助，能避免损失继续扩大。
+          报警不保证把钱追回来，但停下来、留证据、早求助，能少亏一些。
         </p>
       </section>
 
       <button type="button" class="btn btn--primary review__restart" @click="emit('request-restart')">
         再玩一次
       </button>
-      <p class="review__hint">重开前会先弹出确认，避免误触清空本局记录。</p>
+      <p class="review__hint">会先问一句，免得手滑清掉记录。</p>
     </div>
   </section>
 </template>

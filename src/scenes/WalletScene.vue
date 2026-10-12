@@ -39,46 +39,40 @@ const cancelId = computed<OptionId | null>(() => {
 /** 模拟收支记录：完全由状态推导，不单独存储。 */
 const records = computed(() => {
   const list: { label: string; amount: number }[] = [
-    { label: '游戏模拟生活费（初始）', amount: INITIAL_BALANCE },
+    { label: '生活费', amount: INITIAL_BALANCE },
   ]
-  if (props.state.paidTotal >= 100) list.push({ label: '模拟垫付（首次任务）', amount: -100 })
-  if (props.state.paidTotal >= 400) list.push({ label: '模拟垫付（追加「解冻」）', amount: -300 })
+  if (props.state.paidTotal >= 100) list.push({ label: '垫付 · 第一单', amount: -100 })
+  if (props.state.paidTotal >= 400) list.push({ label: '垫付 · 解冻费', amount: -300 })
   return list
 })
 </script>
 
 <template>
   <section class="wallet" aria-label="安心钱包">
-    <AppHeader :title="BRAND.wallet" subtitle="模拟账户 · 无真实资金" show-back @back="emit('back')" />
+    <AppHeader :title="BRAND.wallet" show-back @back="emit('back')" />
 
     <div class="wallet__body">
-      <SimulationBadge text="游戏模拟余额 · 不会扣除现实资金" />
-
       <div class="balance">
-        <p class="balance__label">可支配模拟余额</p>
+        <p class="balance__label">可用余额</p>
         <p class="balance__amount" aria-live="polite">
           {{ state.balance }} <span>元</span>
         </p>
-        <p class="balance__note">
-          已确认模拟垫付合计 {{ state.paidTotal }} 元（{{ state.paidCount }} 笔）
-        </p>
+        <p class="balance__note">已垫付 {{ state.paidTotal }} 元，共 {{ state.paidCount }} 笔</p>
       </div>
 
       <div v-if="state.platformDisplayed > 0" class="platform">
-        <p class="platform__label">平台内显示（未兑现）</p>
+        <p class="platform__label">平台内显示</p>
         <p class="platform__amount">{{ state.platformDisplayed }} <span>元</span></p>
         <p class="platform__note">
-          该数字不可提现，也不计入上面的可支配模拟余额。提现失败时它不会变成可用余额。
+          这笔显示在平台里，取不出来，也不在上面那笔余额里。
         </p>
       </div>
 
-      <section v-if="pendingAmount !== null" class="request" aria-label="待确认的模拟垫付">
-        <p class="request__title">待确认的模拟垫付</p>
+      <section v-if="pendingAmount !== null" class="request" aria-label="待确认的垫付">
+        <p class="request__title">有一笔待确认</p>
         <p class="request__amount">{{ pendingAmount }} <span>元</span></p>
-        <p class="request__hint">
-          这是剧情要求的固定金额。离开此页只是暂停，不会扣款，也不会取消。
-        </p>
-        <SimulationBadge strong text="这是一笔游戏模拟垫付，不会扣现实资金" />
+        <p class="request__hint">离开这页只是先放着，不会扣钱，也不会自动取消。</p>
+        <SimulationBadge strong text="游戏内模拟，不会动你的真钱" />
         <div class="request__actions">
           <button
             v-if="confirmId"
@@ -87,7 +81,7 @@ const records = computed(() => {
             :disabled="submitting"
             @click="emit('choose', confirmId)"
           >
-            确认模拟垫付 {{ pendingAmount }} 元
+            确认垫付 {{ pendingAmount }} 元
           </button>
           <button
             v-if="cancelId"
@@ -96,21 +90,19 @@ const records = computed(() => {
             :disabled="submitting"
             @click="emit('choose', cancelId)"
           >
-            取消，停止参与
+            取消，不参与
           </button>
         </div>
-        <p class="request__note">不需要输入银行卡号、验证码或支付密码。</p>
+        <p class="request__note">不用输卡号、验证码或密码。</p>
       </section>
 
       <section v-else class="norequest" aria-label="当前没有待处理请求">
-        <p class="norequest__title">当前没有待处理的模拟付款</p>
-        <p class="norequest__text">
-          剧情尚未提出付款请求，或该请求已处理。此页面只展示模拟余额与记录。
-        </p>
+        <p class="norequest__title">没有待处理的钱</p>
+        <p class="norequest__text">这里只显示余额和记录。</p>
       </section>
 
-      <section class="records" aria-label="模拟收支记录">
-        <h2 class="records__title">模拟收支记录</h2>
+      <section class="records" aria-label="收支记录">
+        <h2 class="records__title">记录</h2>
         <ul class="records__list">
           <li v-for="record in records" :key="record.label">
             <span>{{ record.label }}</span>
@@ -119,7 +111,6 @@ const records = computed(() => {
             </span>
           </li>
         </ul>
-        <p class="records__note">所有记录均为游戏模拟，与真实账户无关。</p>
       </section>
     </div>
   </section>

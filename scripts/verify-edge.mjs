@@ -252,14 +252,14 @@ async function main() {
 
     await cdp.screenshot(path.join(shotsDir, '01-intro.png'))
     let text = await cdp.text()
-    record('开场显示标题与模拟声明', text.includes('反诈局中局：你的手机') && text.includes('剧情模拟'))
+    record('开场显示标题', text.includes('反诈局中局：你的手机') && text.includes('开始体验'))
 
     await cdp.click('开始体验')
     await cdp.screenshot(path.join(shotsDir, '02-home.png'))
     text = await cdp.text()
     record(
       '开始后先进入桌面并显示邀请通知',
-      text.includes('虚构桌面') && text.includes('一位学姐邀请你加入兼职群'),
+      text.includes('青屏 OS') && text.includes('一位学姐邀请你加入兼职群'),
     )
 
     await cdp.click('一位学姐邀请你加入兼职群')
@@ -267,14 +267,14 @@ async function main() {
     record('通知可进入邀请会话', text.includes('拒绝并举报'))
 
     await cdp.click('进群看看')
-    await cdp.click('跳过动画，显示全部')
+    await cdp.click('显示全部')
     await cdp.screenshot(path.join(shotsDir, '03-group.png'))
     text = await cdp.text()
-    record('群聊显示「先垫 100」话术与风险提示', text.includes('先垫 100') && text.includes('不能替代独立核实'))
+    record('群聊显示「先垫 100」话术与风险提示', text.includes('先垫 100') && text.includes('群里说「到账」的'))
 
-    await cdp.click('查看群主资料')
+    await cdp.click('群主资料')
     text = await cdp.text()
-    record('资料弹层显示不可核验线索', text.includes('最近 7 天内') && text.includes('独立渠道'))
+    record('资料弹层显示不可核验线索', text.includes('最近 7 天内') && text.includes('用别的渠道'))
     await cdp.click('返回群聊')
 
     // 回桌面看余额，验证自由探索不改变数值
@@ -286,7 +286,7 @@ async function main() {
     `)
     record(
       '回桌面后仍在桌面且余额仍为 800（未扣款）',
-      text.includes('虚构桌面') && text.includes('800') && balanceStill800 === 800,
+      text.includes('青屏 OS') && text.includes('800') && balanceStill800 === 800,
       `存档余额=${balanceStill800}`,
     )
 
@@ -296,21 +296,21 @@ async function main() {
     text = await cdp.text()
     record(
       '待付款页显示固定金额与模拟声明',
-      text.includes('确认模拟垫付 100 元') && text.includes('不会扣现实资金') && text.includes('不需要输入银行卡号'),
+      text.includes('确认垫付 100 元') && text.includes('不会动你的真钱') && text.includes('不用输卡号'),
     )
 
     // 离开待付款页再返回，请求仍在
     await cdp.click('桌面')
     await cdp.click('安心钱包')
     text = await cdp.text()
-    record('离开待付款页后请求仍待确认', text.includes('确认模拟垫付 100 元'))
+    record('离开待付款页后请求仍待确认', text.includes('确认垫付 100 元'))
 
-    await cdp.click('确认模拟垫付 100 元')
+    await cdp.click('确认垫付 100 元')
     await sleep(200)
     text = await cdp.text()
     record(
       '确认后余额 700 且平台展示 130 不计入余额',
-      text.includes('700') && text.includes('平台内显示（未兑现，不可提现）'),
+      text.includes('700') && text.includes('平台内显示'),
     )
 
     // 从桌面进入钱包查看余额构成
@@ -318,29 +318,29 @@ async function main() {
     await cdp.click('安心钱包')
     text = await cdp.text()
     record(
-      '钱包区分可支配余额与未兑现数字',
-      text.includes('可支配模拟余额') && text.includes('不计入上面的可支配模拟余额'),
+      '钱包区分可用余额与取不出来的数字',
+      text.includes('可用余额') && text.includes('取不出来'),
     )
 
     // 回到群聊继续剧情（先回桌面再进入消息应用）
     await cdp.click('桌面')
     await cdp.click('继续当前事项')
     await cdp.click('继续查看任务')
-    await cdp.click('跳过动画，显示全部')
+    await cdp.click('显示全部')
     text = await cdp.text()
     record('提现异常显示解冻费话术', text.includes('解冻费') && text.includes('提现失败'))
 
     await cdp.click('查看追加垫付')
     text = await cdp.text()
-    record('追加页金额为 300 且显示当前余额 700', text.includes('确认模拟垫付 300 元') && text.includes('700'))
+    record('追加页金额为 300 且显示当前余额 700', text.includes('确认垫付 300 元') && text.includes('700'))
 
-    await cdp.click('确认模拟垫付 300 元')
+    await cdp.click('确认垫付 300 元')
     await sleep(200)
     await cdp.screenshot(path.join(shotsDir, '05-ending-loss.png'))
     text = await cdp.text()
     record('追加后结局显示余额 400 与累计损失 400', text.includes('追加后损失') && text.includes('400'))
 
-    await cdp.click('查看我的反诈复盘')
+    await cdp.click('看复盘')
     await sleep(200)
     await cdp.screenshot(path.join(shotsDir, '06-review.png'))
     text = await cdp.text()
@@ -355,13 +355,13 @@ async function main() {
     await cdp.click('青讯')
     await cdp.click('进群看看')
     await cdp.click('接下任务')
-    await cdp.click('取消，停止参与')
+    await cdp.click('取消，不参与')
     await sleep(200)
     await cdp.screenshot(path.join(shotsDir, '07-ending-stop.png'))
     text = await cdp.text()
     record(
       '转账前取消：止损结局且明确损失 0',
-      text.includes('及时止损') && text.includes('模拟损失 0 元（在付款前停止）'),
+      text.includes('及时止损') && text.includes('一分没花'),
     )
 
     // 5) 早拒绝路径 + 复盘只引用亲历
@@ -375,19 +375,19 @@ async function main() {
     text = await cdp.text()
     record('早拒绝结局为提前识破', text.includes('提前识破'))
 
-    await cdp.click('查看我的反诈复盘')
+    await cdp.click('看复盘')
     await sleep(200)
     text = await cdp.text()
     record(
       '早拒绝者复盘不含未经历话术',
-      text.includes('陌生兼职邀请') && !text.includes('解冻费') && !text.includes('你确认了首次模拟垫付'),
+      text.includes('陌生人的兼职邀请') && !text.includes('解冻费') && !text.includes('你付了第一笔'),
     )
 
     // 6) 重开二次确认
     await cdp.click('再玩一次')
     text = await cdp.text()
-    record('重开弹出二次确认', text.includes('重新开始本局？'))
-    await cdp.click('确认重新开始')
+    record('重开弹出二次确认', text.includes('重来一次？'))
+    await cdp.click('清掉，重来')
     await sleep(200)
     text = await cdp.text()
     record('确认后回到开场', text.includes('开始体验') && text.includes('反诈局中局：你的手机'))
@@ -424,10 +424,10 @@ async function main() {
     )
 
     await cdp.click('接下任务')
-    await cdp.click('确认模拟垫付 100 元')
+    await cdp.click('确认垫付 100 元')
     await sleep(200)
     text = await cdp.text()
-    record('减弱动效下仍可完成付款流程', text.includes('700') && text.includes('平台内显示（未兑现，不可提现）'))
+    record('减弱动效下仍可完成付款流程', text.includes('700') && text.includes('平台内显示'))
 
     // 9) 键盘可操作性：关键操作均为 button，可聚焦并触发
     const keyboardOk = await cdp.eval(`

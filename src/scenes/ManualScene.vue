@@ -1,13 +1,12 @@
 <script setup lang="ts">
 import AppHeader from '@/components/AppHeader.vue'
-import SimulationBadge from '@/components/SimulationBadge.vue'
 import { BRAND, MANUAL_GENERAL } from '@/data/level01'
 import { hasOutcome } from '@/app/navigation'
 import type { GameState } from '@/game/types'
 
 /**
  * 识骗手册：未结束时展示不剧透的通用提醒；
- * 结局/复盘产生后提供「查看本局结果与复盘」入口。
+ * 结局/复盘产生后提供「看本局结果」入口。
  */
 const props = defineProps<{ state: GameState }>()
 
@@ -19,11 +18,9 @@ const emit = defineEmits<{
 
 <template>
   <section class="manual" aria-label="识骗手册">
-    <AppHeader :title="BRAND.manual" subtitle="通用防诈提醒 · 剧情模拟" show-back @back="emit('back')" />
+    <AppHeader :title="BRAND.manual" show-back @back="emit('back')" />
 
     <div class="manual__body">
-      <SimulationBadge text="本手册为反诈教育内容 · 不承诺追回损失" />
-
       <h2 class="manual__title">{{ MANUAL_GENERAL.title }}</h2>
 
       <ul class="manual__list">
@@ -42,7 +39,7 @@ const emit = defineEmits<{
         class="btn btn--primary manual__outcome"
         @click="emit('open-outcome')"
       >
-        查看本局结果与复盘
+        看本局结果
       </button>
     </div>
   </section>

@@ -1,7 +1,5 @@
 <script setup lang="ts">
-import SimulationBadge from '@/components/SimulationBadge.vue'
-
-/** S0 开场 / 锁屏：全屏背景、作品标题、模拟声明与开始按钮。 */
+/** S0 开场 / 锁屏：全屏背景、作品标题与开始按钮。 */
 const emit = defineEmits<{ (e: 'start'): void }>()
 </script>
 
@@ -13,19 +11,16 @@ const emit = defineEmits<{ (e: 'start'): void }>()
       <p class="intro__clock">9:41</p>
       <h1 id="intro-title" class="intro__title">反诈局中局：你的手机</h1>
       <p class="intro__subtitle">大学生反诈互动 · 第一关「刷单返利」</p>
-      <p class="intro__hint">接下来的一切均为虚构模拟：虚构手机、虚构应用、虚构人物。</p>
-
-      <SimulationBadge
-        strong
-        text="剧情模拟 · 无真实交易 · 不采集任何个人信息"
-      />
+      <p class="intro__hint">
+        接下来你手上是一部虚构的手机，里面的群、人、钱都是编的。约 3 分钟。
+      </p>
 
       <button type="button" class="btn btn--primary intro__start" @click="emit('start')">
         开始体验
       </button>
 
       <p class="intro__foot">
-        游戏模拟生活费 800 元。本作仅用于反诈教育，不接支付、不收集个人信息。
+        游戏里给你 800 元虚拟生活费。本作只做反诈教育，不接支付、不收任何个人信息。
       </p>
     </div>
   </section>

@@ -237,7 +237,7 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="phone">
-    <div class="phone__frame" role="application" aria-label="虚构手机界面">
+    <div class="phone__frame" role="application" aria-label="手机界面">
       <PhoneStatusBar
         v-if="!isIntro"
         clickable
@@ -323,17 +323,17 @@ onBeforeUnmount(() => {
       <!-- 重开二次确认 -->
       <OverlaySheet
         v-if="confirmRestart"
-        title="重新开始本局？"
+        title="重来一次？"
         size="dialog"
         @close="confirmRestart = false"
       >
         <p class="confirm__text">
-          将清空本局进度、模拟余额与复盘记录，并回到开场。此操作不可撤销。
+          进度、余额和这局的记录都会清掉，回到开场。清掉就找不回来了。
         </p>
         <template #footer>
-          <button type="button" class="btn btn--danger" @click="doRestart">确认重新开始</button>
+          <button type="button" class="btn btn--danger" @click="doRestart">清掉，重来</button>
           <button type="button" class="btn btn--secondary" @click="confirmRestart = false">
-            继续当前进度
+            算了，接着玩
           </button>
         </template>
       </OverlaySheet>

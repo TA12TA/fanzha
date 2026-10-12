@@ -2,7 +2,6 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import AppHeader from '@/components/AppHeader.vue'
 import MessageBubble from '@/components/MessageBubble.vue'
-import SimulationBadge from '@/components/SimulationBadge.vue'
 import {
   BRAND,
   FREEZE_MESSAGES,
@@ -38,6 +37,9 @@ const emit = defineEmits<{
 }>()
 
 const view = computed(() => props.session)
+
+/** 群成员数（虚构，用于群聊标题栏）。 */
+const groupCount = 128
 
 const title = computed(() => (view.value === 'invite' ? BRAND.senior : BRAND.group))
 
@@ -144,23 +146,18 @@ const pending = computed(() => {
   <section class="chat" aria-label="青讯消息应用">
     <AppHeader
       :title="title"
-      :subtitle="view === 'invite' ? '陌生人消息 · 剧情模拟' : '群聊 · 剧情模拟'"
+      :subtitle="view === 'invite' ? '陌生人消息' : `${groupCount} 人`"
       show-back
       @back="emit('back')"
     />
 
     <div class="chat__body">
-      <SimulationBadge
-        v-if="view === 'invite'"
-        text="剧情模拟 · 虚构邀请，请勿按此内容操作现实中的账户"
-      />
-
       <div v-if="view === 'group'" class="chat__toolbar">
         <button type="button" class="chat__profilebtn" @click="emit('open-profile')">
-          {{ profileViewed ? '再看对方资料' : '查看群主资料' }}
+          {{ profileViewed ? '再看群主资料' : '群主资料' }}
         </button>
         <button v-if="!allShown" type="button" class="chat__skip" @click="showAll">
-          跳过动画，显示全部
+          显示全部
         </button>
       </div>
 
@@ -176,7 +173,7 @@ const pending = computed(() => {
     <!-- 待确认付款：只提供跳转入口，确认/取消必须在钱包内显式操作 -->
     <div v-if="pending" class="chat__pending">
       <p class="chat__pendingtext">
-        有一笔待确认的模拟垫付 {{ pending }} 元。离开此页不会扣款，也不会取消。
+        有一笔 {{ pending }} 元等着你处理。走开不算付，也不算取消。
       </p>
       <button type="button" class="btn btn--primary" @click="emit('open-wallet')">
         去安心钱包处理
@@ -199,11 +196,10 @@ const pending = computed(() => {
 
     <!-- 平台展示返利：与钱包余额明确区分 -->
     <div v-if="state.platformDisplayed > 0" class="chat__platform">
-      <p class="chat__platformlabel">平台内显示（未兑现，不可提现）</p>
+      <p class="chat__platformlabel">平台内显示</p>
       <p class="chat__platformamount">{{ PLATFORM_REBATE_DISPLAY }} <span>元</span></p>
       <p class="chat__platformnote">
-        这是页面上的数字，不是你的模拟余额。你的{{ BRAND.wallet }}余额仍为
-        {{ state.balance }} 元。
+        这是页面上的数字，不是钱包里的钱。钱包还是 {{ state.balance }} 元。
       </p>
     </div>
 

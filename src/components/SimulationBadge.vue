@@ -1,5 +1,5 @@
 <script setup lang="ts">
-/** 持续可见的模拟声明标记。 */
+/** 模拟声明标记。默认文案保持简短，避免满屏重复提示。 */
 defineProps<{
   /** 强调样式（转账确认页使用）。 */
   strong?: boolean
@@ -10,7 +10,7 @@ defineProps<{
 <template>
   <p class="sim" :class="{ 'sim--strong': strong }" role="note">
     <span class="sim__dot" aria-hidden="true"></span>
-    <span>{{ text ?? '剧情模拟 · 所有金额均为游戏币，不涉及真实资金' }}</span>
+    <span>{{ text ?? '游戏内模拟' }}</span>
   </p>
 </template>
 

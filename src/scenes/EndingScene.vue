@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import AppHeader from '@/components/AppHeader.vue'
-import SimulationBadge from '@/components/SimulationBadge.vue'
 import { ENDING_INFO, INITIAL_BALANCE } from '@/data/level01'
 import type { GameState } from '@/game/types'
 
@@ -25,51 +24,47 @@ const stoppedBeforePaying = computed(() => props.state.paidTotal === 0)
 
 const lossText = computed(() =>
   stoppedBeforePaying.value
-    ? '模拟损失 0 元（在付款前停止）'
-    : `累计模拟损失 ${props.state.paidTotal} 元`,
+    ? '一分没花，你在付款前退出了'
+    : `一共出去 ${props.state.paidTotal} 元`,
 )
 </script>
 
 <template>
   <section class="ending" aria-label="本局结果">
-    <AppHeader title="本局结果" subtitle="剧情模拟 · 手机内结果卡" show-back @back="emit('back')" />
+    <AppHeader title="本局结果" show-back @back="emit('back')" />
 
     <div class="ending__body">
-      <SimulationBadge text="结果仅为游戏模拟，不涉及真实资金" />
-
       <article class="resultcard" aria-live="polite">
         <p class="resultcard__kind">{{ info.title }}</p>
         <p class="resultcard__reason">{{ info.reason }}</p>
 
         <dl class="resultcard__stats">
           <div>
-            <dt>模拟余额</dt>
+            <dt>余额</dt>
             <dd>{{ state.balance }} 元</dd>
           </div>
           <div>
-            <dt>累计模拟损失</dt>
+            <dt>一共出去</dt>
             <dd :class="{ 'resultcard__zero': stoppedBeforePaying }">
               {{ state.paidTotal }} 元
             </dd>
           </div>
           <div>
-            <dt>已确认模拟垫付</dt>
+            <dt>付了几笔</dt>
             <dd>{{ state.paidCount }} 笔</dd>
           </div>
         </dl>
 
         <p class="resultcard__loss">{{ lossText }}</p>
         <p class="resultcard__note">
-          初始模拟生活费 {{ INITIAL_BALANCE }} 元。以上数值仅用于本局游戏，现实中不承诺追回任何损失。
+          开始时有 {{ INITIAL_BALANCE }} 元。这只是游戏里的账，现实中钱转出去不保证能追回来。
         </p>
       </article>
 
       <button type="button" class="btn btn--primary ending__review" @click="emit('choose', 'review')">
-        查看我的反诈复盘
+        看复盘
       </button>
-      <p class="ending__hint">
-        也可以先回桌面或用识骗手册浏览其他内容，结果与复盘入口会一直保留。
-      </p>
+      <p class="ending__hint">也可以先去别处逛逛，结果和复盘随时能回来。</p>
     </div>
   </section>
 </template>

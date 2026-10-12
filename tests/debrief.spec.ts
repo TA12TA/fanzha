@@ -26,11 +26,11 @@ function debriefText(state: GameState): string {
 }
 
 describe('D. 复盘（按经历生成）', () => {
-  it('A01 早拒绝：复盘不含「已垫付」「垫付 100」等未经历的表述', () => {
+  it('A01 早拒绝：复盘不含未经历的付款与追加表述', () => {
     const state = play(['start', 'reject-invite', 'review'])
     const text = debriefText(state)
     expect(text).toContain('提前识破')
-    expect(text).not.toContain('你确认了首次模拟垫付')
+    expect(text).not.toContain('你付了第一笔')
     expect(text).not.toContain('解冻费')
     expect(text).not.toContain('追加')
     const debrief = buildDebrief(state)
@@ -42,26 +42,26 @@ describe('D. 复盘（按经历生成）', () => {
     const state = play(['start', 'enter-group', 'report-group', 'review'])
     const text = debriefText(state)
     expect(text).toContain('进群后退出并举报')
-    expect(text).not.toContain('你确认了首次模拟垫付')
+    expect(text).not.toContain('你付了第一笔')
     expect(buildDebrief(state).paidTotal).toBe(0)
   })
 
   it('A03 查看资料：复盘包含资料线索，并给出独立核实建议', () => {
     const state = play(['start', 'enter-group', 'view-profile', 'accept-task', 'cancel-100', 'review'])
     const text = debriefText(state)
-    expect(text).toContain('查看对方资料')
-    expect(text).toContain('独立渠道')
+    expect(text).toContain('看过对方资料')
+    expect(text).toContain('用另一个渠道')
     expect(buildDebrief(state).paidTotal).toBe(0)
   })
 
-  it('A04 首次垫付后停止：准确显示模拟损失 100，说明平台展示数字不等于到账', () => {
+  it('A04 首次垫付后停止：准确显示损失 100，说明平台展示数字不等于到账', () => {
     const state = play(['start', 'enter-group', 'accept-task', 'confirm-100', 'stop-after-100', 'review'])
     const debrief = buildDebrief(state)
     expect(debrief.paidTotal).toBe(100)
     expect(debrief.balance).toBe(700)
     expect(debrief.summary).toContain('100')
     const text = debriefText(state)
-    expect(text).toContain('平台内显示的数字不等于你账户里的钱')
+    expect(text).toContain('不是你能用的钱')
   })
 
   it('A05 提现异常时停止：复盘包含「解冻费」风险', () => {
@@ -76,7 +76,7 @@ describe('D. 复盘（按经历生成）', () => {
     ])
     const text = debriefText(state)
     expect(text).toContain('解冻费')
-    expect(text).toContain('停止一切付款')
+    expect(text).toContain('别再往里转钱')
     expect(buildDebrief(state).paidTotal).toBe(100)
   })
 
@@ -147,8 +147,8 @@ describe('D. 复盘（按经历生成）', () => {
       play(['start', 'enter-group', 'accept-task', 'confirm-100', 'stop-after-100', 'review']),
     )
     const joined = debrief.actions.join('\n')
-    expect(joined).toContain('停止继续转账')
-    expect(joined).toContain('保存')
+    expect(joined).toContain('别再加钱')
+    expect(joined).toContain('截图留好')
     expect(joined).toContain('举报')
     // 必须明确不承诺追回，且不出现肯定式误导表述。
     expect(joined).toContain('不保证追回')

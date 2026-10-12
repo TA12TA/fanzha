@@ -15,11 +15,8 @@ defineProps<{ message: ChatMessage }>()
   >
     <p v-if="message.name" class="msg__name">{{ message.name }}</p>
     <p class="msg__text">{{ message.text }}</p>
-    <p v-if="message.variant === 'claim'" class="msg__note">
-      以上为群成员自称，非可核实凭证
-    </p>
-    <p v-else-if="message.variant === 'risk'" class="msg__note">剧情模拟 · 反诈提示</p>
-    <p v-else-if="message.variant === 'failed'" class="msg__note">剧情模拟 · 非真实账户</p>
+    <p v-if="message.variant === 'claim'" class="msg__note">他自己说的</p>
+    <p v-else-if="message.variant === 'failed'" class="msg__note">模拟账户</p>
   </div>
 </template>
 

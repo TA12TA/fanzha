@@ -2,7 +2,7 @@
 import { computed, onBeforeUnmount, ref } from 'vue'
 
 /**
- * 顶层模拟状态栏：虚构时间、网络/电量与常驻「剧情模拟」标识。
+ * 顶层模拟状态栏：虚构时间、网络/电量与一个低调的「模拟」标识。
  * 不访问任何系统权限，仅点击可打开只读通知面板。
  */
 const props = defineProps<{
@@ -24,13 +24,13 @@ onBeforeUnmount(() => {
   if (timer) clearTimeout(timer)
 })
 
-const tag = computed(() => (props.expanded ? '收起模拟通知' : '打开模拟通知'))
+const tag = computed(() => (props.expanded ? '收起通知' : '打开通知'))
 </script>
 
 <template>
   <div class="statusbar">
     <span class="statusbar__time">{{ displayTime }}</span>
-    <span class="statusbar__sim" aria-hidden="true">剧情模拟 · 无真实交易</span>
+    <span class="statusbar__sim" aria-hidden="true">模拟</span>
     <button
       v-if="clickable"
       type="button"
