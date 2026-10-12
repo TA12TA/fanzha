@@ -517,7 +517,7 @@ onBeforeUnmount(() => {
           </div>
         </section>
 
-        <PlainAppScene v-else-if="view === 'photos'" :app="view" @back="goBack" />
+        <PlainAppScene v-else-if="view === 'photos'" @back="goBack" />
       </main>
 
       <BottomNav

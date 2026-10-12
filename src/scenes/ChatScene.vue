@@ -95,9 +95,10 @@ onMounted(() => {
   animate()
 })
 
-// 节点变化（新卡片到来）时重新逐条呈现，并在卸载/切换时清理定时器。
+// 节点或会话变化（新卡片到来、切换邀请/群聊）时重新逐条呈现，
+// 并在卸载/切换时清理定时器，避免旧消息延迟覆盖新界面。
 watch(
-  () => props.state.node,
+  () => [props.state.node, props.session],
   () => animate(),
 )
 
