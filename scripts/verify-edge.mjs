@@ -449,7 +449,81 @@ async function main() {
       `聚焦成功=${keyboardOk.ok} 标签=${keyboardOk.tag}`,
     )
 
+    // 8) 北京时间：状态栏与锁屏显示真实北京时间（与系统时钟一致）
     await cdp.send('Emulation.setEmulatedMedia', { features: [] })
+    await cdp.eval(`localStorage.clear(); return true`)
+    await cdp.send('Page.navigate', { url: BASE })
+    await sleep(700)
+
+    // 把浏览器时区设成纽约，验证仍显示北京时间（而非设备本地时间）
+    await cdp.send('Emulation.setTimezoneOverride', { timezoneId: 'America/New_York' })
+
+    const clockCheck = await cdp.eval(`
+      // 只取可见的那一段（屏读文本在 sr-only 里，会污染 textContent）
+      const el = document.querySelector('.intro__clock [aria-hidden="true"]');
+      const shown = el ? el.textContent.trim() : '';
+      const fmt = (tz) => new Intl.DateTimeFormat('zh-CN', {
+        timeZone: tz, hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+      }).format(new Date());
+      return {
+        shown,
+        beijing: fmt('Asia/Shanghai'),
+        newYork: fmt('America/New_York'),
+      };
+    `)
+    record(
+      '锁屏显示北京时间（设备时区为纽约时仍显示北京时间）',
+      clockCheck.shown === clockCheck.beijing && clockCheck.shown !== clockCheck.newYork,
+      `显示=${clockCheck.shown} 北京=${clockCheck.beijing} 纽约=${clockCheck.newYork}`,
+    )
+
+    // 日期行同步显示北京日期
+    const dateCheck = await cdp.eval(`
+      const el = document.querySelector('.intro__date');
+      const shown = el ? el.textContent.trim() : '';
+      const beijingDate = new Intl.DateTimeFormat('zh-CN', {
+        timeZone: 'Asia/Shanghai', month: 'long', day: 'numeric',
+      }).format(new Date());
+      return { shown, beijingDate };
+    `)
+    record(
+      '锁屏日期与北京日期一致',
+      dateCheck.shown.includes(dateCheck.beijingDate),
+      `显示=${dateCheck.shown} 北京日期=${dateCheck.beijingDate}`,
+    )
+
+    // 进入游戏后状态栏同样显示北京时间
+    await cdp.click('开始体验')
+    await sleep(200)
+    const statusCheck = await cdp.eval(`
+      const el = document.querySelector('.statusbar__time [aria-hidden="true"]');
+      const shown = el ? el.textContent.trim() : '';
+      const beijing = new Intl.DateTimeFormat('zh-CN', {
+        timeZone: 'Asia/Shanghai', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+      }).format(new Date());
+      return { shown, beijing };
+    `)
+    record(
+      '状态栏时间与北京时间一致',
+      statusCheck.shown === statusCheck.beijing,
+      `状态栏=${statusCheck.shown} 北京=${statusCheck.beijing}`,
+    )
+
+    // 时间在一分钟内保持稳定（不是每秒乱跳的假时钟）
+    const stable = await cdp.eval(`
+      const el = document.querySelector('.statusbar__time [aria-hidden="true"]');
+      const first = el ? el.textContent.trim() : '';
+      return new Promise((resolve) => setTimeout(() => {
+        resolve({ first, second: el ? el.textContent.trim() : '' });
+      }, 1500));
+    `)
+    record(
+      '同一分钟内时间显示稳定',
+      stable.first === stable.second,
+      `${stable.first} → ${stable.second}`,
+    )
+
+    await cdp.send('Emulation.setTimezoneOverride', { timezoneId: '' })
     await cdp.eval(`localStorage.clear(); return true`)
   } finally {
     if (cdp) {

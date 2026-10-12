@@ -1,6 +1,10 @@
 <script setup lang="ts">
-/** S0 开场 / 锁屏：全屏背景、作品标题与开始按钮。 */
+import { useBeijingClock } from '@/app/clock'
+
+/** S0 开场 / 锁屏：全屏背景、真实北京时间、作品标题与开始按钮。 */
 const emit = defineEmits<{ (e: 'start'): void }>()
+
+const { time: clock, date: today } = useBeijingClock()
 </script>
 
 <template>
@@ -8,7 +12,11 @@ const emit = defineEmits<{ (e: 'start'): void }>()
     <div class="intro__wall" aria-hidden="true"></div>
 
     <div class="intro__body">
-      <p class="intro__clock">9:41</p>
+      <p class="intro__clock">
+        <span class="sr-only">现在是北京时间 {{ clock }}</span>
+        <span aria-hidden="true">{{ clock }}</span>
+      </p>
+      <p class="intro__date">{{ today }}</p>
       <h1 id="intro-title" class="intro__title">反诈局中局：你的手机</h1>
       <p class="intro__subtitle">大学生反诈互动 · 第一关「刷单返利」</p>
       <p class="intro__hint">
@@ -62,6 +70,12 @@ const emit = defineEmits<{ (e: 'start'): void }>()
   font-weight: 300;
   line-height: 1.05;
   font-variant-numeric: tabular-nums;
+}
+
+.intro__date {
+  margin-top: calc(-1 * var(--space-1));
+  font-size: var(--font-sm);
+  color: #b9c9de;
 }
 
 .intro__title {

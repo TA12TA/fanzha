@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref } from 'vue'
+import { computed } from 'vue'
+import { useBeijingClock } from '@/app/clock'
 
 /**
- * 顶层模拟状态栏：虚构时间、网络/电量与一个低调的「模拟」标识。
+ * 顶层模拟状态栏：真实北京时间、网络/电量与一个低调的「模拟」标识。
+ * 时间取自设备时钟并固定按北京时间（Asia/Shanghai）显示；
  * 不访问任何系统权限，仅点击可打开只读通知面板。
  */
 const props = defineProps<{
@@ -14,22 +16,20 @@ const props = defineProps<{
 
 const emit = defineEmits<{ (e: 'toggle-notice'): void }>()
 
-/** 固定虚构时间，避免暗示读取真实系统时间。 */
-const displayTime = '9:41'
+/** 实时北京时间（每分钟对齐刷新）。 */
+const { time: displayTime, date: displayDate } = useBeijingClock()
 
-const batteryText = ref('78%')
-let timer: ReturnType<typeof setTimeout> | null = null
-
-onBeforeUnmount(() => {
-  if (timer) clearTimeout(timer)
-})
+const batteryText = '78%'
 
 const tag = computed(() => (props.expanded ? '收起通知' : '打开通知'))
 </script>
 
 <template>
   <div class="statusbar">
-    <span class="statusbar__time">{{ displayTime }}</span>
+    <span class="statusbar__time">
+      <span class="sr-only">{{ displayDate }}</span>
+      <span aria-hidden="true">{{ displayTime }}</span>
+    </span>
     <span class="statusbar__sim" aria-hidden="true">模拟</span>
     <button
       v-if="clickable"

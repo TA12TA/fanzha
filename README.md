@@ -42,6 +42,7 @@ npm run verify       # 真实浏览器（Edge/Chrome headless）端到端验证�
 src/
   app/AppShell.vue       # 全屏手机容器：状态栏 + 应用视口 + 底部导航 + 弹层
   app/navigation.ts      # UI 导航状态（应用/会话/待付款推导），不含剧情与金额
+  app/clock.ts           # 北京时间时钟（固定 Asia/Shanghai，分钟对齐刷新）
   app/useGame.ts         # 组合式封装：dispatch 是唯一写入口，负责存档
   game/types.ts          # 节点、选项、状态、效果类型
   game/engine.ts         # choose() 事务式转移、不变式校验、结局视图
@@ -51,7 +52,7 @@ src/
   scenes/                # Intro / Home / Chat / Wallet / Manual / Ending / Review / PlainApp
   components/            # 状态栏、底部导航、应用标题栏、弹层、气泡、模拟声明
   styles/                # 设计令牌与基础样式（含 prefers-reduced-motion）
-tests/                   # engine / storage / debrief / app 四套测试
+tests/                   # engine / storage / debrief / clock / app 五套测试
 scripts/verify-edge.mjs  # Edge headless + CDP 端到端验证
 ```
 
@@ -65,6 +66,7 @@ scripts/verify-edge.mjs  # Edge headless + CDP 端到端验证
 - **防重复扣款**：确认按钮即时禁用 + 引擎一次性选项校验；连点、浏览器返回、旧按钮复现均不会二次扣款。浏览器返回键已接入游戏内历史：返回执行「回桌面」而不是离开游戏，也不撤销剧情。
 - **按经历复盘**：只引用玩家实际遇到的环节（早拒绝者不会看到「解冻费」「追加」），结尾给出 2–3 条行动建议，明确不承诺追回。
 - **存档**：版本化 localStorage，校验字段、金额不变式与历史-节点一致性；损坏/旧版存档自动清档回退开场；重开需二次确认并清除存档。
+- **北京时间**：锁屏与状态栏显示真实北京时间（固定 `Asia/Shanghai` 时区格式化），设备处于任何时区都显示北京时间；每分钟对齐刷新，页面从后台恢复时立即校正。只读本地系统时钟，不发起网络请求。
 - **无障碍与适配**：100dvh + `env(safe-area-inset-*)`，320px 无横向溢出，桌面居中限宽 430px，点击区 ≥44px，`prefers-reduced-motion` 时消息直出（已实测），重要操作全部为真实 `<button>`（已实测可键盘聚焦触发）。
 
 实际运行的命令与结果（本机 Node v24.19.0 / npm 11.17.0 / Windows）：
@@ -75,11 +77,11 @@ scripts/verify-edge.mjs  # Edge headless + CDP 端到端验证
 | `npm run dev` | 成功，`http://127.0.0.1:5173/` 返回 200 且已注入 Vite 客户端 |
 | `npm run preview` | 成功，`http://127.0.0.1:4173/` 返回构建产物（引用 hashed 资源） |
 | `npm run typecheck` | 通过，无错误 |
-| `npm test` | **56 项全部通过**（engine 17 / storage 10 / debrief 10 / app 19） |
+| `npm test` | **61 项全部通过**（engine 17 / storage 10 / debrief 10 / clock 5 / app 19） |
 | `npm run build` | 成功，`dist/assets/index-*.js` 113.59 kB（gzip 42.01 kB） |
-| `npm run verify` | **30 项全部通过**（Edge 155.0.4283.45 headless） |
+| `npm run verify` | **34 项全部通过**（Edge 155.0.4283.45 headless） |
 
-`npm run verify` 覆盖：320/375/390px 无横向溢出、三条结局路径、自由探索回切、资料弹层、金额 800→700→400、平台 130 不入账、早拒绝复盘不含未经历话术、重开二次确认、损坏存档回退、`prefers-reduced-motion` 下消息直出并仍可完成付款、关键选项可键盘聚焦触发、验证后服务释放。产物：`.verify/report.json` 与 7 张截图（开场/桌面/群聊/钱包/结局/复盘）。
+`npm run verify` 覆盖：320/375/390px 无横向溢出、三条结局路径、自由探索回切、资料弹层、金额 800→700→400、平台 130 不入账、早拒绝复盘不含未经历话术、重开二次确认、损坏存档回退、`prefers-reduced-motion` 下消息直出并仍可完成付款、关键选项可键盘聚焦触发、北京时间显示（浏览器时区改为纽约时仍显示北京时间）、验证后服务释放。产物：`.verify/report.json` 与 7 张截图（开场/桌面/群聊/钱包/结局/复盘）。
 
 浏览器返回键的行为由 `tests/app.spec.ts` 覆盖（jsdom 中派发 `popstate`）：返回只回到桌面，剧情与金额不变，已确认的付款按钮不复现。
 
