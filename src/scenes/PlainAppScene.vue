@@ -2,17 +2,16 @@
 import AppHeader from '@/components/AppHeader.vue'
 
 /**
- * 只读内容应用：相册 / 通知 / 设置。
+ * 只读内容应用：相册 / 通知。
  * 全部为剧情安全的虚构信息，不接入任何真实系统能力。
  */
-defineProps<{ app: 'photos' | 'notifications' | 'settings' }>()
+defineProps<{ app: 'photos' | 'notifications' }>()
 
 const emit = defineEmits<{ (e: 'back'): void }>()
 
 const titles = {
   photos: '相册',
   notifications: '通知',
-  settings: '设置',
 } as const
 </script>
 
@@ -28,19 +27,10 @@ const titles = {
         </div>
       </template>
 
-      <template v-else-if="app === 'notifications'">
+      <template v-else>
         <ul class="plain__list">
           <li>青讯：有一条陌生人的兼职邀请。</li>
           <li>识骗手册：有新的提醒。</li>
-        </ul>
-      </template>
-
-      <template v-else>
-        <ul class="plain__list">
-          <li>账号：未登录。这游戏不需要账号。</li>
-          <li>个人信息：不要你填姓名、手机号、银行卡或验证码。</li>
-          <li>数据：进度只存在这台设备的浏览器里，不会传出去。</li>
-          <li>声音：关着，也不影响玩。</li>
         </ul>
       </template>
     </div>

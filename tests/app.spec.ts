@@ -111,6 +111,18 @@ async function startAndReachPayment(wrapper: VueWrapper): Promise<void> {
   await click(wrapper, '接下任务')
 }
 
+/** 点击桌面上的应用图标（避免与状态栏按钮的同名 aria-label 冲突）。 */
+async function clickDesktopApp(wrapper: VueWrapper, label: string): Promise<void> {
+  const icon = wrapper
+    .findAll('.apps .app')
+    .find((b) => (b.text() ?? '').includes(label))
+  if (!icon) {
+    const available = wrapper.findAll('.apps .app').map((b) => b.text().trim()).join(' | ')
+    throw new Error(`桌面找不到「${label}」图标。当前可用：${available}`)
+  }
+  await icon.trigger('click')
+}
+
 /** 读取当前存档。 */
 function readSave(): GameState | null {
   const text = globalThis.localStorage.getItem(SAVE_KEY)
@@ -128,13 +140,36 @@ describe('E. 整部手机的交互（B01–B14）', () => {
     expect(wrapper.text()).toContain('上滑解锁')
 
     await swipeUnlock(wrapper)
-    expect(wrapper.text()).toContain('青屏 OS')
     expect(wrapper.text()).toContain('一位学姐邀请你加入兼职群')
     for (const label of ['青讯', '安心钱包', '识骗手册']) {
       expect(wrapper.text(), `桌面应有「${label}」入口`).toContain(label)
     }
     // 桌面就是整页手机，没有外层网页导航
     expect(wrapper.findAll('a')).toHaveLength(0)
+  })
+
+  it('J 解锁后顶部弹出反诈提醒，可关闭且进入通知中心', async () => {
+    const wrapper = mountApp()
+    await swipeUnlock(wrapper)
+
+    // 解锁后按当前节点弹出提醒
+    expect(wrapper.text()).toContain('国家反诈中心提醒您')
+    expect(wrapper.find('.banner').exists()).toBe(true)
+
+    // 点击横幅进入通知中心，可看到同一条提醒
+    await click(wrapper, '国家反诈中心提醒您')
+    expect(wrapper.find('.center__list').exists()).toBe(true)
+    expect(wrapper.text()).toContain('国家反诈中心提醒您')
+
+    // 关闭按钮可收起横幅
+    const fresh = mountApp()
+    await swipeUnlock(fresh)
+    const close = fresh.findAll('button').find((b) => b.attributes('aria-label') === '关闭提醒')
+    expect(close, '横幅应有可键盘访问的关闭按钮').toBeTruthy()
+    await close?.trigger('click')
+    // 退场动画后移除
+    await new Promise((r) => setTimeout(r, 320))
+    expect(fresh.find('.banner').exists()).toBe(false)
   })
 
   it('G 解锁方式的等效性：轻微上滑不解锁，点击与键盘也能解锁', async () => {
@@ -152,13 +187,13 @@ describe('E. 整部手机的交互（B01–B14）', () => {
     // 点击解锁面即可进入（不依赖滑动）
     const byClick = mountApp()
     await clickUnlock(byClick)
-    expect(byClick.text()).toContain('青屏 OS')
+    expect(byClick.text()).toContain('一位学姐邀请你加入兼职群')
 
     // 键盘 Enter 同样可解锁
     const byKey = mountApp()
     await byKey.find('.lock__surface').trigger('keydown', { key: 'Enter' })
     await flush()
-    expect(byKey.text()).toContain('青屏 OS')
+    expect(byKey.text()).toContain('一位学姐邀请你加入兼职群')
   })
 
   it('B01/B09 通知与消息图标是两条独立入口，都能到达邀请', async () => {
@@ -403,7 +438,64 @@ describe('E. 整部手机的交互（B01–B14）', () => {
     await click(wrapper, '桌面')
 
     await click(wrapper, '设置')
-    expect(wrapper.text()).toContain('不要你填姓名、手机号、银行卡或验证码')
+    expect(wrapper.text()).toContain('音效')
+  })
+
+  it('H 设置里的开关是真实可用按钮，且状态持久化', async () => {
+    const wrapper = mountApp()
+    await swipeUnlock(wrapper)
+    await click(wrapper, '设置')
+
+    // 两个开关都是 role=switch 的真实按钮
+    const switches = wrapper.findAll('button[role="switch"]')
+    expect(switches.length).toBe(2)
+
+    const soundSwitch = switches.find((s) => s.attributes('aria-label') === '音效')
+    expect(soundSwitch, '应有音效开关').toBeTruthy()
+    expect(soundSwitch?.attributes('aria-checked')).toBe('true')
+
+    // 关闭音效 → 状态与本地设置同步
+    await soundSwitch?.trigger('click')
+    expect(soundSwitch?.attributes('aria-checked')).toBe('false')
+    const saved = JSON.parse(globalThis.localStorage.getItem('fj-juzhongju:settings:v1') as string)
+    expect(saved.sound).toBe(false)
+
+    // 重新挂载后设置被读回（有存档时直接进桌面，不回锁屏）
+    const reopened = mountApp({ keepSave: true })
+    expect(reopened.find('.lock__surface').exists()).toBe(false)
+    await click(reopened, '设置')
+    const soundAgain = reopened
+      .findAll('button[role="switch"]')
+      .find((s) => s.attributes('aria-label') === '音效')
+    expect(soundAgain?.attributes('aria-checked')).toBe('false')
+  })
+
+  it('J 关闭顶部提醒后不再弹出，但提醒仍进入通知中心', async () => {
+    // 先在设置里关闭顶部提醒
+    const wrapper = mountApp()
+    await swipeUnlock(wrapper)
+    await click(wrapper, '设置')
+    const bannerSwitch = wrapper
+      .findAll('button[role="switch"]')
+      .find((s) => s.attributes('aria-label') === '顶部弹出提醒')
+    expect(bannerSwitch?.attributes('aria-checked')).toBe('true')
+    await bannerSwitch?.trigger('click')
+    expect(bannerSwitch?.attributes('aria-checked')).toBe('false')
+    // 关闭开关应立即收起当前正显示的横幅
+    await new Promise((r) => setTimeout(r, 320))
+    expect(wrapper.find('.banner').exists()).toBe(false)
+
+    // 回到桌面并推进剧情：不应再出现横幅
+    await click(wrapper, '桌面')
+    await click(wrapper, '继续当前事项')
+    await click(wrapper, '进群看看')
+    await flush()
+    expect(wrapper.find('.banner').exists()).toBe(false)
+
+    // 但通知中心仍能看到这条提醒
+    await click(wrapper, '桌面')
+    await clickDesktopApp(wrapper, '通知')
+    expect(wrapper.text()).toContain('国家反诈中心提醒您')
   })
 
   it('B06 动效与音频都不是必要交互：键盘可完成关键选择', async () => {
@@ -431,7 +523,7 @@ describe('E. 整部手机的交互（B01–B14）', () => {
     await flush()
 
     // 回到桌面，仍在游戏内（不回锁屏）
-    expect(wrapper.text()).toContain('青屏 OS')
+    expect(wrapper.find('.home').exists()).toBe(true)
     expect(wrapper.text()).not.toContain('上滑解锁')
 
     // 剧情与金额完全未变，待确认请求仍在

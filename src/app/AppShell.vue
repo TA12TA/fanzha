@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import BottomNav from '@/components/BottomNav.vue'
+import NotificationBanner from '@/components/NotificationBanner.vue'
 import OverlaySheet from '@/components/OverlaySheet.vue'
 import PhoneStatusBar from '@/components/PhoneStatusBar.vue'
 import ChatScene from '@/scenes/ChatScene.vue'
@@ -10,9 +11,13 @@ import IntroScene from '@/scenes/IntroScene.vue'
 import ManualScene from '@/scenes/ManualScene.vue'
 import PlainAppScene from '@/scenes/PlainAppScene.vue'
 import ReviewScene from '@/scenes/ReviewScene.vue'
+import SettingsScene from '@/scenes/SettingsScene.vue'
 import WalletScene from '@/scenes/WalletScene.vue'
 import { hasOutcome, pendingAmount, preferredChatView } from '@/app/navigation'
+import { useSettings } from '@/app/settings'
+import { playSound, setSoundEnabled } from '@/app/sound'
 import { useGame } from '@/app/useGame'
+import { REMINDER_TITLE, reminderFor } from '@/data/antifraud'
 import type { OptionId } from '@/game/types'
 
 /**
@@ -38,6 +43,14 @@ type ViewId =
 
 const game = useGame()
 const { state } = game
+const { settings } = useSettings()
+
+/** 音效总开关跟随设置。 */
+watch(
+  () => settings.value.sound,
+  (on) => setSoundEnabled(on),
+  { immediate: true },
+)
 
 const view = ref<ViewId>(state.value.node === 'intro' ? 'intro' : 'home')
 const profileOpen = ref(false)
@@ -45,6 +58,57 @@ const noticeOpen = ref(false)
 const confirmRestart = ref(false)
 /** 提交后立即禁用按钮，避免连点导致二次扣款。 */
 const submitting = ref(false)
+
+/** 顶部反诈提醒横幅状态。 */
+const banner = ref<{ body: string; leaving: boolean } | null>(null)
+let bannerTimer: ReturnType<typeof setTimeout> | null = null
+let bannerLeaveTimer: ReturnType<typeof setTimeout> | null = null
+
+/** 已收到的提醒（供通知中心查看）。 */
+const reminders = ref<{ id: number; title: string; body: string }[]>([])
+let reminderSeq = 0
+
+function clearBannerTimers(): void {
+  if (bannerTimer) clearTimeout(bannerTimer)
+  if (bannerLeaveTimer) clearTimeout(bannerLeaveTimer)
+  bannerTimer = null
+  bannerLeaveTimer = null
+}
+
+/** 关闭横幅（带退场动画）。 */
+function dismissBanner(): void {
+  clearBannerTimers()
+  if (!banner.value) return
+  banner.value.leaving = true
+  bannerLeaveTimer = setTimeout(() => {
+    banner.value = null
+  }, 220)
+}
+
+/** 玩家在设置里关掉顶部提醒时，立即收起当前正显示的横幅。 */
+watch(
+  () => settings.value.banner,
+  (on) => {
+    if (!on) dismissBanner()
+  },
+)
+
+/** 展示某个节点的反诈提醒。 */
+function showReminder(node = state.value.node): void {
+  const body = reminderFor(node)
+  if (!body) return
+  // 每次进入节点都收进通知中心，便于回看。
+  reminderSeq += 1
+  reminders.value = [{ id: reminderSeq, title: REMINDER_TITLE, body }, ...reminders.value].slice(0, 20)
+
+  if (!settings.value.banner) return
+
+  clearBannerTimers()
+  banner.value = { body, leaving: false }
+  playSound('alert')
+  // 停留一段时间后自动收起；玩家也可手动关闭。
+  bannerTimer = setTimeout(dismissBanner, 7000)
+}
 
 const pending = computed(() => pendingAmount(state.value.node))
 const isIntro = computed(() => view.value === 'intro')
@@ -70,14 +134,22 @@ watch(view, async () => {
 function submit(optionId: OptionId): void {
   if (submitting.value) return
   submitting.value = true
+
+  // 与剧情语义匹配的操作音。解锁音由锁屏自己播放，这里不重复。
+  if (optionId === 'confirm-100' || optionId === 'confirm-300') playSound('confirm')
+  else if (optionId.startsWith('cancel-') || optionId === 'stop-after-100' || optionId === 'stop-at-freeze' || optionId === 'reject-invite' || optionId === 'report-group') playSound('cancel')
+  else if (optionId !== 'start') playSound('tap')
+
   const accepted = game.dispatch(optionId)
   if (accepted) {
     profileOpen.value = false
-    // 开场「开始体验」：先让玩家看到桌面与邀请通知，不直接跳进会话。
+    // 开场解锁：先让玩家看到桌面与邀请通知，不直接跳进会话。
     if (optionId === 'start') {
       view.value = 'home'
+      showReminder(state.value.node)
     } else {
       syncViewToNode()
+      showReminder(state.value.node)
     }
   }
   // 同一帧内的重复点击由 submitting 拦截；进入微任务队列后立即解锁，
@@ -154,6 +226,7 @@ function resume(): void {
 }
 
 function goHome(): void {
+  playSound('tap')
   view.value = 'home'
   profileOpen.value = false
   noticeOpen.value = false
@@ -172,16 +245,19 @@ function goBack(): void {
     noticeOpen.value = false
     return
   }
+  playSound('tap')
   view.value = 'home'
 }
 
 /** 打开资料弹层：同时记录一次线索（引擎处理，余额不变、只记一次）。 */
 function openProfile(): void {
+  playSound('tap')
   profileOpen.value = true
   game.dispatch('view-profile')
 }
 
 function requestRestart(): void {
+  playSound('tap')
   confirmRestart.value = true
 }
 
@@ -190,17 +266,46 @@ function doRestart(): void {
   confirmRestart.value = false
   profileOpen.value = false
   noticeOpen.value = false
+  banner.value = null
+  reminders.value = []
   view.value = 'intro'
 }
 
 /** 手册里的「查看本局结果与复盘」：导航到结局卡。 */
 function openOutcome(): void {
+  playSound('tap')
   view.value = state.value.node === 'debrief' ? 'review' : 'result'
 }
 
-/** 只读应用。 */
-function openPlain(target: 'photos' | 'notifications' | 'settings'): void {
+/** 只读应用（相册 / 通知中心）。 */
+function openPlain(target: 'photos' | 'notifications'): void {
+  playSound('tap')
   view.value = target
+}
+
+/** 打开设置。 */
+function openSettings(): void {
+  playSound('tap')
+  view.value = 'settings'
+}
+
+/** 打开消息应用（按当前节点定位会话）。 */
+function openChat(): void {
+  playSound('tap')
+  view.value = 'chat'
+}
+
+/** 打开钱包。 */
+function openWallet(): void {
+  playSound('tap')
+  view.value = 'wallet'
+}
+
+/** 点击顶部提醒横幅：进入通知中心查看完整内容。 */
+function openBanner(): void {
+  dismissBanner()
+  playSound('tap')
+  view.value = 'notifications'
 }
 
 /**
@@ -232,6 +337,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   globalThis.removeEventListener('popstate', onPopState)
   if (historyGuardActive) historyGuardActive = false
+  clearBannerTimers()
 })
 </script>
 
@@ -245,6 +351,16 @@ onBeforeUnmount(() => {
         @toggle-notice="noticeOpen = !noticeOpen"
       />
 
+      <!-- 顶部反诈提醒横幅：与手机内其他界面同一画风 -->
+      <NotificationBanner
+        v-if="banner && !isIntro"
+        :title="REMINDER_TITLE"
+        :body="banner.body"
+        :leaving="banner.leaving"
+        @open="openBanner"
+        @dismiss="dismissBanner"
+      />
+
       <main ref="mainRef" class="phone__viewport" tabindex="-1">
         <IntroScene v-if="view === 'intro'" @start="submit('start')" />
 
@@ -253,10 +369,11 @@ onBeforeUnmount(() => {
           :state="state"
           :show-invite-notice="showInviteNotice"
           :notice-open="noticeOpen"
-          @open-chat="view = 'chat'"
-          @open-wallet="view = 'wallet'"
+          @open-chat="openChat"
+          @open-wallet="openWallet"
           @open-manual="openManual"
           @open-app="openPlain"
+          @open-settings="openSettings"
           @resume="resume"
           @restart="requestRestart"
         />
@@ -271,7 +388,7 @@ onBeforeUnmount(() => {
           @open-profile="openProfile"
           @close-profile="profileOpen = false"
           @back="goBack"
-          @open-wallet="view = 'wallet'"
+          @open-wallet="openWallet"
         />
 
         <WalletScene
@@ -304,11 +421,34 @@ onBeforeUnmount(() => {
           @open-outcome="openOutcome"
         />
 
-        <PlainAppScene
-          v-else-if="view === 'photos' || view === 'notifications' || view === 'settings'"
-          :app="view"
-          @back="goBack"
-        />
+        <SettingsScene v-else-if="view === 'settings'" @back="goBack" />
+
+        <!-- 通知中心：包含反诈提醒历史 -->
+        <section v-else-if="view === 'notifications'" class="center" aria-label="通知中心">
+          <header class="center__head">
+            <button type="button" class="center__back" aria-label="返回上一层" @click="goBack">←</button>
+            <span class="center__title">通知</span>
+          </header>
+          <div class="center__body">
+            <p v-if="reminders.length === 0" class="center__empty">暂时没有通知。</p>
+            <ul v-else class="center__list">
+              <li v-for="item in reminders" :key="item.id" class="center__item">
+                <p class="center__itemtitle">{{ item.title }}</p>
+                <p class="center__itembody">{{ item.body }}</p>
+              </li>
+            </ul>
+            <button
+              v-if="reminders.length"
+              type="button"
+              class="btn btn--secondary center__clear"
+              @click="reminders = []"
+            >
+              清空通知
+            </button>
+          </div>
+        </section>
+
+        <PlainAppScene v-else-if="view === 'photos'" :app="view" @back="goBack" />
       </main>
 
       <BottomNav
@@ -377,6 +517,92 @@ onBeforeUnmount(() => {
   font-size: var(--font-sm);
   line-height: 1.6;
   color: var(--c-text-soft);
+}
+
+/* 通知中心 */
+.center {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  background: var(--c-surface-2);
+}
+
+.center__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: none;
+  min-height: 46px;
+  padding: var(--space-1) var(--space-2);
+  background: var(--c-surface);
+  border-bottom: 1px solid var(--c-line);
+}
+
+.center__back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--tap-min);
+  height: var(--tap-min);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--c-primary);
+  font-size: var(--font-base);
+}
+
+.center__title {
+  font-size: var(--font-md);
+  font-weight: 700;
+}
+
+.center__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  flex: 1;
+  min-height: 0;
+  padding: var(--space-3);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.center__empty {
+  font-size: var(--font-sm);
+  color: var(--c-text-soft);
+}
+
+.center__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.center__item {
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--c-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.center__itemtitle {
+  margin-bottom: 2px;
+  font-size: var(--font-sm);
+  font-weight: 700;
+}
+
+.center__itembody {
+  font-size: var(--font-sm);
+  line-height: 1.6;
+  color: var(--c-text-soft);
+}
+
+.center__clear {
+  align-self: flex-start;
 }
 
 /* 桌面预览时居中展示手机尺寸画面；移动端铺满可见区域 */

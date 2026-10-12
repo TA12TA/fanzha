@@ -286,9 +286,10 @@ async function main() {
     await cdp.swipeUp({ fromY: 640, toY: 430 })
     await cdp.screenshot(path.join(shotsDir, '02-home.png'))
     text = await cdp.text()
+    const onDesktop = await cdp.eval(`return !!document.querySelector('.home')`)
     record(
       '上滑解锁后进入桌面并显示邀请通知',
-      text.includes('青屏 OS') && text.includes('一位学姐邀请你加入兼职群'),
+      onDesktop && text.includes('一位学姐邀请你加入兼职群'),
     )
 
     await cdp.click('一位学姐邀请你加入兼职群')
@@ -313,9 +314,10 @@ async function main() {
       const save = localStorage.getItem('fj-juzhongju:save:v1');
       return save ? JSON.parse(save).balance : null;
     `)
+    const backOnDesktop = await cdp.eval(`return !!document.querySelector('.home')`)
     record(
       '回桌面后仍在桌面且余额仍为 800（未扣款）',
-      text.includes('青屏 OS') && text.includes('800') && balanceStill800 === 800,
+      backOnDesktop && text.includes('800') && balanceStill800 === 800,
       `存档余额=${balanceStill800}`,
     )
 
@@ -553,7 +555,115 @@ async function main() {
       `${stable.first} → ${stable.second}`,
     )
 
+    // 9) 顶部反诈提醒横幅与音效（先恢复真实时区，避免影响时间断言）
     await cdp.send('Emulation.setTimezoneOverride', { timezoneId: '' })
+    await cdp.eval(`localStorage.clear(); return true`)
+    await cdp.send('Page.navigate', { url: BASE })
+    await sleep(700)
+    await cdp.swipeUp({ fromY: 640, toY: 430 })
+
+    text = await cdp.text()
+    record(
+      '解锁后顶部弹出反诈提醒',
+      text.includes('国家反诈中心提醒您') && text.includes('正规兼职不会通过陌生私聊招人'),
+    )
+
+    const bannerPos = await cdp.eval(`
+      const el = document.querySelector('.banner');
+      if (!el) return null;
+      const r = el.getBoundingClientRect();
+      const bar = document.querySelector('.statusbar').getBoundingClientRect();
+      return { top: Math.round(r.top), bannerTop: Math.round(bar.bottom), width: Math.round(r.width), viewport: window.innerWidth };
+    `)
+    record(
+      '横幅位于状态栏下方且横向留边',
+      bannerPos !== null && bannerPos.top >= bannerPos.bannerTop && bannerPos.width < bannerPos.viewport,
+      bannerPos ? `横幅top=${bannerPos.top} 状态栏底=${bannerPos.bannerTop} 宽=${bannerPos.width}/${bannerPos.viewport}` : '未找到横幅',
+    )
+
+    // 状态栏不应再有「模拟」字样
+    const statusText = await cdp.eval(`
+      const el = document.querySelector('.statusbar');
+      return el ? el.textContent : '';
+    `)
+    record('状态栏不再显示「模拟」', !statusText.includes('模拟'))
+
+    // 音效：在文档创建前注入 AudioContext 探针，确保 App 首次加载就用被拦截的实现。
+    // （若在页面加载后再打补丁，App 已持有真实 AudioContext，探针会数不到。）
+    await cdp.send('Page.addScriptToEvaluateOnNewDocument', {
+      source: `
+        window.__osc = 0; window.__ctx = 0; window.__noAudio = false;
+        const O = window.AudioContext || window.webkitAudioContext;
+        if (O) {
+          class S extends O {
+            constructor(...a) { super(...a); window.__ctx++; }
+            createOscillator() { window.__osc++; return super.createOscillator(); }
+          }
+          window.AudioContext = S; window.webkitAudioContext = S;
+        } else { window.__noAudio = true; }
+      `,
+    })
+
+    // 必须先清存档再加载：否则会恢复上次进度直接进桌面，锁屏不存在、也就测不到解锁音。
+    await cdp.eval(`localStorage.clear(); return true`)
+    await cdp.send('Page.navigate', { url: BASE })
+    await sleep(700)
+    const audioOk = await cdp.eval(`return !window.__noAudio`)
+
+    if (audioOk) {
+      const onLock = await cdp.isLocked()
+      record('音效测试前处于锁屏', onLock, onLock ? '' : '未回到锁屏，测试前提不成立')
+
+      await cdp.swipeUp({ fromY: 640, toY: 430 })
+      await sleep(400)
+      const afterUnlock = await cdp.eval(`return { osc: window.__osc || 0, ctx: window.__ctx || 0 }`)
+      record(
+        '解锁时播放提示音（创建了音频上下文与振荡器）',
+        afterUnlock.osc > 0 && afterUnlock.ctx > 0,
+        `振荡器=${afterUnlock.osc} 上下文=${afterUnlock.ctx}`,
+      )
+
+      await cdp.click('青讯')
+      await sleep(300)
+      const afterTap = await cdp.eval(`return window.__osc || 0`)
+      record('点击操作播放音效', afterTap > afterUnlock.osc, `累计振荡器=${afterTap}`)
+
+      // 关闭音效后不再产生新的振荡器
+      await cdp.click('桌面')
+      await cdp.click('设置')
+      const toggled = await cdp.eval(`
+        const sw = [...document.querySelectorAll('button[role="switch"]')]
+          .find(b => b.getAttribute('aria-label') === '音效');
+        if (!sw) return false;
+        sw.click();
+        return true;
+      `)
+      await sleep(250)
+      const beforeSilent = await cdp.eval(`return window.__osc || 0`)
+      await cdp.click('桌面')
+      await cdp.click('青讯')
+      await sleep(300)
+      const afterSilent = await cdp.eval(`return window.__osc || 0`)
+      record(
+        '关闭音效后不再播放',
+        toggled && afterSilent === beforeSilent,
+        `关闭前=${beforeSilent} 关闭后=${afterSilent}`,
+      )
+
+      // 设置开关确实写入本地设置
+      const settingsSaved = await cdp.eval(`
+        const raw = localStorage.getItem('fj-juzhongju:settings:v1');
+        return raw ? JSON.parse(raw) : null;
+      `)
+      record(
+        '音效开关写入本地设置',
+        settingsSaved !== null && settingsSaved.sound === false,
+        JSON.stringify(settingsSaved),
+      )
+    } else {
+      record('浏览器支持 Web Audio', false, '缺少 AudioContext')
+    }
+
     await cdp.eval(`localStorage.clear(); return true`)
   } finally {
     if (cdp) {

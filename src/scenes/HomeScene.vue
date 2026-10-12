@@ -21,7 +21,8 @@ const emit = defineEmits<{
   (e: 'open-chat'): void
   (e: 'open-wallet'): void
   (e: 'open-manual'): void
-  (e: 'open-app', app: 'photos' | 'notifications' | 'settings'): void
+  (e: 'open-app', app: 'photos' | 'notifications'): void
+  (e: 'open-settings'): void
   (e: 'resume'): void
   (e: 'restart'): void
 }>()
@@ -34,6 +35,15 @@ const apps = [
   { id: 'notifications', label: '通知', glyph: '☰', hint: '打开通知' },
   { id: 'settings', label: '设置', glyph: '⚙', hint: '打开设置' },
 ] as const
+
+/** 图标点击：桌面/钱包/手册有专属事件，其余走通用入口。 */
+function onAppClick(id: (typeof apps)[number]['id']): void {
+  if (id === 'chat') emit('open-chat')
+  else if (id === 'wallet') emit('open-wallet')
+  else if (id === 'manual') emit('open-manual')
+  else if (id === 'settings') emit('open-settings')
+  else emit('open-app', id)
+}
 
 /** 桌面「继续当前事项」文案；仅导航，不自动选择剧情。 */
 const resumeText = computed(() => resumeLabel(props.state.node))
@@ -56,8 +66,6 @@ const chatBadge = computed(() => {
     <div class="home__wall" aria-hidden="true"></div>
 
     <div class="home__scroll">
-      <p class="home__greeting">青屏 OS</p>
-
       <!-- 邀请通知：可忽略，不阻止使用其他应用 -->
       <button
         v-if="showInviteNotice"
@@ -79,15 +87,7 @@ const chatBadge = computed(() => {
             type="button"
             class="app"
             :aria-label="app.hint"
-            @click="
-              app.id === 'chat'
-                ? emit('open-chat')
-                : app.id === 'wallet'
-                  ? emit('open-wallet')
-                  : app.id === 'manual'
-                    ? emit('open-manual')
-                    : emit('open-app', app.id)
-            "
+            @click="onAppClick(app.id)"
           >
             <span class="app__glyph" aria-hidden="true">{{ app.glyph }}</span>
             <span class="app__label">{{ app.label }}</span>
@@ -154,11 +154,6 @@ const chatBadge = computed(() => {
   padding: var(--space-4) var(--space-4) var(--space-5);
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-}
-
-.home__greeting {
-  font-size: var(--font-xs);
-  color: #9fb2c9;
 }
 
 .notice {

@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { useBeijingClock } from '@/app/clock'
 
 /**
- * 顶层模拟状态栏：真实北京时间、网络/电量与一个低调的「模拟」标识。
+ * 顶层状态栏：真实北京时间、信号与电量。
  * 时间取自设备时钟并固定按北京时间（Asia/Shanghai）显示；
  * 不访问任何系统权限，仅点击可打开只读通知面板。
  */
@@ -30,7 +30,7 @@ const tag = computed(() => (props.expanded ? '收起通知' : '打开通知'))
       <span class="sr-only">{{ displayDate }}</span>
       <span aria-hidden="true">{{ displayTime }}</span>
     </span>
-    <span class="statusbar__sim" aria-hidden="true">模拟</span>
+    <span class="statusbar__spacer" aria-hidden="true"></span>
     <button
       v-if="clickable"
       type="button"
@@ -70,13 +70,8 @@ const tag = computed(() => (props.expanded ? '收起通知' : '打开通知'))
   font-variant-numeric: tabular-nums;
 }
 
-.statusbar__sim {
+.statusbar__spacer {
   flex: 1;
-  overflow: hidden;
-  text-align: center;
-  color: var(--c-sim-text);
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .statusbar__right {

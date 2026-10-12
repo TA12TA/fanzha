@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useBeijingClock } from '@/app/clock'
+import { playSound } from '@/app/sound'
 import { UNLOCK_THRESHOLD_PX, dragOffset, shouldUnlock } from '@/app/unlock'
 
 /**
@@ -29,6 +30,7 @@ const armed = computed(() => shouldUnlock(dragY.value))
 function unlock(): void {
   if (unlocking.value) return
   unlocking.value = true
+  playSound('unlock')
   emit('start')
 }
 
