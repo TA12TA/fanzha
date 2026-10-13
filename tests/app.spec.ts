@@ -1,7 +1,7 @@
 import { mount, type VueWrapper } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import AppShell from '@/app/AppShell.vue'
-import { DEFAULT_DURATIONS, LEAVE_MS } from '@/app/notifications'
+import { DEFAULT_DURATIONS, FIRST_NOTICE_DELAY_MS, LEAVE_MS } from '@/app/notifications'
 import { reloadSettings } from '@/app/settings'
 import { findForbiddenClaim } from '@/game/debrief'
 import { SAVE_KEY, saveGame } from '@/game/storage'
@@ -88,6 +88,16 @@ async function swipeUnlock(wrapper: VueWrapper): Promise<void> {
   await flush()
 }
 
+/**
+ * 解锁并等过「首条通知延迟」。
+ * 进入系统后第一条通知会先等 FIRST_NOTICE_DELAY_MS 才弹出，
+ * 需要断言通知行为的用例要先跨过这段延迟。
+ */
+async function swipeUnlockAndWaitNotices(wrapper: VueWrapper): Promise<void> {
+  await swipeUnlock(wrapper)
+  await new Promise((r) => setTimeout(r, FIRST_NOTICE_DELAY_MS + 150))
+}
+
 /** 锁屏等效解锁：点击解锁面（不滑动也能进）。 */
 async function clickUnlock(wrapper: VueWrapper): Promise<void> {
   const surface = wrapper.find('.lock__surface')
@@ -146,7 +156,7 @@ describe('E. 整部手机的交互（B01–B14）', () => {
 
     await swipeUnlock(wrapper)
     expect(wrapper.find('.home').exists(), '解锁后应进入桌面').toBe(true)
-    for (const label of ['青讯', '安心钱包', '识骗手册']) {
+    for (const label of ['青讯', '安心钱包', '国家反诈中心']) {
       expect(wrapper.text(), `桌面应有「${label}」入口`).toContain(label)
     }
     // 邀请提示已改为通知留存：桌面上不再有邀请卡片
@@ -193,7 +203,7 @@ describe('E. 整部手机的交互（B01–B14）', () => {
     expect(viaResume.text()).toContain('拒绝并举报')
   })
 
-  it('B11 邀请可忽略：先看钱包/手册再回来，邀请仍在且未扣款', async () => {
+  it('B11 邀请可忽略：先看钱包/反诈应用再回来，邀请仍在且未扣款', async () => {
     const wrapper = mountApp()
     await swipeUnlock(wrapper)
 
@@ -202,7 +212,7 @@ describe('E. 整部手机的交互（B01–B14）', () => {
     expect(wrapper.text()).toContain('800')
 
     await click(wrapper, '桌面')
-    await click(wrapper, '识骗手册')
+    await click(wrapper, '国家反诈中心')
     expect(wrapper.text()).toContain('让你先垫钱的兼职')
 
     // 回桌面：邀请提示靠图标角标与入口保留，仍能找到
@@ -243,7 +253,7 @@ describe('E. 整部手机的交互（B01–B14）', () => {
     expect(wrapper.text()).toContain('还有一笔 100 元待确认')
     expect(readSave()?.balance).toBe(800)
 
-    await click(wrapper, '识骗手册')
+    await click(wrapper, '国家反诈中心')
     await click(wrapper, '桌面')
     await click(wrapper, '继续当前事项')
     expect(wrapper.text()).toContain('确认垫付 100 元')
@@ -295,13 +305,26 @@ describe('E. 整部手机的交互（B01–B14）', () => {
     expect(saved?.paidTotal).toBe(100)
   })
 
-  it('J 解锁后先弹反诈预警，学姐邀请排在它之后等待', async () => {
+  it('J 进入系统后先看清桌面，延迟若干秒才弹通知', async () => {
     const wrapper = mountApp()
     await swipeUnlock(wrapper)
 
+    // 刚解锁时不应立刻有横幅（玩家要先看到桌面）
+    expect(wrapper.find('.banner').exists(), '解锁瞬间不应弹通知').toBe(false)
+    expect(wrapper.find('.home').exists(), '应已在桌面').toBe(true)
+
+    // 等过延迟后通知才出现
+    await new Promise((r) => setTimeout(r, FIRST_NOTICE_DELAY_MS + 200))
+    expect(wrapper.find('.banner').exists(), '延迟后应弹出通知').toBe(true)
+  })
+
+  it('J 延迟后先弹反诈预警，学姐邀请排在它之后等待', async () => {
+    const wrapper = mountApp()
+    await swipeUnlockAndWaitNotices(wrapper)
+
     // 横幅先弹反诈预警
     const banner = wrapper.find('.banner')
-    expect(banner.exists(), '解锁后应有反诈预警横幅').toBe(true)
+    expect(banner.exists(), '延迟后应有反诈预警横幅').toBe(true)
     expect(banner.classes()).toContain('banner--antifraud')
     expect(banner.text()).toContain('国家反诈中心提醒您')
 
@@ -318,9 +341,13 @@ describe('E. 整部手机的交互（B01–B14）', () => {
     try {
       const wrapper = mountApp()
       await wrapper.find('.lock__surface').trigger('click')
-      // 两条通知都播完（预警 + 邀请）
+      // 跨过首条延迟 + 两条通知都播完（预警 + 邀请）
       await vi.advanceTimersByTimeAsync(
-        DEFAULT_DURATIONS.antifraud + DEFAULT_DURATIONS.message + LEAVE_MS * 2 + 200,
+        FIRST_NOTICE_DELAY_MS +
+          DEFAULT_DURATIONS.antifraud +
+          DEFAULT_DURATIONS.message +
+          LEAVE_MS * 2 +
+          400,
       )
       expect(wrapper.find('.banner').exists(), '横幅应已全部消失').toBe(false)
 
@@ -345,9 +372,13 @@ describe('E. 整部手机的交互（B01–B14）', () => {
       await wrapper.find('.lock__surface').trigger('click')
       await vi.advanceTimersByTimeAsync(50)
 
-      // 第一条是反诈预警
+      // 延迟期间不应有横幅
+      expect(wrapper.find('.banner').exists(), '延迟期间不应弹通知').toBe(false)
+
+      // 跨过首条延迟后，第一条是反诈预警
+      await vi.advanceTimersByTimeAsync(FIRST_NOTICE_DELAY_MS + 60)
       const first = wrapper.find('.banner')
-      expect(first.exists(), '解锁后应出现通知').toBe(true)
+      expect(first.exists(), '延迟后应出现通知').toBe(true)
       expect(first.classes()).toContain('banner--antifraud')
 
       // 预警播完自动关闭后，学姐邀请接上（用户要求：邀请在反诈通知之后弹出）
@@ -370,7 +401,8 @@ describe('E. 整部手机的交互（B01–B14）', () => {
     try {
       const wrapper = mountApp()
       await wrapper.find('.lock__surface').trigger('click')
-      await vi.advanceTimersByTimeAsync(50)
+      // 跨过首条延迟
+      await vi.advanceTimersByTimeAsync(FIRST_NOTICE_DELAY_MS + 50)
 
       // 解锁后有两条排队：预警（当前）+ 学姐邀请（等待）
       expect(wrapper.find('.banner').exists()).toBe(true)
@@ -454,7 +486,7 @@ describe('E. 整部手机的交互（B01–B14）', () => {
     await click(wrapper, '继续当前事项')
     expect(wrapper.text()).toContain('提前识破')
 
-    await click(wrapper, '识骗手册')
+    await click(wrapper, '国家反诈中心')
     await click(wrapper, '看本局结果')
     expect(wrapper.text()).toContain('提前识破')
 
@@ -465,7 +497,7 @@ describe('E. 整部手机的交互（B01–B14）', () => {
 
     // 复盘也可以离开再进入
     await click(wrapper, '桌面')
-    await click(wrapper, '识骗手册')
+    await click(wrapper, '国家反诈中心')
     expect(wrapper.text()).toContain('你碰到的')
   })
 
@@ -583,9 +615,9 @@ describe('E. 整部手机的交互（B01–B14）', () => {
 
   it('K 通知中心打开时不再有横幅遮挡内容', async () => {
     const wrapper = mountApp()
-    await swipeUnlock(wrapper)
-    // 解锁后应正在显示横幅
-    expect(wrapper.find('.banner').exists(), '解锁后应有横幅').toBe(true)
+    await swipeUnlockAndWaitNotices(wrapper)
+    // 延迟过后应正在显示横幅
+    expect(wrapper.find('.banner').exists(), '延迟后应有横幅').toBe(true)
 
     // 切到通知中心后横幅必须收起，避免盖住分组标题
     await clickDesktopApp(wrapper, '通知')

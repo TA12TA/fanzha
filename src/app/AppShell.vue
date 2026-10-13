@@ -136,12 +136,15 @@ const canGoBack = computed(() => view.value !== 'home' && view.value !== 'intro'
 
 /**
  * 是否应展示横幅。
- * 设置里的「顶部弹出通知」是总开关：关闭后两类通知都不再弹横幅，
- * 但通知仍会记入通知中心（推送时已按该开关决定是否入队）。
+ * - 进入系统后的第一条通知会先等一段延迟（让玩家看清桌面），
+ *   由 `notices.visible` 控制，延迟结束前不渲染。
+ * - 设置里的「顶部弹出通知」是总开关：关闭后两类通知都不再弹横幅，
+ *   但通知仍会记入通知中心（推送时已按该开关决定是否入队）。
  */
 const showBanner = computed(() => {
   const item = currentNotice.value
   if (!item || isIntro.value) return false
+  if (!notices.visible.value) return false
   return settings.value.banner
 })
 

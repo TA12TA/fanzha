@@ -5,8 +5,10 @@ import { hasOutcome } from '@/app/navigation'
 import type { GameState } from '@/game/types'
 
 /**
- * 识骗手册：未结束时展示不剧透的通用提醒；
+ * 国家反诈中心（应用）：未结束时展示不剧透的通用提醒；
  * 结局/复盘产生后提供「看本局结果」入口。
+ *
+ * 「识骗手册」已并入本应用，作为应用内的栏目名，不再单独占一个桌面图标。
  */
 const props = defineProps<{ state: GameState }>()
 
@@ -17,10 +19,24 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <section class="manual" aria-label="识骗手册">
-    <AppHeader :title="BRAND.manual" show-back @back="emit('back')" />
+  <section class="manual" :aria-label="BRAND.manual">
+    <AppHeader :title="BRAND.manual" :subtitle="BRAND.manualSection" show-back @back="emit('back')" />
 
     <div class="manual__body">
+      <!-- 应用标识：自绘盾牌图标，不使用任何官方徽标 -->
+      <div class="appbrand">
+        <span class="appbrand__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.7">
+            <path d="M12 2.6 4.5 5.6v5.9c0 4.4 3.2 8.4 7.5 9.9 4.3-1.5 7.5-5.5 7.5-9.9V5.6L12 2.6Z" stroke-linejoin="round" />
+            <path d="M8.8 12.1l2.3 2.3 4-4.2" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </span>
+        <span class="appbrand__text">
+          <span class="appbrand__name">{{ BRAND.manual }}</span>
+          <span class="appbrand__desc">预警提示与防骗知识</span>
+        </span>
+      </div>
+
       <h2 class="manual__title">{{ MANUAL_GENERAL.title }}</h2>
 
       <ul class="manual__list">
@@ -32,7 +48,7 @@ const emit = defineEmits<{
 
       <p class="manual__disclaimer">{{ MANUAL_GENERAL.disclaimer }}</p>
 
-      <!-- 已产生结局时，手册提供再次进入本局结果与复盘的入口 -->
+      <!-- 已产生结局时，应用提供再次进入本局结果与复盘的入口 -->
       <button
         v-if="hasOutcome(props.state.node)"
         type="button"
@@ -63,6 +79,47 @@ const emit = defineEmits<{
   padding: var(--space-3);
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+}
+
+/* 应用标识条 */
+.appbrand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, #1b4f8f, #163d70);
+  color: #fff;
+  box-shadow: var(--shadow-card);
+}
+
+.appbrand__icon {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: rgb(255 255 255 / 16%);
+  color: #cfe6ff;
+}
+
+.appbrand__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.appbrand__name {
+  font-size: var(--font-md);
+  font-weight: 700;
+}
+
+.appbrand__desc {
+  font-size: var(--font-xs);
+  color: #bcd2ec;
 }
 
 .manual__title {

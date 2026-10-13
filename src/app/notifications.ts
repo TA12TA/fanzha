@@ -40,6 +40,13 @@ export const DEFAULT_DURATIONS: Record<NotificationKind, number> = {
 /** 退场动画时长（与 CSS 中的 --dur-base 对齐）。 */
 export const LEAVE_MS = 200
 
+/**
+ * 进入系统后延迟多久才弹出第一条通知。
+ * 让玩家先看到桌面本身（像真机开机后要先看清主屏），
+ * 而不是解锁瞬间就被通知盖住。
+ */
+export const FIRST_NOTICE_DELAY_MS = 3000
+
 /** 通知中心最多保留的条数。 */
 export const MAX_KEPT = 30
 
@@ -89,6 +96,12 @@ export interface NotificationApi {
   waitingCount: ComputedRef<number>
   /** 当前通知是否正在退场（用于播放动画）。 */
   leaving: ComputedRef<boolean>
+  /**
+   * 当前通知是否已可以展示。
+   * 进入系统后的第一条通知会先等待一段延迟（让玩家看清桌面），
+   * 延迟结束前该值为 false，组件据此不渲染横幅。
+   */
+  visible: ComputedRef<boolean>
   /** 已收到的全部通知（倒序，最新在前），供通知中心查看。 */
   history: ComputedRef<PhoneNotification[]>
   /** 推送一条通知（进入展示队列，会弹横幅）。 */
@@ -127,6 +140,10 @@ export function useNotifications(): NotificationApi {
   let autoTimer: ReturnType<typeof setTimeout> | null = null
   /** 退场动画计时。 */
   let leaveTimer: ReturnType<typeof setTimeout> | null = null
+  /** 首次展示前的延迟计时（进入系统后先让玩家看清桌面）。 */
+  let delayTimer: ReturnType<typeof setTimeout> | null = null
+  /** 首次通知是否仍处于「等待延迟结束」状态。 */
+  let awaitingFirst = true
   let disposed = false
 
   function clearAutoTimer(): void {
@@ -143,9 +160,19 @@ export function useNotifications(): NotificationApi {
     }
   }
 
+  function clearDelayTimer(): void {
+    if (delayTimer) {
+      clearTimeout(delayTimer)
+      delayTimer = null
+    }
+  }
+
   const current = computed(() => head(queue.value))
   const pendingCount = computed(() => queue.value.length)
   const waitingCount = computed(() => Math.max(0, queue.value.length - 1))
+  /** 是否已过首次延迟（延迟期间不渲染横幅）。 */
+  const ready = ref(false)
+  const visible = computed(() => ready.value && current.value !== null && !disposed)
   /** 通知中心展示：最新在前。 */
   const historyView = computed(() => [...history.value].reverse())
 
@@ -157,12 +184,29 @@ export function useNotifications(): NotificationApi {
     schedule()
   }
 
-  /** 为队首安排自动关闭。 */
+  /**
+   * 为队首安排自动关闭。
+   * 若这是本次进入系统后的第一条通知，先等 `FIRST_NOTICE_DELAY_MS`
+   * 让玩家看清桌面，再开始展示（展示时长仍按类型计算）。
+   */
   function schedule(): void {
     clearAutoTimer()
     if (disposed) return
     const top = head(queue.value)
     if (!top) return
+
+    if (awaitingFirst) {
+      awaitingFirst = false
+      clearDelayTimer()
+      delayTimer = setTimeout(() => {
+        delayTimer = null
+        // 延迟结束：允许展示，并开始这条通知的展示计时。
+        ready.value = true
+        schedule()
+      }, FIRST_NOTICE_DELAY_MS)
+      return
+    }
+
     autoTimer = setTimeout(() => {
       autoTimer = null
       beginLeave()
@@ -239,7 +283,10 @@ export function useNotifications(): NotificationApi {
   function clear(): void {
     clearAutoTimer()
     clearLeaveTimer()
+    clearDelayTimer()
     leaving.value = false
+    ready.value = false
+    awaitingFirst = true
     queue.value = []
     history.value = []
   }
@@ -248,6 +295,7 @@ export function useNotifications(): NotificationApi {
     disposed = true
     clearAutoTimer()
     clearLeaveTimer()
+    clearDelayTimer()
   }
 
   return {
@@ -255,6 +303,7 @@ export function useNotifications(): NotificationApi {
     pendingCount,
     waitingCount,
     leaving: computed(() => leaving.value),
+    visible,
     history: historyView,
     push,
     record,

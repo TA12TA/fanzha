@@ -31,12 +31,12 @@ const emit = defineEmits<{
 }>()
 
 const apps = [
-  { id: 'chat', label: BRAND.chat, glyph: '✉', hint: '打开消息应用' },
-  { id: 'wallet', label: BRAND.wallet, glyph: '◈', hint: '查看余额' },
-  { id: 'manual', label: BRAND.manual, glyph: '▤', hint: '反诈手册与复盘' },
-  { id: 'photos', label: '相册', glyph: '▣', hint: '打开相册' },
-  { id: 'notifications', label: '通知', glyph: '☰', hint: '打开通知' },
-  { id: 'settings', label: '设置', glyph: '⚙', hint: '打开设置' },
+  { id: 'chat', label: BRAND.chat, hint: '打开消息应用' },
+  { id: 'wallet', label: BRAND.wallet, hint: '查看余额' },
+  { id: 'manual', label: BRAND.manual, hint: '打开国家反诈中心' },
+  { id: 'photos', label: '相册', hint: '打开相册' },
+  { id: 'notifications', label: '通知', hint: '打开通知' },
+  { id: 'settings', label: '设置', hint: '打开设置' },
 ] as const
 
 /** 图标点击：桌面/钱包/手册有专属事件，其余走通用入口。 */
@@ -80,7 +80,86 @@ const showNoticeDot = computed(() => props.hasUnread === true)
             :aria-label="app.hint"
             @click="onAppClick(app.id)"
           >
-            <span class="app__glyph" aria-hidden="true">{{ app.glyph }}</span>
+            <span class="app__glyph" aria-hidden="true">
+              <!-- 应用图标：全部自绘 SVG，不使用任何官方徽标 -->
+              <svg
+                v-if="app.id === 'chat'"
+                viewBox="0 0 24 24"
+                width="24"
+                height="24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+              >
+                <path d="M3.6 6.2h16.8v10.4H8.8l-4 3.4v-3.4H3.6Z" stroke-linejoin="round" />
+              </svg>
+              <svg
+                v-else-if="app.id === 'wallet'"
+                viewBox="0 0 24 24"
+                width="24"
+                height="24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+              >
+                <path d="M3.5 7.2h17v11H3.5Z" stroke-linejoin="round" />
+                <path d="M3.5 7.2 15.5 3.8v3.4" stroke-linejoin="round" />
+                <circle cx="16.8" cy="12.7" r="1.2" fill="currentColor" stroke="none" />
+              </svg>
+              <svg
+                v-else-if="app.id === 'manual'"
+                viewBox="0 0 24 24"
+                width="24"
+                height="24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+              >
+                <path d="M12 2.8 5 5.7v5.7c0 4.3 3.1 8.2 7 9.6 3.9-1.4 7-5.3 7-9.6V5.7L12 2.8Z" stroke-linejoin="round" />
+                <path d="M9 12l2.2 2.2 3.8-4" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+              <svg
+                v-else-if="app.id === 'photos'"
+                viewBox="0 0 24 24"
+                width="24"
+                height="24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+              >
+                <path d="M3.8 5.4h16.4v13.2H3.8Z" stroke-linejoin="round" />
+                <path d="M3.8 15.2l4.6-4.2 4 3.4 3-2.6 4.8 4.2" stroke-linejoin="round" />
+                <circle cx="8.6" cy="9" r="1.3" />
+              </svg>
+              <svg
+                v-else-if="app.id === 'notifications'"
+                viewBox="0 0 24 24"
+                width="24"
+                height="24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+              >
+                <path d="M6.4 16.4V10.6a5.6 5.6 0 0 1 11.2 0v5.8Z" stroke-linejoin="round" />
+                <path d="M4.8 16.4h14.4" stroke-linecap="round" />
+                <path d="M10.2 19.2a1.9 1.9 0 0 0 3.6 0" stroke-linecap="round" />
+              </svg>
+              <svg
+                v-else
+                viewBox="0 0 24 24"
+                width="24"
+                height="24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+              >
+                <circle cx="12" cy="12" r="3.1" />
+                <path
+                  d="M12 2.9v2.6M12 18.5v2.6M21.1 12h-2.6M5.5 12H2.9M18.4 5.6l-1.8 1.8M7.4 16.6l-1.8 1.8M18.4 18.4l-1.8-1.8M7.4 7.4 5.6 5.6"
+                  stroke-linecap="round"
+                />
+              </svg>
+            </span>
             <span class="app__label">{{ app.label }}</span>
             <span v-if="app.id === 'chat' && chatBadge" class="app__badge">{{ chatBadge }}</span>
             <span

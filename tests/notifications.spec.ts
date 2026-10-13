@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
   DEFAULT_DURATIONS,
+  FIRST_NOTICE_DELAY_MS,
   LEAVE_MS,
   MAX_KEPT,
   countByKind,
@@ -83,6 +84,24 @@ describe('K. 通知队列（两类通知独立、定时关闭）', () => {
 })
 
 describe('L. 通知队列的时序（自动关闭与手动关闭不竞态）', () => {
+  it('首条通知会先等一段延迟才展示', async () => {
+    vi.useFakeTimers()
+    try {
+      const n = useNotifications()
+      n.push({ kind: 'antifraud', title: 'A', body: 'a' })
+
+      // 入队后立刻可见性仍为 false（等玩家看清桌面）
+      expect(n.current.value?.title).toBe('A')
+      expect(n.visible.value, '延迟期间不应可见').toBe(false)
+
+      // 延迟结束后才可展示
+      await vi.advanceTimersByTimeAsync(FIRST_NOTICE_DELAY_MS + 60)
+      expect(n.visible.value, '延迟结束后应可见').toBe(true)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('到点自动关闭：队列逐条推进', async () => {
     vi.useFakeTimers()
     try {
@@ -93,8 +112,8 @@ describe('L. 通知队列的时序（自动关闭与手动关闭不竞态）', (
       expect(n.current.value?.title).toBe('A')
       expect(n.waitingCount.value).toBe(1)
 
-      // 第一条到时自动关闭（含退场动画）后，第二条接上
-      await vi.advanceTimersByTimeAsync(DEFAULT_DURATIONS.message + LEAVE_MS + 20)
+      // 跨过首条延迟后，第一条到时自动关闭（含退场动画），第二条接上
+      await vi.advanceTimersByTimeAsync(FIRST_NOTICE_DELAY_MS + DEFAULT_DURATIONS.message + LEAVE_MS + 40)
       expect(n.current.value?.title).toBe('B')
 
       // 第二条到点后队列清空
@@ -113,8 +132,8 @@ describe('L. 通知队列的时序（自动关闭与手动关闭不竞态）', (
       n.push({ kind: 'message', title: 'A', body: 'a' })
       n.push({ kind: 'antifraud', title: 'B', body: 'b' })
 
-      // 在第一条自动关闭前夕手动关闭
-      await vi.advanceTimersByTimeAsync(DEFAULT_DURATIONS.message - 50)
+      // 跨过首条延迟，再在第一条自动关闭前夕手动关闭
+      await vi.advanceTimersByTimeAsync(FIRST_NOTICE_DELAY_MS + DEFAULT_DURATIONS.message - 50)
       n.dismissCurrent()
       await vi.advanceTimersByTimeAsync(LEAVE_MS + 20)
 

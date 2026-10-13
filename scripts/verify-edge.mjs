@@ -572,13 +572,24 @@ async function main() {
     await sleep(700)
     await cdp.swipeUp({ fromY: 640, toY: 430 })
 
+    // 刚解锁：应先看到桌面，延迟期间不弹通知
+    const immediateBanner = await cdp.eval(`return !!document.querySelector('.banner')`)
+    const onHome = await cdp.eval(`return !!document.querySelector('.home')`)
+    record(
+      '解锁后先看到桌面，延迟期间不弹通知',
+      immediateBanner === false && onHome === true,
+      immediateBanner ? '立刻弹了横幅' : '',
+    )
+
+    // 等过首条延迟（3 秒）后通知才出现
+    await sleep(3400)
     const firstBanner = await cdp.eval(`
       const el = document.querySelector('.banner');
       if (!el) return null;
       return { cls: el.className, text: el.textContent };
     `)
     record(
-      '解锁后先弹出反诈预警',
+      '延迟结束后弹出反诈预警',
       firstBanner !== null &&
         firstBanner.cls.includes('banner--antifraud') &&
         firstBanner.text.includes('国家反诈中心提醒您'),
@@ -607,6 +618,7 @@ async function main() {
     record('桌面仍有「继续当前事项」入口', resumeEntry.includes('继续当前事项'), resumeEntry.trim().slice(0, 40))
 
     // 预警播完后，学姐邀请横幅自动接上
+    // 时序：延迟 3s -> 预警展示 6s -> 退场 0.2s -> 邀请展示
     await sleep(6600)
     const secondBanner = await cdp.eval(`
       const el = document.querySelector('.banner');
