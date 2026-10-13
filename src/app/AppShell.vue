@@ -325,6 +325,12 @@ function openNotificationCenter(): void {
   view.value = 'notifications'
 }
 
+/** 点击消息类通知：进入对应会话（当前消息都来自青讯）。 */
+function openNoticeTarget(): void {
+  playSound('tap')
+  view.value = 'chat'
+}
+
 /** 已读标记：进入通知中心后清除未读圆点。 */
 const noticesReadAt = ref(0)
 const hasUnreadNotices = computed(() => notices.history.value.length > noticesReadAt.value)
@@ -506,13 +512,17 @@ onBeforeUnmount(() => {
               <template v-if="messageNotices.length">
                 <h2 class="center__group">消息</h2>
                 <ul class="center__list">
-                  <li
-                    v-for="item in messageNotices"
-                    :key="item.id"
-                    class="center__item center__item--message"
-                  >
-                    <p class="center__itemtitle">{{ item.title }}</p>
-                    <p class="center__itembody">{{ item.body }}</p>
+                  <li v-for="item in messageNotices" :key="item.id">
+                    <!-- 消息类通知可点：直接进入对应会话 -->
+                    <button
+                      type="button"
+                      class="center__item center__item--message center__item--action"
+                      @click="openNoticeTarget"
+                    >
+                      <span class="center__itemtitle">{{ item.title }}</span>
+                      <span class="center__itembody">{{ item.body }}</span>
+                      <span class="center__itemhint">点击查看</span>
+                    </button>
                   </li>
                 </ul>
               </template>
@@ -689,13 +699,38 @@ onBeforeUnmount(() => {
   border-left: 3px solid var(--c-accent);
 }
 
+/* 可点击的消息通知：整块是按钮 */
+.center__item--action {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  border: 1px solid var(--c-line);
+  border-left: 3px solid var(--c-accent);
+  text-align: left;
+  cursor: pointer;
+}
+
+.center__item--action:active {
+  background: var(--c-surface-2);
+}
+
+.center__itemhint {
+  margin-top: var(--space-1);
+  font-size: var(--font-xs);
+  color: var(--c-primary);
+  font-weight: 600;
+}
+
 .center__itemtitle {
+  display: block;
   margin-bottom: 2px;
   font-size: var(--font-sm);
   font-weight: 700;
 }
 
 .center__itembody {
+  display: block;
   font-size: var(--font-sm);
   line-height: 1.6;
   color: var(--c-text-soft);

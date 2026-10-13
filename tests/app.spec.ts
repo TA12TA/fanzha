@@ -95,10 +95,10 @@ async function clickUnlock(wrapper: VueWrapper): Promise<void> {
   await flush()
 }
 
-/** 开场 → 桌面 → 点通知进入邀请会话。 */
+/** 开场 → 桌面 → 进入邀请会话（邀请提示已改为通知留存，走「青讯」图标进入）。 */
 async function startAndOpenInvite(wrapper: VueWrapper): Promise<void> {
   await swipeUnlock(wrapper)
-  await click(wrapper, '一位学姐邀请你加入兼职群')
+  await clickDesktopApp(wrapper, '青讯')
 }
 
 /** 开场 → 进群。 */
@@ -139,16 +139,20 @@ beforeEach(() => {
 })
 
 describe('E. 整部手机的交互（B01–B14）', () => {
-  it('B01/B08 锁屏上滑解锁 → 桌面：先看到独立桌面与邀请通知，不是答题页', async () => {
+  it('B01/B08 锁屏上滑解锁 → 桌面：先看到独立桌面，不是答题页', async () => {
     const wrapper = mountApp()
     expect(wrapper.text()).toContain('反诈局中局：你的手机')
     expect(wrapper.text()).toContain('上滑解锁')
 
     await swipeUnlock(wrapper)
-    expect(wrapper.text()).toContain('一位学姐邀请你加入兼职群')
+    expect(wrapper.find('.home').exists(), '解锁后应进入桌面').toBe(true)
     for (const label of ['青讯', '安心钱包', '识骗手册']) {
       expect(wrapper.text(), `桌面应有「${label}」入口`).toContain(label)
     }
+    // 邀请提示已改为通知留存：桌面上不再有邀请卡片
+    expect(wrapper.find('.notice').exists(), '桌面不应再有邀请卡片').toBe(false)
+    // 但「青讯」图标有角标提示待处理
+    expect(wrapper.find('.app__badge').exists(), '青讯图标应有角标').toBe(true)
     // 桌面就是整页手机，没有外层网页导航
     expect(wrapper.findAll('a')).toHaveLength(0)
   })
@@ -168,24 +172,25 @@ describe('E. 整部手机的交互（B01–B14）', () => {
     // 点击解锁面即可进入（不依赖滑动）
     const byClick = mountApp()
     await clickUnlock(byClick)
-    expect(byClick.text()).toContain('一位学姐邀请你加入兼职群')
+    expect(byClick.find('.home').exists()).toBe(true)
 
     // 键盘 Enter 同样可解锁
     const byKey = mountApp()
     await byKey.find('.lock__surface').trigger('keydown', { key: 'Enter' })
     await flush()
-    expect(byKey.text()).toContain('一位学姐邀请你加入兼职群')
+    expect(byKey.find('.home').exists()).toBe(true)
   })
 
-  it('B01/B09 通知与消息图标是两条独立入口，都能到达邀请', async () => {
-    const viaNotice = mountApp()
-    await startAndOpenInvite(viaNotice)
-    expect(viaNotice.text()).toContain('拒绝并举报')
-
+  it('B01/B09 「青讯」图标与「继续当前事项」都能到达邀请', async () => {
     const viaIcon = mountApp()
     await swipeUnlock(viaIcon)
-    await click(viaIcon, '青讯')
+    await clickDesktopApp(viaIcon, '青讯')
     expect(viaIcon.text()).toContain('拒绝并举报')
+
+    const viaResume = mountApp()
+    await swipeUnlock(viaResume)
+    await click(viaResume, '继续当前事项')
+    expect(viaResume.text()).toContain('拒绝并举报')
   })
 
   it('B11 邀请可忽略：先看钱包/手册再回来，邀请仍在且未扣款', async () => {
@@ -200,8 +205,9 @@ describe('E. 整部手机的交互（B01–B14）', () => {
     await click(wrapper, '识骗手册')
     expect(wrapper.text()).toContain('让你先垫钱的兼职')
 
+    // 回桌面：邀请提示靠图标角标与入口保留，仍能找到
     await click(wrapper, '桌面')
-    expect(wrapper.text()).toContain('一位学姐邀请你加入兼职群')
+    expect(wrapper.find('.app__badge').exists(), '青讯角标应仍在').toBe(true)
 
     await click(wrapper, '继续当前事项')
     expect(wrapper.text()).toContain('拒绝并举报')
@@ -305,6 +311,30 @@ describe('E. 整部手机的交互（B01–B14）', () => {
     // 消息记录在通知中心（不丢档）
     await clickDesktopApp(wrapper, '通知')
     expect(wrapper.text()).toContain('一位学姐邀请你加入兼职群')
+  })
+
+  it('J 邀请改为通知留存：横幅消失后仍能从通知中心找回并进入会话', async () => {
+    vi.useFakeTimers()
+    try {
+      const wrapper = mountApp()
+      await wrapper.find('.lock__surface').trigger('click')
+      // 两条通知都播完（预警 + 邀请）
+      await vi.advanceTimersByTimeAsync(
+        DEFAULT_DURATIONS.antifraud + DEFAULT_DURATIONS.message + LEAVE_MS * 2 + 200,
+      )
+      expect(wrapper.find('.banner').exists(), '横幅应已全部消失').toBe(false)
+
+      vi.useRealTimers()
+      // 桌面上没有邀请卡片
+      expect(wrapper.find('.notice').exists()).toBe(false)
+      // 但通知中心留存了这条邀请，且可点击进入会话
+      await clickDesktopApp(wrapper, '通知')
+      expect(wrapper.text()).toContain('一位学姐邀请你加入兼职群')
+      await click(wrapper, '一位学姐邀请你加入兼职群')
+      expect(wrapper.text()).toContain('拒绝并举报')
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('K 通知自动关闭后，排在后面的学姐邀请自动接上', async () => {

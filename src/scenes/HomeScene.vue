@@ -6,12 +6,15 @@ import { hasOutcome, isPendingPayment, pendingAmount } from '@/app/navigation'
 import type { GameState } from '@/game/types'
 
 /**
- * S1 桌面 / 通知（UI 容器状态，不是剧情节点）。
- * 桌面只负责导航：点击图标或通知切换视图，不提交任何剧情选项、不改变金额。
+ * S1 桌面（UI 容器状态，不是剧情节点）。
+ * 桌面只负责导航：点击图标切换视图，不提交任何剧情选项、不改变金额。
+ *
+ * 邀请提示不再做成桌面卡片：改为顶部通知 + 通知中心留存 +
+ * 「青讯」图标角标 + 「继续当前事项」入口，避免同一件事在桌面上重复占位。
  */
 const props = defineProps<{
   state: GameState
-  /** 邀请通知是否可见（剧情到达 invite 且尚未处理）。 */
+  /** 是否有一条待处理的邀请（用于图标角标与入口文案）。 */
   showInviteNotice: boolean
   /** 是否有未读通知（用于图标角标）。 */
   hasUnread?: boolean
@@ -69,21 +72,6 @@ const showNoticeDot = computed(() => props.hasUnread === true)
     <div class="home__wall" aria-hidden="true"></div>
 
     <div class="home__scroll">
-      <!-- 邀请通知：可忽略，不阻止使用其他应用 -->
-      <button
-        v-if="showInviteNotice"
-        type="button"
-        class="notice"
-        @click="emit('open-chat')"
-      >
-        <span class="notice__head">
-          <span class="notice__app">{{ BRAND.chat }}</span>
-          <span class="notice__time">刚刚</span>
-        </span>
-        <span class="notice__title">一位学姐邀请你加入兼职群</span>
-        <span class="notice__body">「课余任务，报酬当天结算」——点击查看邀请</span>
-      </button>
-
       <ul class="apps">
         <li v-for="app in apps" :key="app.id">
           <button
@@ -153,43 +141,6 @@ const showNoticeDot = computed(() => props.hasUnread === true)
   padding: var(--space-4) var(--space-4) var(--space-5);
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-}
-
-.notice {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  width: 100%;
-  padding: var(--space-3);
-  border: 1px solid rgb(255 255 255 / 22%);
-  border-radius: var(--radius-md);
-  background: rgb(255 255 255 / 96%);
-  color: var(--c-text);
-  text-align: left;
-  box-shadow: var(--shadow-card);
-  animation: notice-in var(--dur-slow) ease;
-}
-
-.notice__head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: var(--font-xs);
-  color: var(--c-text-soft);
-}
-
-.notice__app {
-  font-weight: 700;
-}
-
-.notice__title {
-  font-size: var(--font-base);
-  font-weight: 700;
-}
-
-.notice__body {
-  font-size: var(--font-sm);
-  color: var(--c-text-soft);
 }
 
 .apps {
@@ -324,18 +275,5 @@ const showNoticeDot = computed(() => props.hasUnread === true)
   background: transparent;
   color: #cddcee;
   font-size: var(--font-sm);
-}
-
-@keyframes notice-in {
-  from {
-    transform: translateY(-10px);
-    opacity: 0;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .notice {
-    animation: none;
-  }
 }
 </style>

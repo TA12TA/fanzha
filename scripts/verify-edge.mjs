@@ -287,14 +287,24 @@ async function main() {
     await cdp.screenshot(path.join(shotsDir, '02-home.png'))
     text = await cdp.text()
     const onDesktop = await cdp.eval(`return !!document.querySelector('.home')`)
+    const hasCard = await cdp.eval(`return !!document.querySelector('.notice')`)
     record(
-      '上滑解锁后进入桌面并显示邀请通知',
-      onDesktop && text.includes('一位学姐邀请你加入兼职群'),
+      '上滑解锁后进入桌面（邀请提示改为通知留存，桌面无邀请卡片）',
+      onDesktop && hasCard === false,
+      hasCard ? '桌面仍有卡片' : '',
     )
 
-    await cdp.click('一位学姐邀请你加入兼职群')
+    // 邀请入口：青讯图标角标 + 继续当前事项
+    const chatBadge = await cdp.eval(`
+      const el = [...document.querySelectorAll('.apps .app')].find(x => (x.textContent||'').includes('青讯'));
+      const badge = el ? el.querySelector('.app__badge') : null;
+      return badge ? badge.textContent.trim() : null;
+    `)
+    record('青讯图标有未读角标', chatBadge === '1', `角标=${chatBadge}`)
+
+    await cdp.click('青讯')
     text = await cdp.text()
-    record('通知可进入邀请会话', text.includes('拒绝并举报'))
+    record('青讯图标可进入邀请会话', text.includes('拒绝并举报'))
 
     await cdp.click('进群看看')
     await cdp.click('显示全部')
@@ -400,7 +410,7 @@ async function main() {
     await cdp.send('Page.navigate', { url: BASE })
     await sleep(700)
     await cdp.swipeUp({ fromY: 640, toY: 430 })
-    await cdp.click('一位学姐邀请你加入兼职群')
+    await cdp.click('青讯')
     await cdp.click('拒绝并举报')
     await sleep(200)
     text = await cdp.text()
@@ -583,11 +593,18 @@ async function main() {
     record('学姐邀请排在预警之后等待（角标提示）', queuedBadge !== null, `角标=${queuedBadge}`)
 
     // 桌面邀请卡仍然在（持久入口）
+    // 桌面邀请卡片已移除（改为通知留存）
     const desktopCard = await cdp.eval(`
+      return !!document.querySelector('.notice');
+    `)
+    record('桌面上不再有邀请卡片', desktopCard === false)
+
+    // 但「继续当前事项」入口仍在
+    const resumeEntry = await cdp.eval(`
       const el = document.querySelector('.resume');
       return el ? el.textContent : '';
     `)
-    record('桌面仍有「继续当前事项」入口', desktopCard.includes('继续当前事项'), desktopCard.trim().slice(0, 40))
+    record('桌面仍有「继续当前事项」入口', resumeEntry.includes('继续当前事项'), resumeEntry.trim().slice(0, 40))
 
     // 预警播完后，学姐邀请横幅自动接上
     await sleep(6600)
@@ -630,6 +647,20 @@ async function main() {
       `分组=${JSON.stringify(groups)}`,
     )
     record('通知中心内不再有横幅遮挡分组标题', bannerInCenter === false)
+
+    // 邀请改为「通知留存」：横幅消失后仍能从通知中心点进会话
+    await cdp.eval(`
+      const b = [...document.querySelectorAll('.center__item--action')][0];
+      if (b) b.click();
+      return !!b;
+    `)
+    await sleep(400)
+    const enteredFromCenter = await cdp.text()
+    record(
+      '通知中心里的邀请可点进会话（通知留存生效）',
+      enteredFromCenter.includes('拒绝并举报'),
+      enteredFromCenter.slice(0, 30),
+    )
 
     // 状态栏入口与桌面图标共用同一个通知中心（不再有第二个只读面板）
     await cdp.click('桌面')
