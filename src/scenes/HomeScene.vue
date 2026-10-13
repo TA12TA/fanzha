@@ -80,7 +80,11 @@ const showNoticeDot = computed(() => props.hasUnread === true)
             :aria-label="app.hint"
             @click="onAppClick(app.id)"
           >
-            <span class="app__glyph" aria-hidden="true">
+            <span
+              class="app__glyph"
+              :class="{ 'app__glyph--brand': app.id === 'manual' }"
+              aria-hidden="true"
+            >
               <!-- 应用图标：全部自绘 SVG，不使用任何官方徽标 -->
               <svg
                 v-if="app.id === 'chat'"
@@ -248,8 +252,25 @@ const showNoticeDot = computed(() => props.hasUnread === true)
 }
 
 .app__glyph {
-  font-size: 24px;
-  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: rgb(255 255 255 / 10%);
+  color: #dbe8f7;
+}
+
+/*
+ * 反诈应用图标：蓝底白盾，形态接近常见安全类应用图标。
+ * 注意：不使用国家反诈中心官方徽标（官方来源无法获取，
+ * 且 AGENTS.md 要求不使用真实机构标志，避免产出可伪造的官方素材）。
+ */
+.app__glyph--brand {
+  background: linear-gradient(150deg, #2f7fe0, #1c56a8);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgb(31 111 235 / 34%);
 }
 
 .app__label {
