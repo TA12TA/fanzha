@@ -295,12 +295,19 @@ async function main() {
     )
 
     // 邀请入口：青讯图标角标 + 继续当前事项
+    // 注意：角标要等通知真正弹出后才出现（见「延迟期间不应有角标」的断言），
+    // 因此这里先等过延迟再查。
+    await sleep(3400)
     const chatBadge = await cdp.eval(`
       const el = [...document.querySelectorAll('.apps .app')].find(x => (x.textContent||'').includes('青讯'));
       const badge = el ? el.querySelector('.app__badge') : null;
       return badge ? badge.textContent.trim() : null;
     `)
-    record('青讯图标有未读角标', chatBadge === '1', `角标=${chatBadge}`)
+    record('通知弹出后青讯图标出现未读角标', chatBadge === '1', `角标=${chatBadge}`)
+
+    // 角标风格统一：不存在第二种（圆点）样式
+    const dotCount = await cdp.eval(`return document.querySelectorAll('.app__badge--dot').length`)
+    record('角标风格统一（无圆点样式）', dotCount === 0, `圆点数=${dotCount}`)
 
     await cdp.click('青讯')
     text = await cdp.text()
@@ -579,6 +586,32 @@ async function main() {
       '解锁后先看到桌面，延迟期间不弹通知',
       immediateBanner === false && onHome === true,
       immediateBanner ? '立刻弹了横幅' : '',
+    )
+
+    // 时序一致：延迟期间横幅还没弹，角标也不应亮
+    const badgesDuringDelay = await cdp.eval(`return document.querySelectorAll('.app__badge').length`)
+    record(
+      '延迟期间角标不亮（与横幅时序一致）',
+      badgesDuringDelay === 0,
+      `延迟期角标数=${badgesDuringDelay}`,
+    )
+
+    // 图标风格统一：六个图标尺寸与圆角一致
+    const iconStyles = await cdp.eval(`
+      const list = [...document.querySelectorAll('.apps .app .app__glyph')].map(g => {
+        const cs = getComputedStyle(g);
+        const r = g.getBoundingClientRect();
+        return { size: Math.round(r.width) + 'x' + Math.round(r.height), radius: cs.borderRadius };
+      });
+      return list;
+    `)
+    const uniformIcons =
+      iconStyles.length === 6 &&
+      iconStyles.every((s) => s.size === iconStyles[0].size && s.radius === iconStyles[0].radius)
+    record(
+      '六个桌面图标尺寸与圆角统一',
+      uniformIcons,
+      `共 ${iconStyles.length} 个，首个=${JSON.stringify(iconStyles[0])}`,
     )
 
     // 等过首条延迟（3 秒）后通知才出现
