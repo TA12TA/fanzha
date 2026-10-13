@@ -236,6 +236,7 @@ function syncViewToNode(): void {
 }
 
 function openManual(): void {
+  playSound('tap')
   // 已生成复盘时，手册直接展示本局复盘（S9）。
   view.value = state.value.node === 'debrief' ? 'review' : 'manual'
 }

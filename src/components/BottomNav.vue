@@ -28,7 +28,13 @@ const emit = defineEmits<{
       aria-label="回到桌面"
       @click="emit('home')"
     >
-      <span class="nav__icon" aria-hidden="true">⌂</span>
+      <span class="nav__icon" aria-hidden="true">
+        <!-- 图标统一为自绘 SVG（原先用字符 ⌂ / ←，与真图标风格不一致） -->
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round">
+          <path d="M4 10.5 12 4l8 6.5" />
+          <path d="M6.2 12v7.2h11.6V12" />
+        </svg>
+      </span>
       <span class="nav__text">桌面</span>
     </button>
     <button
@@ -38,12 +44,16 @@ const emit = defineEmits<{
       aria-label="返回上一层"
       @click="emit('back')"
     >
-      <span class="nav__icon" aria-hidden="true">←</span>
+      <span class="nav__icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round">
+          <path d="M14.5 5.5 8 12l6.5 6.5" />
+        </svg>
+      </span>
       <span class="nav__text">返回</span>
     </button>
     <button type="button" class="nav__btn" aria-label="打开国家反诈中心" @click="emit('manual')">
       <span class="nav__icon" aria-hidden="true">
-        <img :src="antifraudLogo" alt="" width="17" height="17" class="nav__logo" />
+        <img :src="antifraudLogo" alt="" width="18" height="18" class="nav__logo" />
       </span>
       <span class="nav__text">反诈</span>
     </button>
@@ -82,12 +92,18 @@ const emit = defineEmits<{
 }
 
 .nav__icon {
-  font-size: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
   line-height: 1;
 }
 
 .nav__logo {
   display: block;
+  width: 18px;
+  height: 18px;
   border-radius: 4px;
 }
 

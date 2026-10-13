@@ -3,6 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import AppShell from '@/app/AppShell.vue'
 import { DEFAULT_DURATIONS, FIRST_NOTICE_DELAY_MS, LEAVE_MS } from '@/app/notifications'
 import { reloadSettings } from '@/app/settings'
+import { __resetSoundForTests } from '@/app/sound'
+import { BRAND } from '@/data/level01'
 import { findForbiddenClaim } from '@/game/debrief'
 import { SAVE_KEY, saveGame } from '@/game/storage'
 import { choose, createInitialState } from '@/game/engine'
@@ -731,5 +733,99 @@ describe('E. 整部手机的交互（B01–B14）', () => {
     // 存档仍是已付款后的状态，且确认按钮不复现
     expect(readSave()?.balance).toBe(700)
     expect(findButton(wrapper, '确认垫付 100 元')).toBeUndefined()
+  })
+})
+
+/**
+ * 安装一个假的 AudioContext，用来统计音效是否真的被请求播放。
+ *
+ * jsdom 没有 Web Audio，真实的 playSound 会静默降级，
+ * 因此必须替换构造器才能在单元测试里断言「这一点击有没有出声」。
+ */
+function installFakeAudio(): { count: () => number } {
+  let oscillators = 0
+
+  const audioParam = () => ({
+    value: 0,
+    setValueAtTime: () => {},
+    linearRampToValueAtTime: () => {},
+    exponentialRampToValueAtTime: () => {},
+  })
+
+  class FakeAudioContext {
+    state = 'running'
+    currentTime = 0
+    destination = {}
+    resume(): Promise<void> {
+      return Promise.resolve()
+    }
+    createOscillator() {
+      oscillators += 1
+      return {
+        type: 'sine',
+        frequency: audioParam(),
+        connect: () => {},
+        start: () => {},
+        stop: () => {},
+      }
+    }
+    createGain() {
+      return { gain: audioParam(), connect: () => {} }
+    }
+  }
+
+  Object.defineProperty(globalThis, 'AudioContext', {
+    value: FakeAudioContext,
+    configurable: true,
+    writable: true,
+  })
+
+  return { count: () => oscillators }
+}
+
+/**
+ * 音效覆盖：每个应用入口都必须出声。
+ *
+ * 回归用例：`openManual()` 曾经漏调 playSound，
+ * 导致桌面「国家反诈中心」大图标和底部导航「反诈」小图标点击都没有声音。
+ */
+describe('L. 音效覆盖（桌面大图标 / 底部导航小图标）', () => {
+  let audio: { count: () => number }
+
+  beforeEach(() => {
+    __resetSoundForTests()
+    audio = installFakeAudio()
+  })
+
+  afterEach(() => {
+    Reflect.deleteProperty(globalThis, 'AudioContext')
+    __resetSoundForTests()
+  })
+
+  it('L01 点击桌面「国家反诈中心」图标播放点击音效', async () => {
+    const wrapper = mountApp()
+    await swipeUnlock(wrapper)
+
+    const before = audio.count()
+    await clickDesktopApp(wrapper, '国家反诈中心')
+
+    // 确实进入了反诈应用（识骗手册是它的一个栏目）
+    expect(wrapper.text()).toContain(BRAND.manualSection)
+    expect(audio.count(), '桌面反诈图标点击后应创建振荡器').toBeGreaterThan(before)
+  })
+
+  it('L02 点击底部导航「反诈」按钮播放点击音效', async () => {
+    const wrapper = mountApp()
+    await swipeUnlock(wrapper)
+
+    const nav = wrapper
+      .findAll('button')
+      .find((b) => b.attributes('aria-label') === '打开国家反诈中心')
+    expect(nav, '底部导航应有「反诈」按钮').toBeTruthy()
+
+    const before = audio.count()
+    await nav?.trigger('click')
+
+    expect(audio.count(), '底部导航反诈按钮点击后应创建振荡器').toBeGreaterThan(before)
   })
 })

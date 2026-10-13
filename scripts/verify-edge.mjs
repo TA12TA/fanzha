@@ -767,6 +767,43 @@ async function main() {
       const afterTap = await cdp.eval(`return window.__osc || 0`)
       record('点击操作播放音效', afterTap > afterUnlock.osc, `累计振荡器=${afterTap}`)
 
+      // 反诈应用有两个入口：桌面大图标 + 底部导航小图标，两者都必须出声。
+      // 回归：openManual() 曾经漏调 playSound，两个入口都静音。
+      await cdp.click('桌面')
+      await sleep(200)
+      const beforeAntifraudTile = await cdp.eval(`return window.__osc || 0`)
+      const tileClicked = await cdp.eval(`
+        const b = [...document.querySelectorAll('.apps .app')]
+          .find(el => (el.textContent || '').includes('国家反诈中心'));
+        if (!b) return false;
+        b.click();
+        return true;
+      `)
+      await sleep(250)
+      const afterAntifraudTile = await cdp.eval(`return window.__osc || 0`)
+      record(
+        '点击桌面「国家反诈中心」大图标有音效',
+        tileClicked && afterAntifraudTile > beforeAntifraudTile,
+        `之前=${beforeAntifraudTile} 之后=${afterAntifraudTile}`,
+      )
+
+      await cdp.click('桌面')
+      await sleep(200)
+      const beforeAntifraudNav = await cdp.eval(`return window.__osc || 0`)
+      const navClicked = await cdp.eval(`
+        const b = document.querySelector('.nav__btn[aria-label="打开国家反诈中心"]');
+        if (!b) return false;
+        b.click();
+        return true;
+      `)
+      await sleep(250)
+      const afterAntifraudNav = await cdp.eval(`return window.__osc || 0`)
+      record(
+        '点击底部导航「反诈」小图标有音效',
+        navClicked && afterAntifraudNav > beforeAntifraudNav,
+        `之前=${beforeAntifraudNav} 之后=${afterAntifraudNav}`,
+      )
+
       // 关闭音效后不再产生新的振荡器
       await cdp.click('桌面')
       await cdp.click('设置')
