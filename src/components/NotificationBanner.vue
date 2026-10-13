@@ -4,15 +4,15 @@ import type { NotificationKind } from '@/app/notifications'
 /**
  * 顶部通知横幅（手机通知样式）。
  *
- * 两类通知视觉上明确区分：
- * - `antifraud`：国家反诈中心预警，深色警示卡片 + 盾牌图标
- * - `message`：消息通知，浅色卡片 + 消息图标
+ * **两类通知共用同一套视觉风格**：同一张卡片底色、同一套排版与间距，
+ * 仅通过左侧强调色与图标区分类型（预警=盾牌+蓝，消息=气泡+绿）。
+ * 早期版本把预警做成深色卡、消息做成浅色卡，看起来像两套界面，已统一。
  *
  * 与手机内其他界面统一画风：圆角卡片、状态栏下方滑入、可点击查看、可关闭。
  * 自动关闭由通知队列控制，这里只负责展示与交互。
  */
 defineProps<{
-  /** 通知类型，决定视觉样式。 */
+  /** 通知类型，决定图标与强调色。 */
   kind: NotificationKind
   /** 通知标题。 */
   title: string
@@ -82,6 +82,7 @@ const emit = defineEmits<{
 </template>
 
 <style scoped>
+/* 统一底色：两类通知用同一张卡片，只靠左侧强调色与图标区分 */
 .banner {
   position: absolute;
   top: calc(var(--safe-top) + 34px);
@@ -92,26 +93,24 @@ const emit = defineEmits<{
   align-items: flex-start;
   gap: var(--space-1);
   padding: var(--space-3);
-  border: 1px solid transparent;
+  padding-left: calc(var(--space-3) + 3px);
+  border: 1px solid var(--c-line);
+  border-left-width: 3px;
   border-radius: var(--radius-md);
-  box-shadow: 0 8px 26px rgb(4 10 20 / 45%);
+  background: rgb(255 255 255 / 97%);
+  color: var(--c-text);
+  box-shadow: 0 8px 26px rgb(4 10 20 / 26%);
   backdrop-filter: blur(6px);
   animation: banner-in var(--dur-base) ease-out;
 }
 
-/* 预警：深色警示卡片 */
+/* 强调色只在左边框与图标上体现类型差异 */
 .banner--antifraud {
-  border-color: rgb(255 255 255 / 14%);
-  background: rgb(28 40 58 / 96%);
-  color: #eef4fb;
+  border-left-color: #4084e0;
 }
 
-/* 消息：浅色卡片，与预警明显区分 */
 .banner--message {
-  border-color: var(--c-line);
-  background: rgb(255 255 255 / 97%);
-  color: var(--c-text);
-  box-shadow: 0 8px 26px rgb(4 10 20 / 26%);
+  border-left-color: var(--c-accent);
 }
 
 .banner--leaving {
@@ -142,13 +141,13 @@ const emit = defineEmits<{
 }
 
 .banner--antifraud .banner__icon {
-  background: rgb(64 132 224 / 26%);
-  color: #9fd8ff;
+  background: var(--c-primary-soft);
+  color: #2b6fd4;
 }
 
 .banner--message .banner__icon {
-  background: var(--c-primary-soft);
-  color: var(--c-primary);
+  background: #e2f4ee;
+  color: var(--c-accent);
 }
 
 .banner__text {
@@ -161,22 +160,12 @@ const emit = defineEmits<{
 .banner__title {
   font-size: var(--font-sm);
   font-weight: 700;
-}
-
-.banner--antifraud .banner__title {
-  color: #ffffff;
+  color: var(--c-text);
 }
 
 .banner__body {
   font-size: var(--font-sm);
   line-height: 1.5;
-}
-
-.banner--antifraud .banner__body {
-  color: #c6d5e6;
-}
-
-.banner--message .banner__body {
   color: var(--c-text-soft);
 }
 
@@ -185,14 +174,10 @@ const emit = defineEmits<{
   align-self: center;
   padding: 1px 7px;
   border-radius: 999px;
-  background: rgb(255 255 255 / 16%);
-  font-size: var(--font-xs);
-  font-variant-numeric: tabular-nums;
-}
-
-.banner--message .banner__queued {
   background: var(--c-surface-2);
   color: var(--c-text-soft);
+  font-size: var(--font-xs);
+  font-variant-numeric: tabular-nums;
 }
 
 .banner__close {
@@ -203,16 +188,9 @@ const emit = defineEmits<{
   border: 0;
   border-radius: 50%;
   background: transparent;
+  color: var(--c-text-soft);
   font-size: var(--font-sm);
   line-height: 1;
-}
-
-.banner--antifraud .banner__close {
-  color: #93a6bd;
-}
-
-.banner--message .banner__close {
-  color: var(--c-text-soft);
 }
 
 .banner__close:hover {

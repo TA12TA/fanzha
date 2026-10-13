@@ -498,13 +498,11 @@ onBeforeUnmount(() => {
               <template v-if="antifraudNotices.length">
                 <h2 class="center__group">国家反诈中心</h2>
                 <ul class="center__list">
-                  <li
-                    v-for="item in antifraudNotices"
-                    :key="item.id"
-                    class="center__item center__item--antifraud"
-                  >
-                    <p class="center__itemtitle">{{ item.title }}</p>
-                    <p class="center__itembody">{{ item.body }}</p>
+                  <li v-for="item in antifraudNotices" :key="item.id">
+                    <div class="center__item center__item--antifraud">
+                      <span class="center__itemtitle">{{ item.title }}</span>
+                      <span class="center__itembody">{{ item.body }}</span>
+                    </div>
                   </li>
                 </ul>
               </template>
@@ -684,30 +682,31 @@ onBeforeUnmount(() => {
 }
 
 .center__item {
-  padding: var(--space-3);
-  border-radius: var(--radius-md);
-  background: var(--c-surface);
-  box-shadow: var(--shadow-card);
-}
-
-/* 预警：深色卡片，与消息区分 */
-.center__item--antifraud {
-  border-left: 3px solid #4084e0;
-}
-
-.center__item--message {
-  border-left: 3px solid var(--c-accent);
-}
-
-/* 可点击的消息通知：整块是按钮 */
-.center__item--action {
   display: flex;
   flex-direction: column;
   gap: 2px;
   width: 100%;
+  padding: var(--space-3);
+  padding-left: calc(var(--space-3) + 3px);
   border: 1px solid var(--c-line);
-  border-left: 3px solid var(--c-accent);
+  border-left-width: 3px;
+  border-radius: var(--radius-md);
+  background: var(--c-surface);
+  box-shadow: var(--shadow-card);
   text-align: left;
+}
+
+/* 与顶部横幅同一套规则：底色一致，仅左侧强调色区分类型 */
+.center__item--antifraud {
+  border-left-color: #4084e0;
+}
+
+.center__item--message {
+  border-left-color: var(--c-accent);
+}
+
+/* 可点击的消息通知 */
+.center__item--action {
   cursor: pointer;
 }
 
