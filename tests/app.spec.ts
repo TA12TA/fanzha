@@ -829,3 +829,146 @@ describe('L. 音效覆盖（桌面大图标 / 底部导航小图标）', () => {
     expect(audio.count(), '底部导航反诈按钮点击后应创建振荡器').toBeGreaterThan(before)
   })
 })
+
+/**
+ * 音效覆盖（第二轮）：把「点了没声音」当成一类缺陷逐个清掉。
+ *
+ * 起因：用户报「反诈图标点击没声音」，查下来 `openManual()` 漏调 playSound。
+ * 顺着同一类缺陷往下查，又发现 7 处按钮静音：横幅「×」、继续当前事项、
+ * 清空通知、清掉重来、算了接着玩、关闭资料（两个按钮）、显示全部。
+ *
+ * 这些用例刻意逐个按钮断言，不写「随便点一下有声音就算过」的宽松断言 ——
+ * 否则新增按钮再漏音效时，测试依然全绿。
+ */
+describe('M. 音效覆盖：没有静音按钮', () => {
+  let audio: { count: () => number }
+
+  beforeEach(() => {
+    __resetSoundForTests()
+    audio = installFakeAudio()
+  })
+
+  afterEach(() => {
+    Reflect.deleteProperty(globalThis, 'AudioContext')
+    __resetSoundForTests()
+  })
+
+  /** 点击前记录振荡器数，点击后返回增量。找不到目标直接抛错，不让用例假性通过。 */
+  async function soundDelta(
+    wrapper: VueWrapper,
+    selector: string,
+    label: string,
+  ): Promise<number> {
+    const target = wrapper.find(selector)
+    if (!target.exists()) throw new Error(`找不到「${label}」（${selector}）`)
+    const before = audio.count()
+    await target.trigger('click')
+    await flush()
+    return audio.count() - before
+  }
+
+  it('M01 锁屏上滑解锁有音效', async () => {
+    const wrapper = mountApp()
+    const before = audio.count()
+    await swipeUnlock(wrapper)
+    expect(audio.count(), '解锁应出声').toBeGreaterThan(before)
+  })
+
+  it('M02 桌面六个图标每一个都有音效', async () => {
+    // 六个图标点击后都会切视图，因此每个都用全新挂载，避免互相影响
+    for (const label of ['青讯', '安心钱包', '国家反诈中心', '相册', '通知', '设置']) {
+      const wrapper = mountApp()
+      await swipeUnlock(wrapper)
+      const before = audio.count()
+      await clickDesktopApp(wrapper, label)
+      expect(audio.count(), `桌面「${label}」图标点击应出声`).toBeGreaterThan(before)
+      wrapper.unmount()
+    }
+  })
+
+  it('M03 桌面「继续当前事项」有音效', async () => {
+    const wrapper = mountApp()
+    await swipeUnlock(wrapper)
+
+    // 有存档时桌面才出现这个入口
+    await clickDesktopApp(wrapper, '青讯')
+    await click(wrapper, '进群看看')
+    await click(wrapper, '桌面')
+
+    const before = audio.count()
+    await click(wrapper, '继续当前事项')
+    expect(audio.count(), '「继续当前事项」应出声').toBeGreaterThan(before)
+  })
+
+  it('M04 顶部横幅手动「×」关闭有音效', async () => {
+    const wrapper = mountApp()
+    await swipeUnlockAndWaitNotices(wrapper)
+    expect(wrapper.find('.banner').exists(), '延迟后应有横幅').toBe(true)
+    // before 在横幅已弹出之后取值，已包含弹出时那声预警音，只测手动关闭这一声
+    expect(await soundDelta(wrapper, '.banner__close', '横幅关闭'), '手动关闭横幅应出声').toBeGreaterThan(0)
+  })
+
+  it('M05 通知中心「清空通知」有音效', async () => {
+    const wrapper = mountApp()
+    await swipeUnlockAndWaitNotices(wrapper)
+    await clickDesktopApp(wrapper, '通知')
+
+    expect(await soundDelta(wrapper, '.center__clear', '清空通知'), '「清空通知」应出声').toBeGreaterThan(0)
+  })
+
+  it('M06 「清掉，重来」与「算了，接着玩」都有音效', async () => {
+    // 取消分支
+    const a = mountApp()
+    await swipeUnlock(a)
+    await click(a, '重新开始本局')
+    expect(await soundDelta(a, '.overlay__close', '遮罩关闭'), '关闭确认框应出声').toBeGreaterThan(0)
+
+    await click(a, '重新开始本局')
+    const cancelBtn = a.findAll('button').find((b) => b.text().includes('算了，接着玩'))
+    expect(cancelBtn, '应有「算了，接着玩」').toBeTruthy()
+    const before = audio.count()
+    await cancelBtn?.trigger('click')
+    expect(audio.count(), '「算了，接着玩」应出声').toBeGreaterThan(before)
+
+    // 确认清档分支
+    await click(a, '重新开始本局')
+    const wipeBtn = a.findAll('button').find((b) => b.text().includes('清掉，重来'))
+    expect(wipeBtn, '应有「清掉，重来」').toBeTruthy()
+    const beforeWipe = audio.count()
+    await wipeBtn?.trigger('click')
+    await flush()
+    expect(audio.count(), '「清掉，重来」应出声').toBeGreaterThan(beforeWipe)
+  })
+
+  it('M07 青讯「显示全部」与关闭资料弹层都有音效', async () => {
+    const wrapper = mountApp()
+    await swipeUnlock(wrapper)
+    await clickDesktopApp(wrapper, '青讯')
+    // 必须进群：邀请会话消息条数少，不会出现「显示全部」
+    await click(wrapper, '进群看看')
+
+    const skip = wrapper.findAll('button').find((b) => b.text().includes('显示全部'))
+    expect(skip, '群聊里应有「显示全部」').toBeTruthy()
+    const beforeSkip = audio.count()
+    await skip?.trigger('click')
+    expect(audio.count(), '「显示全部」应出声').toBeGreaterThan(beforeSkip)
+
+    // 打开资料弹层 → 关闭
+    await click(wrapper, '群主资料')
+    expect(await soundDelta(wrapper, '.profilesheet__close', '关闭资料'), '关闭资料应出声').toBeGreaterThan(0)
+  })
+
+  it('M08 结局与复盘页的按钮都有音效', async () => {
+    const wrapper = mountApp()
+    await startAndOpenInvite(wrapper)
+    await click(wrapper, '拒绝并举报')
+    await flush()
+
+    // 结局页 → 看复盘
+    expect(await soundDelta(wrapper, '.ending__review', '看复盘'), '「看复盘」应出声').toBeGreaterThan(0)
+
+    // 复盘页 → 再玩一次（会弹二次确认）
+    await flush()
+    expect(await soundDelta(wrapper, '.review__restart', '再玩一次'), '复盘页「再玩一次」应出声').toBeGreaterThan(0)
+  })
+})

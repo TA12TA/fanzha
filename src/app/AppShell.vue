@@ -114,6 +114,34 @@ function dismissNotice(): void {
   notices.dismissCurrent()
 }
 
+/**
+ * 玩家手动点横幅的「×」。
+ * 必须与自动到时关闭区分开：自动关闭是通知自己的倒计时，不该再补一声；
+ * 手动关闭是玩家操作，要给一声反馈。
+ */
+function closeBanner(): void {
+  playSound('tap')
+  dismissNotice()
+}
+
+/** 清空通知中心历史。 */
+function clearNotices(): void {
+  playSound('tap')
+  notices.clear()
+}
+
+/** 关闭「重来一次？」确认框：取消，保留进度。 */
+function cancelRestart(): void {
+  playSound('tap')
+  confirmRestart.value = false
+}
+
+/** 关闭资料弹层。 */
+function closeProfile(): void {
+  playSound('tap')
+  profileOpen.value = false
+}
+
 /** 设置里关掉顶部横幅时，立即收起当前通知。 */
 watch(
   () => settings.value.banner,
@@ -243,6 +271,7 @@ function openManual(): void {
 
 /** 桌面「继续当前事项」：按节点导航，不自动选择剧情。 */
 function resume(): void {
+  playSound('tap')
   const node = state.value.node
   if (node === 'intro') {
     view.value = 'home'
@@ -299,6 +328,7 @@ function requestRestart(): void {
 }
 
 function doRestart(): void {
+  playSound('cancel')
   game.restart()
   confirmRestart.value = false
   profileOpen.value = false
@@ -435,7 +465,7 @@ onBeforeUnmount(() => {
         :leaving="noticeLeaving"
         :queued="waitingCount"
         @open="openBanner"
-        @dismiss="dismissNotice"
+        @dismiss="closeBanner"
       />
 
       <main ref="mainRef" class="phone__viewport" tabindex="-1">
@@ -465,7 +495,7 @@ onBeforeUnmount(() => {
           :profile-viewed="state.viewedProfile"
           @choose="submit"
           @open-profile="openProfile"
-          @close-profile="profileOpen = false"
+          @close-profile="closeProfile"
           @back="goBack"
           @open-wallet="openWallet"
         />
@@ -545,7 +575,7 @@ onBeforeUnmount(() => {
               <button
                 type="button"
                 class="btn btn--secondary center__clear"
-                @click="notices.clear()"
+                @click="clearNotices"
               >
                 清空通知
               </button>
@@ -570,14 +600,14 @@ onBeforeUnmount(() => {
         v-if="confirmRestart"
         title="重来一次？"
         size="dialog"
-        @close="confirmRestart = false"
+        @close="cancelRestart"
       >
         <p class="confirm__text">
           进度、余额和这局的记录都会清掉，回到开场。清掉就找不回来了。
         </p>
         <template #footer>
           <button type="button" class="btn btn--danger" @click="doRestart">清掉，重来</button>
-          <button type="button" class="btn btn--secondary" @click="confirmRestart = false">
+          <button type="button" class="btn btn--secondary" @click="cancelRestart">
             算了，接着玩
           </button>
         </template>

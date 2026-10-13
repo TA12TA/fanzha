@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import AppHeader from '@/components/AppHeader.vue'
 import MessageBubble from '@/components/MessageBubble.vue'
+import { playSound } from '@/app/sound'
 import {
   BRAND,
   FREEZE_MESSAGES,
@@ -67,6 +68,8 @@ function clearTimers(): void {
 }
 
 function showAll(): void {
+  // 「显示全部」是玩家操作，给一声反馈（此前是静音按钮）。
+  playSound('tap')
   clearTimers()
   visibleCount.value = messages.value.length
 }

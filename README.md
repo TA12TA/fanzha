@@ -133,8 +133,8 @@ scripts/smoke-public.mjs # 公网地址冒烟测试（隧道/静态托管发布�
 | `npm run dev`       | 成功，`http://127.0.0.1:5173/` 返回 200 且已注入 Vite 客户端                                                                  |
 | `npm run preview`   | 成功，`http://127.0.0.1:4173/` 返回构建产物（引用 hashed 资源）                                                                  |
 | `npm run typecheck` | 通过，无错误                                                                                                            |
-| `npm test`          | **106 项全部通过**（engine 17 / storage 10 / debrief 10 / clock 5 / unlock 6 / settings 11 / notifications 14 / app 33） |
-| `npm run build`     | 成功，`dist/assets/index-*.js` 127.01 kB（gzip 47.27 kB）                                                              |
+| `npm test`          | **114 项全部通过**（engine 17 / storage 10 / debrief 10 / clock 5 / unlock 6 / settings 11 / notifications 14 / app 41） |
+| `npm run build`     | 成功，`dist/assets/index-*.js` 127.03 kB（gzip 47.27 kB）                                                              |
 | `npm run verify`    | **58 项全部通过**（Edge 155.0.4283.45 headless）                                                                         |
 | `npm run smoke:public` | **12 项全部通过**（对 trycloudflare 公网地址实跑，2026-10-13）                                                              |
 
@@ -146,6 +146,20 @@ scripts/smoke-public.mjs # 公网地址冒烟测试（隧道/静态托管发布�
 - **设置图标**：原先画成了「亮度/太阳」，与设置语义不符；已改为真实齿轮（`circle r=3` + 8 齿）。
 - **底部导航图标**：桌面/返回原先用字符 `⌂` / `←`，与反诈的图片图标风格不一致；已统一为 18×18 自绘 SVG。
 - **反诈应用点击无音效**：`openManual()` 是唯一漏调 `playSound('tap')` 的入口，导致桌面大图标与底部导航小图标点击都静音。已补上，并加了两个回归用例：`tests/app.spec.ts` 的 L01/L02（用假 `AudioContext` 统计振荡器），以及 `verify-edge.mjs` 里真实浏览器的振荡器计数断言（实测 6→7、8→9）。
+- **其余 7 处静音按钮**：顺着同一类缺陷清掉了「横幅 ×」「继续当前事项」「清空通知」「清掉，重来」「算了，接着玩 / 遮罩关闭」「关闭资料」「显示全部」。回归用例是 `tests/app.spec.ts` 的 M01–M08；已做反证——把这批修复临时撤掉后 M03–M07 全部失败，确认用例真能抓到缺陷（M01/M02/M08 覆盖的是本来就有音效的按钮）。
+
+### 音效约定
+
+| 场景 | 音效 |
+| --- | --- |
+| 导航、打开/关闭界面、普通按钮 | `tap` |
+| 破坏性或丢弃类操作（清掉重来、清空） | `cancel` |
+| 剧情里的确认付款 | `confirm` |
+| 剧情里的拒绝/退出 | `cancel` |
+| 通知弹出（预警 / 消息） | `alert` / `receive` |
+| 解锁 | `unlock` |
+
+原则：**玩家的每一次有意操作都要有反馈，但自动发生的事（通知到时自动关闭）不该补音效** —— 否则手动关闭与自动关闭会听起来一样，玩家分不清自己点没点上。
 
 ## 已知问题与未完成项
 
