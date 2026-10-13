@@ -2,6 +2,7 @@
 import AppHeader from '@/components/AppHeader.vue'
 import { BRAND, MANUAL_GENERAL } from '@/data/level01'
 import { hasOutcome } from '@/app/navigation'
+import antifraudLogo from '@/assets/antifraud-logo.png'
 import type { GameState } from '@/game/types'
 
 /**
@@ -23,13 +24,10 @@ const emit = defineEmits<{
     <AppHeader :title="BRAND.manual" :subtitle="BRAND.manualSection" show-back @back="emit('back')" />
 
     <div class="manual__body">
-      <!-- 应用标识：自绘盾牌图标，不使用任何官方徽标 -->
+      <!-- 应用标识：使用官方 logo 图片 -->
       <div class="appbrand">
         <span class="appbrand__icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.7">
-            <path d="M12 2.6 4.5 5.6v5.9c0 4.4 3.2 8.4 7.5 9.9 4.3-1.5 7.5-5.5 7.5-9.9V5.6L12 2.6Z" stroke-linejoin="round" />
-            <path d="M8.8 12.1l2.3 2.3 4-4.2" stroke-linecap="round" stroke-linejoin="round" />
-          </svg>
+          <img :src="antifraudLogo" alt="" width="44" height="44" class="appbrand__logo" />
         </span>
         <span class="appbrand__text">
           <span class="appbrand__name">{{ BRAND.manual }}</span>
@@ -102,7 +100,13 @@ const emit = defineEmits<{
   height: 44px;
   border-radius: 12px;
   background: rgb(255 255 255 / 16%);
-  color: #cfe6ff;
+  overflow: hidden;
+}
+
+.appbrand__logo {
+  display: block;
+  width: 44px;
+  height: 44px;
 }
 
 .appbrand__text {

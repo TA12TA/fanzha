@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import antifraudLogo from '@/assets/antifraud-logo.png'
+
 /**
  * 常驻底部导航：回桌面 / 返回上一层 / 打开国家反诈中心。
  * 仅改变 UI 视图，不影响剧情与金额。
@@ -41,10 +43,7 @@ const emit = defineEmits<{
     </button>
     <button type="button" class="nav__btn" aria-label="打开国家反诈中心" @click="emit('manual')">
       <span class="nav__icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9">
-          <path d="M12 2.8 5 5.7v5.7c0 4.3 3.1 8.2 7 9.6 3.9-1.4 7-5.3 7-9.6V5.7L12 2.8Z" stroke-linejoin="round" />
-          <path d="M9 12l2.2 2.2 3.8-4" stroke-linecap="round" stroke-linejoin="round" />
-        </svg>
+        <img :src="antifraudLogo" alt="" width="17" height="17" class="nav__logo" />
       </span>
       <span class="nav__text">反诈</span>
     </button>
@@ -85,6 +84,11 @@ const emit = defineEmits<{
 .nav__icon {
   font-size: 16px;
   line-height: 1;
+}
+
+.nav__logo {
+  display: block;
+  border-radius: 4px;
 }
 
 .nav__text {

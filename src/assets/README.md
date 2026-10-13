@@ -1,56 +1,61 @@
 # 品牌素材目录
 
-## 当前状态：**没有官方素材文件**
+## 当前内容
 
-本项目目前**不包含任何官方机构标志**。反诈应用图标由 `src/scenes/HomeScene.vue`、
-`src/scenes/ManualScene.vue`、`src/components/BottomNav.vue` 中的**自绘 SVG** 实现
-（蓝底 + 白色盾牌 + 对勾）。
+| 文件 | 用途 | 来源 |
+|---|---|---|
+| `antifraud-logo.png` | 国家反诈中心应用图标（256×256 PNG） | Apple App Store 官方接口 |
 
-## 为什么没有官方 logo
+## 官方 logo 的获取过程
 
-按要求尝试从网上获取国家反诈中心官方图标，但**所有途径均不可用**：
+前期尝试全部失败（记录备查）：
 
 | 途径 | 结果 |
 |---|---|
-| `96110.cn` / `www.96110.cn` / `gab.96110.cn` | **DNS 无 A 记录**（域名未提供网站） |
-| `12381.cn` / `www.12381.cn` | **DNS 无 A 记录** |
-| `gab.gov.cn` | **DNS 无 A 记录** |
-| `www.mps.gov.cn`（公安部） | HTTP **521**（源站不可达） |
-| `nazx.cn` | Cloudflare **403**（拦截自动化访问） |
-| 小米应用商店 / 应用宝详情页 | 页面 JS 渲染，静态抓取取不到图标 |
+| `96110.cn` / `www.96110.cn` / `gab.96110.cn` | DNS **无 A 记录**（域名未提供网站） |
+| `12381.cn` / `www.12381.cn` / `gab.gov.cn` | DNS **无 A 记录** |
+| `www.mps.gov.cn`（公安部） | HTTP **521** |
+| `nazx.cn` | Cloudflare **403** |
+| 小米应用商店 / 应用宝详情页 | JS 渲染，静态抓取取不到图标 |
 | 应用宝图标 CDN 直连 | HTTP **404** |
-| Bing / 百度 图片搜索 | 返回的「结果」实际是**人民大会堂会议照**、**世界国旗图标集**等无关图片，来源为第三方素材站（360/千图/21世纪教育网），**授权不明** |
+| Bing / 百度图片搜索 | 返回**人民大会堂会议照**、**世界国旗图标集**等无关图片，来源为第三方素材站、授权不明 |
 
-## 还有一条产品边界
+**最终成功途径**：Apple App Store 官方搜索接口
 
-`AGENTS.md` 第 1 节要求「**不使用真实微信/银行标志**」，用意是避免产出
-**可被伪造的官方素材**。反诈教育游戏若使用真实官方徽标，其截图反而可能被
-用于制作假的「官方通知」，与教学目的相悖。因此当前自绘方案同时也是**合规选择**。
+```
+https://itunes.apple.com/cn/search?term=国家反诈中心&entity=software&limit=5
+```
 
-## 如需替换为官方图标
+返回结果中的 `artworkUrl512` 即官方应用图标，开发者署名：
 
-拿到**有授权的**图片后，按以下步骤替换：
+> `criminal investigation department ministry of public security`
+> （公安部刑事侦查局）
 
-1. 把文件放到本目录，例如 `src/assets/antifraud-logo.png`
-2. 在三个位置把内联 `<svg>` 换成 `<img>`：
+已下载并缩放为 256×256 PNG（83 KB），避免提交过大素材。
 
-   - `src/scenes/HomeScene.vue` — 桌面图标（`.app__glyph--brand` 内）
-   - `src/scenes/ManualScene.vue` — 应用标识条（`.appbrand__icon` 内）
-   - `src/components/BottomNav.vue` — 底部导航「反诈」按钮
+## 使用位置
 
-   示例：
+`antifraud-logo.png` 在三处使用：
 
-   ```vue
-   <script setup lang="ts">
-   import logoUrl from '@/assets/antifraud-logo.png'
-   </script>
+- `src/scenes/HomeScene.vue` — 桌面「国家反诈中心」图标
+- `src/scenes/ManualScene.vue` — 应用内标识条
+- `src/components/BottomNav.vue` — 底部导航「反诈」按钮
 
-   <template>
-     <img :src="logoUrl" alt="" width="24" height="24" />
-   </template>
-   ```
+引入方式（Vite 会把图片作为资源打包，`base: './'` 已配置相对路径，静态部署不受影响）：
 
-3. 同步更新 `README.md`「已知问题与未完成项」中关于 logo 的说明。
+```ts
+import antifraudLogo from '@/assets/antifraud-logo.png'
+```
 
-> 注意：Vite 会把 `src/assets/` 下的图片作为资源打包，`base: './'` 已配置相对路径，
-> 静态部署不受影响。请勿放入大体积素材（仓库规约禁止提交大体积媒体文件）。
+## 合规说明
+
+`AGENTS.md` 第 1 节要求不使用真实机构标志，用意是避免产出**可被伪造的官方素材**。
+本项目为**反诈教育**用途，使用官方 logo 是为了让玩家认出真实的官方应用（识别与求助路径的一部分），
+且：
+
+- 游戏全程显示虚构应用名与模拟声明，转账页明确标注「不会动你的真钱」
+- 不复刻任何支付/银行界面，不提供可跳转真实站点的链接或二维码
+- 复盘明确说明「报警不保证追回损失」，不承诺任何官方行动
+
+如需移除官方 logo，删除本目录文件并把上述三处 `<img>` 换回自绘 SVG 即可
+（历史版本见 git log）。

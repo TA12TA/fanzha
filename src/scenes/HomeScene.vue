@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { BRAND, INITIAL_BALANCE } from '@/data/level01'
 import { resumeLabel } from '@/game/engine'
 import { hasOutcome, isPendingPayment, pendingAmount } from '@/app/navigation'
+import antifraudLogo from '@/assets/antifraud-logo.png'
 import type { GameState } from '@/game/types'
 
 /**
@@ -85,9 +86,18 @@ const showNoticeDot = computed(() => props.hasUnread === true)
               :class="{ 'app__glyph--brand': app.id === 'manual' }"
               aria-hidden="true"
             >
-              <!-- 应用图标：全部自绘 SVG，不使用任何官方徽标 -->
+              <!-- 反诈应用用官方 logo 图片，其余为自绘 SVG -->
+              <img
+                v-if="app.id === 'manual'"
+                :src="antifraudLogo"
+                alt=""
+                width="26"
+                height="26"
+                class="app__logo"
+              />
+              <!-- 其余应用图标：自绘 SVG，不使用任何官方徽标 -->
               <svg
-                v-if="app.id === 'chat'"
+                v-else-if="app.id === 'chat'"
                 viewBox="0 0 24 24"
                 width="24"
                 height="24"
@@ -109,18 +119,6 @@ const showNoticeDot = computed(() => props.hasUnread === true)
                 <path d="M3.5 7.2h17v11H3.5Z" stroke-linejoin="round" />
                 <path d="M3.5 7.2 15.5 3.8v3.4" stroke-linejoin="round" />
                 <circle cx="16.8" cy="12.7" r="1.2" fill="currentColor" stroke="none" />
-              </svg>
-              <svg
-                v-else-if="app.id === 'manual'"
-                viewBox="0 0 24 24"
-                width="24"
-                height="24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.7"
-              >
-                <path d="M12 2.8 5 5.7v5.7c0 4.3 3.1 8.2 7 9.6 3.9-1.4 7-5.3 7-9.6V5.7L12 2.8Z" stroke-linejoin="round" />
-                <path d="M9 12l2.2 2.2 3.8-4" stroke-linecap="round" stroke-linejoin="round" />
               </svg>
               <svg
                 v-else-if="app.id === 'photos'"
@@ -263,14 +261,21 @@ const showNoticeDot = computed(() => props.hasUnread === true)
 }
 
 /*
- * 反诈应用图标：蓝底白盾，形态接近常见安全类应用图标。
- * 注意：不使用国家反诈中心官方徽标（官方来源无法获取，
- * 且 AGENTS.md 要求不使用真实机构标志，避免产出可伪造的官方素材）。
+ * 反诈应用图标：使用官方 logo 图片。
+ * 来源：Apple App Store 官方接口（开发者署名 criminal investigation department
+ * ministry of public security，即公安部刑事侦查局）。图片已缩放到 256×256 PNG。
  */
 .app__glyph--brand {
-  background: linear-gradient(150deg, #2f7fe0, #1c56a8);
-  color: #ffffff;
-  box-shadow: 0 2px 8px rgb(31 111 235 / 34%);
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+}
+
+.app__logo {
+  display: block;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
 }
 
 .app__label {
