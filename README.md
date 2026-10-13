@@ -61,6 +61,7 @@ npm run smoke:public -- https://xxxx.trycloudflare.com/
 
 临时隧道地址的注意点：
 
+- **开关都在本机，不进仓库**：关闭外网访问只要结束 `cloudflared` 进程（`Stop-Process -Name cloudflared -Force`），本地与局域网预览不受影响；关闭后公网地址返回 HTTP 530 属正常。关闭状态下 `preview.allowedHosts` 里的白名单不产生任何影响，因为没有任何进程在监听那个 Host。
 - **地址是临时的**：cloudflared quick tunnel 每次重启都会换一个新域名，且官方明确不保证可用性（无账号隧道仅供试用）。
 - **任何人拿到链接都能玩**：游戏不接后端、不上传玩家选择，除玩家本机 `localStorage` 外无数据落地。
 - **延迟偏高**：实测出口落在 Cloudflare 圣何塞（sjc），单次资源请求约 1–1.7 秒；首屏可见约 5 秒。功能正常，但不如局域网地址流畅。局域网试玩仍推荐 `http://<本机IP>:4173/`。
