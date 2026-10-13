@@ -19,6 +19,13 @@ const props = defineProps<{
   showInviteNotice: boolean
   /** 是否有未读通知（用于图标角标）。 */
   hasUnread?: boolean
+  /** 未读通知条数（用于角标数字）。 */
+  unreadCount?: number
+  /**
+   * 通知是否已经真正弹出过。
+   * 角标必须等横幅先出现，避免「横幅还在延迟、角标先亮」的时序倒置。
+   */
+  noticeShown?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -58,14 +65,25 @@ const pending = computed(() => pendingAmount(props.state.node))
 
 const outcome = computed(() => hasOutcome(props.state.node))
 
+/**
+ * 图标角标：**统一使用数字徽标**（不再混用纯圆点）。
+ *
+ * 时序规则：角标表示「有东西在等你处理」，因此必须等通知**真正弹出过**
+ * 之后才显示，否则会出现「横幅还没弹、角标先亮了」的倒置。
+ * 由 `noticeShown` 从通知队列状态推导。
+ */
 const chatBadge = computed(() => {
-  if (props.showInviteNotice) return '1'
+  if (props.showInviteNotice && props.noticeShown) return '1'
   if (isPendingPayment(props.state.node) || outcome.value) return '!'
   return ''
 })
 
-/** 通知图标角标：有未读通知时显示圆点。 */
-const showNoticeDot = computed(() => props.hasUnread === true)
+/** 通知图标角标：有未读通知时显示条数（与青讯同一套样式）。 */
+const noticeBadge = computed(() => {
+  if (props.hasUnread !== true || props.noticeShown !== true) return ''
+  const n = props.unreadCount ?? 0
+  return n > 9 ? '9+' : String(Math.max(1, n))
+})
 </script>
 
 <template>
@@ -163,12 +181,21 @@ const showNoticeDot = computed(() => props.hasUnread === true)
               </svg>
             </span>
             <span class="app__label">{{ app.label }}</span>
-            <span v-if="app.id === 'chat' && chatBadge" class="app__badge">{{ chatBadge }}</span>
+            <!-- 角标统一为数字徽标样式，不再混用纯圆点 -->
             <span
-              v-else-if="app.id === 'notifications' && showNoticeDot"
-              class="app__badge app__badge--dot"
-              aria-hidden="true"
-            ></span>
+              v-if="app.id === 'chat' && chatBadge"
+              class="app__badge"
+              :aria-label="`有 ${chatBadge} 条待处理`"
+            >
+              {{ chatBadge }}
+            </span>
+            <span
+              v-else-if="app.id === 'notifications' && noticeBadge"
+              class="app__badge"
+              :aria-label="`有 ${noticeBadge} 条通知`"
+            >
+              {{ noticeBadge }}
+            </span>
           </button>
         </li>
       </ul>
@@ -283,6 +310,7 @@ const showNoticeDot = computed(() => props.hasUnread === true)
   text-align: center;
 }
 
+/* 全项目唯一的角标样式：数字徽标（不再有第二种圆点样式） */
 .app__badge {
   position: absolute;
   top: 6px;
@@ -297,17 +325,6 @@ const showNoticeDot = computed(() => props.hasUnread === true)
   font-weight: 700;
   line-height: 18px;
   text-align: center;
-}
-
-/* 未读圆点：不带数字 */
-.app__badge--dot {
-  min-width: 0;
-  width: 10px;
-  height: 10px;
-  top: 8px;
-  right: 10px;
-  padding: 0;
-  border: 2px solid rgb(255 255 255 / 88%);
 }
 
 .resume {

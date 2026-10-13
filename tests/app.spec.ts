@@ -161,10 +161,35 @@ describe('E. 整部手机的交互（B01–B14）', () => {
     }
     // 邀请提示已改为通知留存：桌面上不再有邀请卡片
     expect(wrapper.find('.notice').exists(), '桌面不应再有邀请卡片').toBe(false)
-    // 但「青讯」图标有角标提示待处理
-    expect(wrapper.find('.app__badge').exists(), '青讯图标应有角标').toBe(true)
     // 桌面就是整页手机，没有外层网页导航
     expect(wrapper.findAll('a')).toHaveLength(0)
+  })
+
+  it('B01 角标与横幅时序一致：横幅未弹时角标不亮，弹出后才亮', async () => {
+    const wrapper = mountApp()
+    await swipeUnlock(wrapper)
+
+    // 延迟期间：横幅未弹，角标也不应亮（避免时序倒置）
+    expect(wrapper.find('.banner').exists(), '延迟期间不应有横幅').toBe(false)
+    expect(wrapper.find('.app__badge').exists(), '延迟期间不应有角标').toBe(false)
+
+    // 等横幅弹出后，角标才出现
+    await new Promise((r) => setTimeout(r, FIRST_NOTICE_DELAY_MS + 250))
+    expect(wrapper.find('.banner').exists(), '延迟后应有横幅').toBe(true)
+    expect(wrapper.find('.app__badge').exists(), '横幅弹出后应有角标').toBe(true)
+  })
+
+  it('B01 角标风格统一：青讯与通知都用数字徽标，不存在圆点样式', async () => {
+    const wrapper = mountApp()
+    await swipeUnlockAndWaitNotices(wrapper)
+
+    // 所有角标都走同一个 .app__badge 类
+    const badges = wrapper.findAll('.app__badge')
+    expect(badges.length).toBeGreaterThan(0)
+    for (const b of badges) {
+      expect(b.classes(), '角标不应再有第二种（圆点）样式').not.toContain('app__badge--dot')
+      expect(b.text().trim(), '角标应为数字或符号，不是空圆点').not.toBe('')
+    }
   })
 
   it('G 解锁方式的等效性：轻微上滑不解锁，点击与键盘也能解锁', async () => {
@@ -205,20 +230,19 @@ describe('E. 整部手机的交互（B01–B14）', () => {
 
   it('B11 邀请可忽略：先看钱包/反诈应用再回来，邀请仍在且未扣款', async () => {
     const wrapper = mountApp()
-    await swipeUnlock(wrapper)
+    await swipeUnlockAndWaitNotices(wrapper)
 
     await click(wrapper, '安心钱包')
     expect(wrapper.text()).toContain('没有待处理的钱')
     expect(wrapper.text()).toContain('800')
 
     await click(wrapper, '桌面')
-    await click(wrapper, '国家反诈中心')
+    await clickDesktopApp(wrapper, '国家反诈中心')
     expect(wrapper.text()).toContain('让你先垫钱的兼职')
 
     // 回桌面：邀请提示靠图标角标与入口保留，仍能找到
     await click(wrapper, '桌面')
     expect(wrapper.find('.app__badge').exists(), '青讯角标应仍在').toBe(true)
-
     await click(wrapper, '继续当前事项')
     expect(wrapper.text()).toContain('拒绝并举报')
     expect(wrapper.text()).not.toContain('你已付款')

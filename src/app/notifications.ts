@@ -102,6 +102,11 @@ export interface NotificationApi {
    * 延迟结束前该值为 false，组件据此不渲染横幅。
    */
   visible: ComputedRef<boolean>
+  /**
+   * 是否有通知**已经真正弹出过**（至少有一条开始展示）。
+   * 用于让桌面角标与横幅时序一致：横幅还没弹时，角标不应先亮。
+   */
+  hasShownAny: ComputedRef<boolean>
   /** 已收到的全部通知（倒序，最新在前），供通知中心查看。 */
   history: ComputedRef<PhoneNotification[]>
   /** 推送一条通知（进入展示队列，会弹横幅）。 */
@@ -173,6 +178,12 @@ export function useNotifications(): NotificationApi {
   /** 是否已过首次延迟（延迟期间不渲染横幅）。 */
   const ready = ref(false)
   const visible = computed(() => ready.value && current.value !== null && !disposed)
+  /**
+   * 是否已有通知真正弹出过。
+   * `ready` 一旦为 true 即表示第一条已经开始展示；
+   * 用它驱动桌面角标，保证「先弹横幅、后亮角标」。
+   */
+  const hasShownAny = computed(() => ready.value)
   /** 通知中心展示：最新在前。 */
   const historyView = computed(() => [...history.value].reverse())
 
@@ -304,6 +315,7 @@ export function useNotifications(): NotificationApi {
     waitingCount,
     leaving: computed(() => leaving.value),
     visible,
+    hasShownAny,
     history: historyView,
     push,
     record,

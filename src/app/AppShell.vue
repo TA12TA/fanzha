@@ -334,9 +334,20 @@ function openNoticeTarget(): void {
   view.value = 'chat'
 }
 
-/** 已读标记：进入通知中心后清除未读圆点。 */
+/**
+ * 桌面角标的「未读」判定。
+ *
+ * 关键时序：必须等通知**真正弹出过**（`notices.hasShownAny`）之后才允许亮角标，
+ * 否则会出现「横幅还在延迟、角标已经亮了」的倒置观感。
+ * 进入通知中心即视为已读。
+ */
+/** 已读水位：进入通知中心时记录当时的通知条数。 */
 const noticesReadAt = ref(0)
-const hasUnreadNotices = computed(() => notices.history.value.length > noticesReadAt.value)
+const unreadCount = computed(() => {
+  if (!notices.hasShownAny.value) return 0
+  return Math.max(0, notices.history.value.length - noticesReadAt.value)
+})
+const hasUnreadNotices = computed(() => unreadCount.value > 0)
 
 function markNoticesRead(): void {
   noticesReadAt.value = notices.history.value.length
@@ -434,6 +445,8 @@ onBeforeUnmount(() => {
           :state="state"
           :show-invite-notice="showInviteNotice"
           :has-unread="hasUnreadNotices"
+          :unread-count="unreadCount"
+          :notice-shown="notices.hasShownAny.value"
           @open-chat="openChat"
           @open-wallet="openWallet"
           @open-manual="openManual"
