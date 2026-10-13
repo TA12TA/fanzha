@@ -34,4 +34,8 @@
 - 保持脚本/状态/组件命名一致，关键教育文案需审校；如引用具体案例或统计数字，记录出处，无法核实就不写成事实数据。
 - 运行构建及可运行的测试，检查失败原因并修复；最终回报应列出完成项、未完成项、实际运行的命令、剩余风险，不得把未测试功能称作已通过。
 - **每轮改动必须提交一次 git**（用户明确要求）：完成一轮修改后立即 `git add -A && git commit`，不要攒着留到后面。提交信息用中文、按 `类型: 简述` 的格式（如 `feat:` / `fix:` / `refactor:` / `docs:` / `test:`），正文写清改了什么、为什么改、跑了哪些验证。回报时应给出本轮提交的哈希，并确认工作区干净（`git status` 无未提交改动）。
+- **中文文本一律不要经过 PowerShell 处理**（已两次踩坑，务必遵守）：
+  - 不要用 `-replace` / `Get-Content -Raw` + `Set-Content` 做文本替换，会把 UTF-8 中文变成乱码（本项目曾因此损坏源文件三次，只能 `git checkout --` 重做）；
+  - 不要用 `Out-File` / `Set-Content` 写 git 提交信息：Windows PowerShell 的 `-Encoding utf8` 会写入 BOM，提交主题会带上一个零宽字符。应使用编辑工具直接写文件，再 `git commit -F <文件>`；
+  - 反过来，**不要用 PowerShell 的字符串方法判断编码**：捕获原生程序（如 git）输出时 PowerShell 会自行加上 U+FEFF，导致 `$s.StartsWith([char]0xFEFF)` 之类的检查误报。要确认 BOM 是否存在，请读文件字节比对 `EF BB BF`。
 - `LEVEL-01.md` 定义剧情和数值，`DEVELOPMENT.md` 定义工程结构和全屏实现，`SCENES.md` 定义手机视图与场景操作，`ACCEPTANCE.md` 定义验收。若发现矛盾，先在交付说明中指出并采用不产生真实交易、数值可核对、玩家可止损的保守处理。
