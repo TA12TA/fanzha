@@ -173,8 +173,15 @@ async function killTree(child) {
 }
 
 async function main() {
-  await rm(outDir, { recursive: true, force: true })
+  // 只清理本脚本自己产出的东西（截图、浏览器 profile、报告）。
+  // 原先是 rm(outDir, { recursive: true })，会把 .verify 下任何其它文件一起删掉；
+  // 一旦那里有被进程占用的文件（例如临时隧道程序）就会直接 EPERM 崩掉，
+  // 连验证都跑不起来。
+  await mkdir(outDir, { recursive: true })
+  await rm(shotsDir, { recursive: true, force: true }).catch(() => {})
   await mkdir(shotsDir, { recursive: true })
+  await rm(path.join(outDir, 'browser-profile'), { recursive: true, force: true }).catch(() => {})
+  await rm(path.join(outDir, 'report.json'), { force: true }).catch(() => {})
 
   const browserPath = EDGE_CANDIDATES.find((p) => existsSync(p))
   if (!browserPath) {

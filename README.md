@@ -32,9 +32,38 @@ npm run preview      # 预览构建产物（http://127.0.0.1:4173/）
 npm run typecheck    # vue-tsc 类型检查
 npm test             # 单元 + 集成测试（vitest）
 npm run verify       # 真实浏览器（Edge/Chrome headless）端到端验证，产出截图与报告
+npm run smoke:public -- <公网URL>   # 公网部署冒烟测试：真实浏览器打开公网地址，确认能玩
 ```
 
 部署：`vite.config.ts` 使用 `base: './'` 相对路径，`dist/` 可直接放到任意静态目录（含子路径）。核心剧情不依赖任何外部服务。
+
+### 临时发布到公网（隧道）
+
+本项目是纯静态 H5、没有后端，所以任何静态托管都能用。临时演示最省事的做法是打一条隧道：
+
+```bash
+# 1) 起预览服务（对外监听，便于隧道回连）
+node node_modules/vite/bin/vite.js preview --port 4173 --strictPort --host 0.0.0.0
+
+# 2) 另开一个终端，把 4173 隧道到公网（cloudflared 需自行下载，不要放进仓库）
+cloudflared tunnel --url http://127.0.0.1:4173 --no-autoupdate
+
+# 3) 拿到形如 https://xxxx.trycloudflare.com 的地址后，做一次真实浏览器冒烟
+npm run smoke:public -- https://xxxx.trycloudflare.com/
+```
+
+两个坑已经踩过并修好，重新部署时不必再踩：
+
+1. **`403 Blocked request. This host "..." is not allowed.`**
+   这不是 Cloudflare 拦的，是 Vite preview 自己的 Host 校验（防 DNS rebinding）。已在 `vite.config.ts` 的 `preview.allowedHosts` 放行 `.trycloudflare.com` 与 `.loca.lt`。只放行这两个隧道域名，本机与局域网访问照旧，陌生 Host 仍然返回 403（可实测验证）。
+2. **`EPERM: unlink '...cloudflared.exe'`**
+   `verify-edge.mjs` 原先会整目录删掉 `.verify/`，一旦里面放了对外的隧道程序（进程占用文件）就会直接把验证跑崩。现在只清理脚本自己产出的截图/profile/report。另外隧道程序属于本机工具，建议放在仓库外（例如 `E:\DSH\_fj-tunnel\`），不要放进工作区。
+
+临时隧道地址的注意点：
+
+- **地址是临时的**：cloudflared quick tunnel 每次重启都会换一个新域名，且官方明确不保证可用性（无账号隧道仅供试用）。
+- **任何人拿到链接都能玩**：游戏不接后端、不上传玩家选择，除玩家本机 `localStorage` 外无数据落地。
+- **延迟偏高**：实测出口落在 Cloudflare 圣何塞（sjc），单次资源请求约 1–1.7 秒；首屏可见约 5 秒。功能正常，但不如局域网地址流畅。局域网试玩仍推荐 `http://<本机IP>:4173/`。
 
 ## 工程结构
 
@@ -59,6 +88,7 @@ src/
   styles/                # 设计令牌与基础样式（含 prefers-reduced-motion）
 tests/                   # engine / storage / debrief / clock / unlock / settings / notifications / app 八套测试
 scripts/verify-edge.mjs  # Edge headless + CDP 端到端验证
+scripts/smoke-public.mjs # 公网地址冒烟测试（隧道/静态托管发布后跑）
 ```
 
 **关卡数据位置**：`src/data/level01.ts`（节点、选项转移表、金额常量、消息与复盘标签）；状态转移逻辑在 `src/game/engine.ts`。新增节点需同时补充转移表、`NODE_OPTIONS`、复盘规则与测试。
@@ -106,6 +136,7 @@ scripts/verify-edge.mjs  # Edge headless + CDP 端到端验证
 | `npm test`          | **106 项全部通过**（engine 17 / storage 10 / debrief 10 / clock 5 / unlock 6 / settings 11 / notifications 14 / app 33） |
 | `npm run build`     | 成功，`dist/assets/index-*.js` 127.01 kB（gzip 47.27 kB）                                                              |
 | `npm run verify`    | **58 项全部通过**（Edge 155.0.4283.45 headless）                                                                         |
+| `npm run smoke:public` | **12 项全部通过**（对 trycloudflare 公网地址实跑，2026-10-13）                                                              |
 
 `npm run verify` 覆盖：320/375/390px 无横向溢出、真实触摸事件上滑解锁（含轻微上滑不解锁）、三条结局路径、自由探索回切、资料弹层、金额 800→700→400、平台 130 不入账、早拒绝复盘不含未经历话术、重开二次确认、损坏存档回退、`prefers-reduced-motion` 下消息直出并仍可完成付款、关键选项可键盘聚焦触发、北京时间显示（浏览器时区改为纽约时仍显示北京时间）、**解锁后延迟弹通知**（先看到桌面 → 3 秒后才弹预警 → 邀请排队角标 +1 → 预警播完邀请接上 → 两条都自动关闭）、**邀请改为通知留存**（桌面无卡片、青讯有角标、通知中心里的邀请可点进会话）、通知中心不遮挡与分组、状态栏与桌面图标共用同一入口、状态栏无「模拟」字样、**六个桌面图标尺寸与圆角统一**、**音效实测**（拦截 AudioContext 计数振荡器：解锁与点击确实发声、**桌面「国家反诈中心」大图标与底部导航「反诈」小图标两个入口都出声**、关闭开关后不再发声）、验证后服务释放。产物：`.verify/report.json` 与 7 张截图。
 
@@ -126,6 +157,7 @@ scripts/verify-edge.mjs  # Edge headless + CDP 端到端验证
   - 使用理由：本项目是**反诈教育**产品，让玩家认出真实官方应用属于「识别与求助路径」的一部分；游戏全程仍标注虚构应用与模拟声明，转账页明确「不会动你的真钱」。
 - **微信内置浏览器真机：待检查**（B07）。本机无微信环境，未做真机验证；已覆盖的是桌面浏览器预览与 Edge headless 移动视口。
 - **未做真机 iOS/Android 手势区实测**：安全区依赖 `env()`，在带底部工具栏的移动浏览器中的实际留白待真机确认。
+- **没有 favicon**：浏览器会自动请求 `/favicon.ico` 得到 404（公网冒烟测试会把这条记录为「favicon 缺失 1 次 404，不影响游戏」）。观感上只影响浏览器标签页图标，未处理。
 - **未实现（按规约不属于第一关范围）**：分享海报、图鉴、第二关、账号、排行榜、后端。
 - **剧情文案**：为教学目的虚构，未引用具体真实案例或统计数字，因此无需标注出处。
 - 未提交 `node_modules/`、`dist/`、`.verify/`（均已在 `.gitignore` 中排除）。
