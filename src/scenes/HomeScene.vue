@@ -101,7 +101,7 @@ const noticeBadge = computed(() => {
           >
             <span
               class="app__glyph"
-              :class="{ 'app__glyph--brand': app.id === 'manual' }"
+              :class="app.id === 'manual' ? 'app__glyph--brand' : `app__glyph--${app.id}`"
               aria-hidden="true"
             >
               <!-- 反诈应用用官方 logo 图片，其余为自绘 SVG -->
@@ -109,8 +109,8 @@ const noticeBadge = computed(() => {
                 v-if="app.id === 'manual'"
                 :src="antifraudLogo"
                 alt=""
-                width="26"
-                height="26"
+                width="38"
+                height="38"
                 class="app__logo"
               />
               <!-- 其余应用图标：自绘 SVG，不使用任何官方徽标 -->
@@ -283,14 +283,42 @@ const noticeBadge = computed(() => {
   width: 38px;
   height: 38px;
   border-radius: 10px;
-  background: rgb(255 255 255 / 10%);
-  color: #dbe8f7;
+  color: #ffffff;
+  /* 默认底板：与官方 logo 一致的做法——每个图标都有自己的彩色底板 */
+  background: linear-gradient(150deg, #5a7ea8, #3d5a7d);
+  box-shadow: 0 2px 8px rgb(4 10 20 / 26%);
+}
+
+/*
+ * 各应用的彩色底板：统一为「彩色渐变底 + 白色图标」，
+ * 与「国家反诈中心」的官方 logo（彩色实心图标）保持同一种呈现方式。
+ * 反诈中心用官方图片，不套底板。
+ */
+.app__glyph--chat {
+  background: linear-gradient(150deg, #3f9bf5, #1f6fd0);
+}
+
+.app__glyph--wallet {
+  background: linear-gradient(150deg, #35b98a, #178a63);
+}
+
+.app__glyph--photos {
+  background: linear-gradient(150deg, #f0885a, #d15f36);
+}
+
+.app__glyph--notifications {
+  background: linear-gradient(150deg, #f0b73f, #d18f1c);
+}
+
+.app__glyph--settings {
+  background: linear-gradient(150deg, #8a93a6, #5f6a7e);
 }
 
 /*
  * 反诈应用图标：使用官方 logo 图片。
  * 来源：Apple App Store 官方接口（开发者署名 criminal investigation department
  * ministry of public security，即公安部刑事侦查局）。图片已缩放到 256×256 PNG。
+ * 官方 logo 自带蓝色底与金色盾牌，因此不再叠加底板。
  */
 .app__glyph--brand {
   background: transparent;
@@ -300,9 +328,9 @@ const noticeBadge = computed(() => {
 
 .app__logo {
   display: block;
-  width: 26px;
-  height: 26px;
-  border-radius: 6px;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
 }
 
 .app__label {
