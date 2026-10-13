@@ -555,7 +555,7 @@ async function main() {
       `${stable.first} → ${stable.second}`,
     )
 
-    // 9) 顶部通知：两类分开、不重复、定时自动关闭
+    // 9) 顶部通知：预警在前、学姐邀请在后，逐条定时自动关闭
     await cdp.send('Emulation.setTimezoneOverride', { timezoneId: '' })
     await cdp.eval(`localStorage.clear(); return true`)
     await cdp.send('Page.navigate', { url: BASE })
@@ -568,20 +568,19 @@ async function main() {
       return { cls: el.className, text: el.textContent };
     `)
     record(
-      '解锁后先弹出反诈预警（桌面卡片已提示邀请，横幅不重复）',
+      '解锁后先弹出反诈预警',
       firstBanner !== null &&
         firstBanner.cls.includes('banner--antifraud') &&
         firstBanner.text.includes('国家反诈中心提醒您'),
       firstBanner ? firstBanner.cls : '无横幅',
     )
 
-    // 横幅内容不应与桌面卡片逐字重复
-    const bannerBody = firstBanner ? firstBanner.text : ''
-    record(
-      '横幅不再重复桌面上同一句邀请文案',
-      !bannerBody.includes('一位学姐邀请你加入兼职群'),
-      bannerBody.slice(0, 40),
-    )
+    // 学姐邀请应排在预警之后等待（角标提示）
+    const queuedBadge = await cdp.eval(`
+      const el = document.querySelector('.banner__queued');
+      return el ? el.textContent.trim() : null;
+    `)
+    record('学姐邀请排在预警之后等待（角标提示）', queuedBadge !== null, `角标=${queuedBadge}`)
 
     // 桌面邀请卡仍然在（持久入口）
     const desktopCard = await cdp.eval(`
@@ -590,10 +589,25 @@ async function main() {
     `)
     record('桌面仍有「继续当前事项」入口', desktopCard.includes('继续当前事项'), desktopCard.trim().slice(0, 40))
 
-    // 等待预警自动关闭（默认 6 秒 + 退场动画）
+    // 预警播完后，学姐邀请横幅自动接上
     await sleep(6600)
+    const secondBanner = await cdp.eval(`
+      const el = document.querySelector('.banner');
+      if (!el) return null;
+      return { cls: el.className, text: el.textContent };
+    `)
+    record(
+      '预警之后学姐邀请自动接上弹出',
+      secondBanner !== null &&
+        secondBanner.cls.includes('banner--message') &&
+        secondBanner.text.includes('一位学姐邀请你加入兼职群'),
+      secondBanner ? secondBanner.cls : '无横幅',
+    )
+
+    // 邀请也定时自动关闭，两条都播完后顶部不再有横幅
+    await sleep(4600)
     const anyBanner = await cdp.eval(`return !!document.querySelector('.banner')`)
-    record('预警定时自动关闭，无需手动点', anyBanner === false)
+    record('两条通知都定时自动关闭，无需手动点', anyBanner === false)
 
     // 两类通知在通知中心分组保留，且进入时横幅已收起、不遮挡标题
     await cdp.click('桌面')

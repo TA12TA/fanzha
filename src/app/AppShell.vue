@@ -81,22 +81,33 @@ function pushAntifraud(node = state.value.node): void {
     return
   }
   notices.push(item)
-  playSound('alert')
 }
 
 /**
  * 推送消息类通知（学姐邀请、群消息等），与预警分开。
- * `silent` 为 true 时只记录不弹横幅（用于解锁瞬间：桌面卡片已经在提示同一件事）。
+ * 排在队列末尾，等当前通知播完后自动接上。
  */
-function pushMessage(title: string, body: string, options: { silent?: boolean } = {}): void {
-  const item = { kind: 'message' as const, title, body }
-  if (options.silent || !settings.value.banner) {
-    notices.record(item)
+function pushMessage(title: string, body: string): void {
+  if (!settings.value.banner) {
+    notices.record({ kind: 'message', title, body })
     return
   }
-  notices.push(item)
-  playSound('receive')
+  notices.push({ kind: 'message', title, body })
 }
+
+/**
+ * 通知**真正显示**时播放对应提示音。
+ * 因此排在后面的通知轮到它时也会响，而不是入队时就响。
+ */
+watch(
+  () => currentNotice.value?.id,
+  (id, prevId) => {
+    if (id === undefined || id === prevId) return
+    const item = currentNotice.value
+    if (!item) return
+    playSound(item.kind === 'antifraud' ? 'alert' : 'receive')
+  },
+)
 
 /** 关闭当前通知（队列内部先停倒计时再动画出队，不会跳过下一条）。 */
 function dismissNotice(): void {
@@ -171,9 +182,9 @@ function submit(optionId: OptionId): void {
     // 开场解锁：先让玩家看到桌面与邀请通知，不直接跳进会话。
     if (optionId === 'start') {
       view.value = 'home'
-      // 桌面邀请卡已经在提示同一件事，横幅不再重复弹，只记入通知中心。
-      pushMessage(BRAND.chat, '一位学姐邀请你加入兼职群', { silent: true })
+      // 先弹反诈预警，学姐邀请排在它之后自动接上（不打断、不覆盖）。
       pushAntifraud(state.value.node)
+      pushMessage(BRAND.chat, '一位学姐邀请你加入兼职群')
     } else {
       syncViewToNode()
       pushAntifraud(state.value.node)

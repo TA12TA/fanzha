@@ -289,25 +289,25 @@ describe('E. 整部手机的交互（B01–B14）', () => {
     expect(saved?.paidTotal).toBe(100)
   })
 
-  it('J 解锁时桌面卡片已提示邀请，横幅不重复弹同一件事', async () => {
+  it('J 解锁后先弹反诈预警，学姐邀请排在它之后等待', async () => {
     const wrapper = mountApp()
     await swipeUnlock(wrapper)
 
-    // 桌面卡片承担邀请提示
-    expect(wrapper.text()).toContain('一位学姐邀请你加入兼职群')
-
-    // 横幅只弹反诈预警，不再重复一句相同的邀请文案
+    // 横幅先弹反诈预警
     const banner = wrapper.find('.banner')
     expect(banner.exists(), '解锁后应有反诈预警横幅').toBe(true)
     expect(banner.classes()).toContain('banner--antifraud')
     expect(banner.text()).toContain('国家反诈中心提醒您')
 
-    // 消息仍记录在通知中心（不丢档）
+    // 学姐邀请排在后面等待（角标提示还有一条）
+    expect(wrapper.find('.banner__queued').exists(), '应提示还有一条通知在等待').toBe(true)
+
+    // 消息记录在通知中心（不丢档）
     await clickDesktopApp(wrapper, '通知')
     expect(wrapper.text()).toContain('一位学姐邀请你加入兼职群')
   })
 
-  it('K 通知会自动关闭，无需玩家手动点', async () => {
+  it('K 通知自动关闭后，排在后面的学姐邀请自动接上', async () => {
     vi.useFakeTimers()
     try {
       const wrapper = mountApp()
@@ -315,13 +315,21 @@ describe('E. 整部手机的交互（B01–B14）', () => {
       await wrapper.find('.lock__surface').trigger('click')
       await vi.advanceTimersByTimeAsync(50)
 
-      const banner = wrapper.find('.banner')
-      expect(banner.exists(), '解锁后应出现通知').toBe(true)
-      expect(banner.classes()).toContain('banner--antifraud')
+      // 第一条是反诈预警
+      const first = wrapper.find('.banner')
+      expect(first.exists(), '解锁后应出现通知').toBe(true)
+      expect(first.classes()).toContain('banner--antifraud')
 
-      // 预警默认 6 秒后自动关闭
-      await vi.advanceTimersByTimeAsync(DEFAULT_DURATIONS.antifraud + 400)
-      expect(wrapper.find('.banner').exists(), '通知应已自动关闭').toBe(false)
+      // 预警播完自动关闭后，学姐邀请接上（用户要求：邀请在反诈通知之后弹出）
+      await vi.advanceTimersByTimeAsync(DEFAULT_DURATIONS.antifraud + LEAVE_MS + 60)
+      const second = wrapper.find('.banner')
+      expect(second.exists(), '预警之后应轮到学姐邀请').toBe(true)
+      expect(second.classes()).toContain('banner--message')
+      expect(second.text()).toContain('一位学姐邀请你加入兼职群')
+
+      // 邀请播完后队列清空，横幅不再出现
+      await vi.advanceTimersByTimeAsync(DEFAULT_DURATIONS.message + LEAVE_MS + 60)
+      expect(wrapper.find('.banner').exists(), '两条都播完后应无横幅').toBe(false)
     } finally {
       vi.useRealTimers()
     }
@@ -334,25 +342,28 @@ describe('E. 整部手机的交互（B01–B14）', () => {
       await wrapper.find('.lock__surface').trigger('click')
       await vi.advanceTimersByTimeAsync(50)
 
-      // 入队两条：手动关闭第一条后，第二条必须还在
-      const vm = wrapper.vm as unknown as {
-        notices?: { push: (i: { kind: 'message'; title: string; body: string }) => void }
-      }
-      void vm
-      // 直接通过界面验证：解锁后只有一条预警在队列里
+      // 解锁后有两条排队：预警（当前）+ 学姐邀请（等待）
       expect(wrapper.find('.banner').exists()).toBe(true)
+      expect(wrapper.find('.banner').classes()).toContain('banner--antifraud')
 
-      // 点击关闭
+      // 手动关闭第一条
       const close = wrapper
         .findAll('button')
         .find((b) => b.attributes('aria-label') === '关闭通知')
       await close?.trigger('click')
-      // 退场动画期间仍算当前条
       await vi.advanceTimersByTimeAsync(LEAVE_MS + 50)
-      expect(wrapper.find('.banner').exists()).toBe(false)
 
-      // 队列已空，时间再推进也不会凭空冒出内容
-      await vi.advanceTimersByTimeAsync(20000)
+      // 第二条必须仍在展示，而不是被连带跳过
+      const second = wrapper.find('.banner')
+      expect(second.exists(), '手动关闭后应轮到第二条，而不是全部消失').toBe(true)
+      expect(second.classes()).toContain('banner--message')
+
+      // 再推进到第一条原本的自动关闭时间点，不应造成二次出队
+      await vi.advanceTimersByTimeAsync(200)
+      expect(wrapper.find('.banner').classes()).toContain('banner--message')
+
+      // 第二条播完后才清空
+      await vi.advanceTimersByTimeAsync(DEFAULT_DURATIONS.message + LEAVE_MS + 60)
       expect(wrapper.find('.banner').exists()).toBe(false)
     } finally {
       vi.useRealTimers()

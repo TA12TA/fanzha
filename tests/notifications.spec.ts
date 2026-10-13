@@ -139,17 +139,18 @@ describe('L. 通知队列的时序（自动关闭与手动关闭不竞态）', (
     expect(n.history.value[0].body).toBe('已记录')
   })
 
-  it('dropCurrent 立即丢弃且不播动画（用于切换视图）', () => {
+  it('dropCurrent 清空整个展示队列且不播动画，历史仍保留', () => {
     vi.useFakeTimers()
     try {
       const n = useNotifications()
       n.push({ kind: 'message', title: 'A', body: 'a' })
       n.push({ kind: 'message', title: 'B', body: 'b' })
       n.dropCurrent()
-      // 同步生效，无需等待动画
-      expect(n.current.value?.title).toBe('B')
+      // 同步生效：整个队列都清掉，避免排队中的下一条弹到新页面上
+      expect(n.current.value).toBeNull()
+      expect(n.pendingCount.value).toBe(0)
       expect(n.leaving.value).toBe(false)
-      // 历史仍保留两条
+      // 历史仍保留两条（通知中心还能回看）
       expect(n.history.value).toHaveLength(2)
     } finally {
       vi.useRealTimers()

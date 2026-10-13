@@ -102,7 +102,10 @@ export interface NotificationApi {
   record: (input: { kind: NotificationKind; title: string; body: string }) => void
   /** 玩家主动关闭当前通知（先停倒计时，再动画，最后出队）。 */
   dismissCurrent: () => void
-  /** 立即丢弃当前通知与整个队列，不播动画（用于切页/重开）。 */
+  /**
+   * 立即丢弃**整个展示队列**，不播动画（用于切换视图/重开）。
+   * 只清展示队列，通知中心的历史保留。
+   */
   dropCurrent: () => void
   /** 清空队列与历史。 */
   clear: () => void
@@ -221,11 +224,16 @@ export function useNotifications(): NotificationApi {
     beginLeave()
   }
 
-  /** 立即丢弃队首（不播动画），用于切换视图时避免过期横幅压住新页面。 */
+  /**
+   * 立即丢弃整个展示队列（不播动画）。
+   * 用于切换视图时避免过期横幅压住新页面——必须清整队，
+   * 否则排队中的下一条会紧接着弹到新页面上。
+   */
   function dropCurrent(): void {
+    clearAutoTimer()
     clearLeaveTimer()
     leaving.value = false
-    advanceNow()
+    queue.value = []
   }
 
   function clear(): void {
