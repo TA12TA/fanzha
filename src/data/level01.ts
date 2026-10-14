@@ -310,7 +310,7 @@ export const MOM_MESSAGES: ChatMessage[] = [
     id: 'm1',
     from: 'them',
     name: BRAND.mom,
-    text: '这个月生活费给你转过去了，收到回我一声。',
+    text: '这个月生活费转过去了，收到回我一声。',
   },
   {
     id: 'm2',
@@ -357,7 +357,7 @@ export const INVITE_MESSAGES: ChatMessage[] = [
     id: 'i2',
     from: 'them',
     name: BRAND.senior,
-    text: '不用出门，手机上就能做。先拉你进群看看？不合适随时退',
+    text: '手机上就能做，先拉你进群看看？不合适随时退',
   },
   {
     id: 'i3',
@@ -437,7 +437,7 @@ export const FREEZE_MESSAGES: ChatMessage[] = [
     id: 'f3',
     from: 'them',
     name: BRAND.groupOwner,
-    text: '别的同学都交了，就你还差这一步，别耽误大家结算',
+    text: '别的同学都交了，别耽误大家结算',
   },
   {
     id: 'f4',

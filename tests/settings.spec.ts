@@ -6,6 +6,7 @@ import {
   parseSettings,
   saveSettings,
 } from '@/app/settings'
+import { DAY_END_HOUR, DAY_START_HOUR, resolveTheme, themeForHour } from '@/app/theme'
 import { REMINDER_TITLE, allReminders, reminderFor } from '@/data/antifraud'
 import type { NodeId } from '@/game/types'
 
@@ -38,18 +39,33 @@ beforeEach(() => {
 })
 
 describe('H. 设置（音效与提醒开关）', () => {
-  it('默认开启音效与顶部提醒', () => {
+  it('默认开启音效与顶部提醒，壁纸为自动', () => {
     const s = loadSettings(storage)
     expect(s.sound).toBe(true)
     expect(s.banner).toBe(true)
+    expect(s.theme).toBe('auto')
     expect(s.version).toBe(SETTINGS_VERSION)
   })
 
   it('保存后可读回', () => {
-    saveSettings({ version: SETTINGS_VERSION, sound: false, banner: true }, storage)
+    saveSettings({ version: SETTINGS_VERSION, sound: false, banner: true, theme: 'day' }, storage)
     const s = loadSettings(storage)
     expect(s.sound).toBe(false)
     expect(s.banner).toBe(true)
+    expect(s.theme).toBe('day')
+  })
+
+  it('老存档缺 theme 时按 auto 迁移，而不是整份丢弃', () => {
+    // 模拟升级前写下的存档：没有 theme 字段
+    storage.setItem(
+      SETTINGS_KEY,
+      JSON.stringify({ version: SETTINGS_VERSION, sound: false, banner: false }),
+    )
+    const s = loadSettings(storage)
+    // 玩家调过的音效偏好必须保留
+    expect(s.sound).toBe(false)
+    expect(s.banner).toBe(false)
+    expect(s.theme).toBe('auto')
   })
 
   it('损坏或旧版设置回退到默认值并清档', () => {
@@ -61,6 +77,13 @@ describe('H. 设置（音效与提醒开关）', () => {
 
     storage.setItem(SETTINGS_KEY, JSON.stringify({ version: SETTINGS_VERSION, sound: 'yes' }))
     expect(loadSettings(storage).sound).toBe(true)
+
+    // theme 取值非法同样判为损坏
+    storage.setItem(
+      SETTINGS_KEY,
+      JSON.stringify({ version: SETTINGS_VERSION, sound: true, banner: true, theme: 'dusk' }),
+    )
+    expect(loadSettings(storage).theme).toBe('auto')
   })
 
   it('parseSettings 拒绝非布尔与缺字段', () => {
@@ -71,6 +94,7 @@ describe('H. 设置（音效与提醒开关）', () => {
       version: SETTINGS_VERSION,
       sound: true,
       banner: true,
+      theme: 'auto',
     })
   })
 
@@ -90,7 +114,36 @@ describe('H. 设置（音效与提醒开关）', () => {
       },
     }
     expect(() => loadSettings(throwing)).not.toThrow()
-    expect(saveSettings({ version: SETTINGS_VERSION, sound: false, banner: false }, throwing)).toBe(false)
+    expect(
+      saveSettings(
+        { version: SETTINGS_VERSION, sound: false, banner: false, theme: 'auto' },
+        throwing,
+      ),
+    ).toBe(false)
+  })
+})
+
+/**
+ * 壁纸主题：默认按时间自动切换，也允许玩家锁定。
+ * 这里只测纯函数（不碰 DOM），DOM 行为由 app.spec 与 verify-edge 覆盖。
+ */
+describe('J. 壁纸主题（白天 / 夜间）', () => {
+  it('按小时判断白天与夜间，边界明确', () => {
+    expect(themeForHour(DAY_START_HOUR)).toBe('day')
+    expect(themeForHour(DAY_END_HOUR - 1)).toBe('day')
+    expect(themeForHour(DAY_END_HOUR)).toBe('night')
+    expect(themeForHour(DAY_START_HOUR - 1)).toBe('night')
+    expect(themeForHour(0)).toBe('night')
+    expect(themeForHour(12)).toBe('day')
+  })
+
+  it('自动模式跟随时间，手动模式锁定不变', () => {
+    // 自动：白天的小时给 day，夜里的小时给 night
+    expect(resolveTheme('auto', 9)).toBe('day')
+    expect(resolveTheme('auto', 23)).toBe('night')
+    // 手动：无视时间
+    expect(resolveTheme('day', 23)).toBe('day')
+    expect(resolveTheme('night', 9)).toBe('night')
   })
 })
 

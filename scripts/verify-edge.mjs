@@ -297,6 +297,23 @@ async function main() {
       lockText.includes('剧情演示') ? '保留了「剧情演示」标记' : '缺少模拟标记',
     )
 
+    // 锁屏必须挂载壁纸图层（与桌面共用同一份 styles/wallpaper.css）
+    const lockWall = await cdp.eval(`
+      const wall = document.querySelector('.lock .wall');
+      const sky = document.querySelector('.lock .wall__sky');
+      return {
+        hasWall: !!wall,
+        hasSky: !!sky,
+        bg: wall ? getComputedStyle(wall).backgroundImage : '',
+        theme: document.documentElement.getAttribute('data-theme'),
+      };
+    `)
+    record(
+      '锁屏挂载了壁纸图层（与桌面共用同一张）',
+      lockWall.hasWall && lockWall.hasSky && lockWall.bg.length > 0,
+      `主题=${lockWall.theme}`,
+    )
+
     // 上滑解锁（真实触摸事件）
     await cdp.swipeUp({ fromY: 640, toY: 430 })
     await cdp.screenshot(path.join(shotsDir, '02-home.png'))
@@ -307,6 +324,18 @@ async function main() {
       '上滑解锁后进入桌面（邀请提示改为通知留存，桌面无邀请卡片）',
       onDesktop && hasCard === false,
       hasCard ? '桌面仍有卡片' : '',
+    )
+
+    // 解锁前后壁纸必须一致（否则会看到背景跳一下）
+    const wallSame = await cdp.eval(`
+      const homeWall = document.querySelector('.home .wall');
+      const sky = document.querySelector('.home .wall__sky');
+      return { hasWall: !!homeWall, hasSky: !!sky };
+    `)
+    record(
+      '桌面壁纸与锁屏同源（解锁后背景不跳）',
+      wallSame.hasWall && wallSame.hasSky,
+      '',
     )
 
     // 解锁过渡动画：桌面所在的换页容器应带 unlock 动画
@@ -650,18 +679,28 @@ async function main() {
       `状态栏=${statusCheck.shown} 北京=${statusCheck.beijing}`,
     )
 
-    // 时间在一分钟内保持稳定（不是每秒乱跳的假时钟）
+    // 时间必须是真时钟：每一刻都与北京时间一致。
+    // （原先只比较「1.5 秒内文字有没有变」，正好跨分钟就会假失败；
+    //  改成拿两次采样分别与当时的北京时间对照，跨分钟也不会误报。）
     const stable = await cdp.eval(`
       const el = document.querySelector('.statusbar__time [aria-hidden="true"]');
+      const fmt = () => new Intl.DateTimeFormat('zh-CN', {
+        timeZone: 'Asia/Shanghai', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+      }).format(new Date());
       const first = el ? el.textContent.trim() : '';
+      const firstExpected = fmt();
       return new Promise((resolve) => setTimeout(() => {
-        resolve({ first, second: el ? el.textContent.trim() : '' });
+        resolve({
+          first, firstExpected,
+          second: el ? el.textContent.trim() : '',
+          secondExpected: fmt(),
+        });
       }, 1500));
     `)
     record(
-      '同一分钟内时间显示稳定',
-      stable.first === stable.second,
-      `${stable.first} → ${stable.second}`,
+      '时间显示与北京时间逐次一致（真时钟，不是假跳动）',
+      stable.first === stable.firstExpected && stable.second === stable.secondExpected,
+      `${stable.first}(期望${stable.firstExpected}) → ${stable.second}(期望${stable.secondExpected})`,
     )
 
     // 9) 顶部通知：预警在前、学姐邀请在后，逐条定时自动关闭
@@ -969,6 +1008,104 @@ async function main() {
     await sleep(300)
     const viewerClosed = await cdp.eval(`return !document.querySelector('.viewer')`)
     record('关闭查看器后回到相册网格', viewerClosed === true)
+    await cdp.click('返回')
+
+    // ============ 壁纸主题（白天 / 夜间） ============
+    const autoTheme = await cdp.eval(`
+      const html = document.documentElement;
+      return { theme: html.getAttribute('data-theme'), mode: html.getAttribute('data-theme-mode') };
+    `)
+    record(
+      '壁纸主题默认自动且已生效',
+      (autoTheme.theme === 'day' || autoTheme.theme === 'night') && autoTheme.mode === 'auto',
+      `主题=${autoTheme.theme} 模式=${autoTheme.mode}`,
+    )
+
+    // 切到另一套主题（在设置页操作），然后回桌面测量
+    const otherTheme = autoTheme.theme === 'day' ? 'night' : 'day'
+    const homeWallBefore = await cdp.eval(`
+      const wall = document.querySelector('.home .wall');
+      return wall ? getComputedStyle(wall).backgroundImage : '';
+    `)
+    await cdp.eval(`
+      const b = [...document.querySelectorAll('.home .app')].find(x => (x.textContent||'').includes('设置'));
+      if (b) b.click();
+      return !!b;
+    `)
+    await sleep(400)
+    await cdp.eval(`
+      const label = '壁纸：' + (${JSON.stringify(otherTheme)} === 'day' ? '白天' : '夜间');
+      const b = [...document.querySelectorAll('button')].find(x => x.getAttribute('aria-label') === label);
+      if (b) b.click();
+      return !!b;
+    `)
+    await sleep(400)
+    await cdp.eval(`
+      const b = [...document.querySelectorAll('button')].find(x => x.getAttribute('aria-label') === '回到桌面');
+      if (b) b.click();
+      return !!b;
+    `)
+    await sleep(600)
+    const afterSwitch = await cdp.eval(`
+      const html = document.documentElement;
+      const wall = document.querySelector('.home .wall');
+      const label = document.querySelector('.dock .app .app__label');
+      const sb = document.querySelector('.statusbar');
+      const nav = document.querySelector('.nav');
+      return {
+        theme: html.getAttribute('data-theme'),
+        mode: html.getAttribute('data-theme-mode'),
+        wall: wall ? getComputedStyle(wall).backgroundImage : '',
+        dockLabel: label ? getComputedStyle(label).color : '',
+        sb: sb ? sb.className : '',
+        nav: nav ? nav.className : '',
+      };
+    `)
+    record(
+      '设置里可手动切换壁纸，切换后壁纸真的变了',
+      afterSwitch.theme === otherTheme &&
+        afterSwitch.mode === otherTheme &&
+        afterSwitch.wall.length > 0 &&
+        afterSwitch.wall !== homeWallBefore,
+      `切到=${afterSwitch.theme} 壁纸已变=${afterSwitch.wall !== homeWallBefore}`,
+    )
+
+    // 白天壁纸是浅色：桌面上的文字与手机外框必须自动转深色，否则看不清
+    const isDay = afterSwitch.theme === 'day'
+    const contrast = await cdp.eval(`
+      const label = document.querySelector('.dock .app .app__label');
+      const color = label ? getComputedStyle(label).color : '';
+      const m = color.match(/\\d+/g);
+      const lum = m ? (Number(m[0]) * 0.299 + Number(m[1]) * 0.587 + Number(m[2]) * 0.114) : 255;
+      return { color, lum };
+    `)
+    record(
+      isDay ? '白天壁纸下桌面文字自动转深色（可读）' : '夜间壁纸下桌面文字保持浅色（可读）',
+      isDay ? contrast.lum < 140 : contrast.lum > 140,
+      `Dock 标签色=${contrast.color} 亮度=${Math.round(contrast.lum)}`,
+    )
+
+    record(
+      '状态栏与导航栏跟随壁纸明暗换色',
+      isDay
+        ? afterSwitch.sb.includes('statusbar--light') && afterSwitch.nav.includes('nav--light')
+        : afterSwitch.sb.includes('statusbar--dark') && afterSwitch.nav.includes('nav--dark'),
+      `${afterSwitch.sb} / ${afterSwitch.nav}`,
+    )
+
+    // 恢复自动模式，避免影响后续断言
+    await cdp.eval(`
+      const b = [...document.querySelectorAll('.home .app')].find(x => (x.textContent||'').includes('设置'));
+      if (b) b.click();
+      return !!b;
+    `)
+    await sleep(400)
+    await cdp.eval(`
+      const b = [...document.querySelectorAll('button')].find(x => x.getAttribute('aria-label') === '壁纸：自动');
+      if (b) b.click();
+      return !!b;
+    `)
+    await sleep(300)
     await cdp.click('返回')
 
     // 设置页：真机把「清空数据」放在设置里；同时不再有元叙述提示

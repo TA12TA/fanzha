@@ -1327,3 +1327,84 @@ describe('S. 沉浸感（去说明文字 / 解锁过渡 / 设置页重开）', (
     expect(readSave()?.balance).toBe(700)
   })
 })
+
+/**
+ * T. 壁纸主题 + 应用打开逻辑。
+ *
+ * 用户要求：壁纸分白天/夜间两套、默认按时间切换、设置里保留开关；
+ * 并优化「应用打开逻辑」（此前有几个明显的怪行为，见下面各条）。
+ */
+describe('T. 壁纸主题与应用打开逻辑', () => {
+  it('T01 主题默认自动，写在 html 上供样式与断言读取', async () => {
+    mountApp()
+    await flush()
+
+    const html = globalThis.document.documentElement
+    const theme = html.getAttribute('data-theme')
+    expect(['day', 'night'], 'data-theme 只能是 day 或 night').toContain(theme)
+    expect(html.getAttribute('data-theme-mode'), '默认模式是 auto').toBe('auto')
+  })
+
+  it('T02 设置里可切换白天/夜间，且写入本地设置', async () => {
+    const wrapper = mountApp()
+    await swipeUnlock(wrapper)
+    await clickDesktopApp(wrapper, '设置')
+
+    const html = globalThis.document.documentElement
+    await click(wrapper, '壁纸：夜间')
+    expect(html.getAttribute('data-theme'), '锁定夜间后立即生效').toBe('night')
+    expect(html.getAttribute('data-theme-mode')).toBe('night')
+
+    await click(wrapper, '壁纸：白天')
+    expect(html.getAttribute('data-theme'), '锁定白天后立即生效').toBe('day')
+
+    const saved = JSON.parse(globalThis.localStorage.getItem('fj-juzhongju:settings:v1') as string)
+    expect(saved.theme).toBe('day')
+  })
+
+  it('T03 打开相册总是回到网格第一屏，不停在上次翻到的那张', async () => {
+    const wrapper = mountApp()
+    await swipeUnlock(wrapper)
+
+    await clickDesktopApp(wrapper, '相册')
+    await wrapper.findAll('.thumb')[1]?.trigger('click')
+    expect(wrapper.find('.viewer').exists(), '应打开查看器').toBe(true)
+
+    // 回桌面再进相册：不应还停在查看器里
+    await click(wrapper, '回到桌面')
+    await clickDesktopApp(wrapper, '相册')
+    expect(wrapper.find('.viewer').exists(), '重新打开相册应回到网格').toBe(false)
+    expect(wrapper.findAll('.thumb').length).toBeGreaterThan(0)
+  })
+
+  it('T04 结局/复盘之后再点青讯，给的是会话列表而不是某个会话', async () => {
+    const wrapper = mountApp()
+    await startAndOpenInvite(wrapper)
+    await click(wrapper, '拒绝并举报')
+    await flush()
+    // 此时节点已是 end-clear，剧情会话已经结束
+    await click(wrapper, '回到桌面')
+    await clickDesktopApp(wrapper, '青讯')
+
+    expect(wrapper.find('.sessions').exists(), '应进入会话列表').toBe(true)
+    expect(wrapper.find('.chat__list').exists(), '不应直接进入某个会话').toBe(false)
+  })
+
+  it('T05 跳过消息动画的入口在消息末尾，不在顶部挤压第一条消息', async () => {
+    const wrapper = mountApp()
+    await swipeUnlock(wrapper)
+    await clickDesktopApp(wrapper, '青讯')
+
+    const body = wrapper.find('.chat__body')
+    // 「显示全部」应出现在消息列表之后（DOM 顺序上晚于 .chat__list）
+    const list = body.find('.chat__list')
+    const skip = body.find('.chat__skiprow')
+    expect(skip.exists(), '应有跳过动画的入口').toBe(true)
+    const children = [...body.element.children].map((el) => el.className)
+    expect(
+      children.indexOf('chat__skiprow'),
+      '「显示全部」应排在消息列表之后',
+    ).toBeGreaterThan(children.indexOf('chat__list'))
+    expect(list.exists()).toBe(true)
+  })
+})

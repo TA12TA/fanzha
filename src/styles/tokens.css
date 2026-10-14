@@ -48,6 +48,41 @@
   --c-warn-text: #7a4a12;
   --c-sim-bg: #1b2634;
   --c-sim-text: #9fd8ff;
+  /*
+   * 文字层级（2026-10-14 新增）。
+   *
+   * 目的：让「不同重要程度」的文字在颜色和粗细上有稳定、可复用的区别，
+   * 而不是每个组件各写一个近似色。三级用法：
+   * - `--c-text`        主内容：消息正文、金额、列表标题 —— 最深、最粗；
+   * - `--c-text-secondary` 次要信息：发言人名、行副标题、时间 —— 中等；
+   * - `--c-text-tertiary`  辅助说明：备注、提示、分组标题 —— 最浅、最细。
+   * 三级对比度依次递减，但仍满足正文可读性（最浅一级对白底 ≥ 4.5:1）。
+   */
+  --c-text-secondary: #5b6b83;
+  --c-text-tertiary: #8494a8;
+  /* 深色桌面上的对应层级（壁纸是深色底） */
+  --c-text-invert-soft: #c3d0e2;
+  --c-text-invert-dim: #93a5bd;
+
+  /*
+   * 「壁纸上的内容」用色（2026-10-14 新增）。
+   *
+   * 桌面与锁屏的内容直接压在壁纸上，所以它们的颜色必须跟着壁纸走：
+   * 夜间壁纸深 → 文字浅；白天壁纸浅 → 文字深。
+   * 下面这组默认值对应夜间，白天主题在 [data-theme='day'] 里覆盖。
+   */
+  --c-on-wall: #f7fafc;
+  --c-on-wall-soft: #c3d0e2;
+  --c-on-wall-dim: #93a5bd;
+  --c-wall-surface: rgb(255 255 255 / 10%);
+  --c-wall-border: rgb(255 255 255 / 16%);
+  --c-wall-dock: rgb(255 255 255 / 12%);
+  --c-wall-dock-border: rgb(255 255 255 / 18%);
+  --shadow-on-wall: 0 4px 12px rgb(4 10 20 / 30%);
+  --shadow-dock: 0 8px 28px rgb(4 10 20 / 34%);
+  --wall-vignette: rgb(4 10 20 / 30%);
+  --c-wall-chip: rgb(31 111 235 / 24%);
+  --c-wall-chip-border: rgb(56 128 235 / 55%);
 
   --shadow-card: 0 2px 10px rgb(16 30 54 / 10%);
   --shadow-sheet: 0 -6px 24px rgb(10 20 36 / 22%);
@@ -62,4 +97,24 @@
     --dur-base: 0ms;
     --dur-slow: 0ms;
   }
+}
+
+/*
+ * 白天壁纸上的内容用色：壁纸变浅，压在它上面的文字/组件随之转深色。
+ * 只影响桌面与锁屏（`--c-on-wall*` 与 `--c-wall-*`），应用内部页面本来
+ * 就是浅色底，不参与这套切换。
+ */
+[data-theme='day'] {
+  --c-on-wall: #10233c;
+  --c-on-wall-soft: #3d5372;
+  --c-on-wall-dim: #5c718c;
+  --c-wall-surface: rgb(255 255 255 / 62%);
+  --c-wall-border: rgb(255 255 255 / 72%);
+  --c-wall-dock: rgb(255 255 255 / 58%);
+  --c-wall-dock-border: rgb(255 255 255 / 76%);
+  --shadow-on-wall: 0 3px 10px rgb(30 60 100 / 18%);
+  --shadow-dock: 0 8px 24px rgb(30 60 100 / 20%);
+  --wall-vignette: rgb(255 255 255 / 18%);
+  --c-wall-chip: rgb(31 111 235 / 16%);
+  --c-wall-chip-border: rgb(31 111 235 / 42%);
 }

@@ -93,7 +93,12 @@ const hintText = computed(() => {
     :class="{ 'lock--unlocking': unlocking }"
     aria-labelledby="lock-title"
   >
-    <div class="lock__wall" aria-hidden="true"></div>
+    <!-- 壁纸与桌面共用同一份（styles/wallpaper.css），解锁时背景不会跳 -->
+    <div class="wall" aria-hidden="true">
+      <div class="wall__sky"></div>
+      <div class="wall__hills"></div>
+      <div class="wall__glow"></div>
+    </div>
 
     <!-- 上滑区域：整屏可拖，同时是可聚焦的解锁按钮 -->
     <button
@@ -147,21 +152,13 @@ const hintText = computed(() => {
   flex-direction: column;
   min-height: 0;
   color: var(--c-text-invert);
-  background: linear-gradient(170deg, var(--c-desktop-1), var(--c-desktop-2));
+  /* 底色由 .wall 提供（白天/夜间两套），这里只兜底 */
+  background: var(--c-desktop-2);
   overflow: hidden;
 }
 
 .lock--unlocking {
   animation: lock-out var(--dur-slow) ease forwards;
-}
-
-.lock__wall {
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(circle at 22% 18%, rgb(64 132 224 / 34%), transparent 46%),
-    radial-gradient(circle at 82% 74%, rgb(20 160 140 / 26%), transparent 44%);
-  pointer-events: none;
 }
 
 /* 整屏都是解锁热区：既是滑动面，也是真实 button（键盘可达） */

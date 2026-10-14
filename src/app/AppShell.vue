@@ -18,6 +18,7 @@ import { hasOutcome, pendingAmount, preferredChatView, type AppId, type ChatView
 import type { ChatSessionId } from '@/data/level01'
 import { useNotifications } from '@/app/notifications'
 import { useSettings } from '@/app/settings'
+import { useTheme } from '@/app/theme'
 import { playSound, setSoundEnabled } from '@/app/sound'
 import { useGame } from '@/app/useGame'
 import { REMINDER_TITLE, reminderFor } from '@/data/antifraud'
@@ -49,6 +50,8 @@ const game = useGame()
 const { state } = game
 const { settings } = useSettings()
 const notices = useNotifications()
+// 壁纸主题（白天/夜间）：默认按北京时间自动切换，可在设置里锁定。
+const { theme } = useTheme()
 
 /** 音效总开关跟随设置。 */
 watch(
@@ -78,6 +81,12 @@ const submitting = ref(false)
  * 不会延迟玩家操作（`prefers-reduced-motion` 下由 token 归零）。
  */
 const transitionKind = ref<'unlock' | 'app'>('app')
+
+/**
+ * 相册的挂载钥匙：每次从桌面重新打开相册时 +1，
+ * 让相册重新挂载、回到网格第一屏，而不是停在上次翻到的那张照片。
+ */
+const photosKey = ref(0)
 
 /** 六个真正的应用（结局/复盘/桌面/锁屏不算应用）。 */
 const APP_IDS: AppId[] = ['chat', 'wallet', 'manual', 'photos', 'notifications', 'settings']
@@ -215,9 +224,16 @@ const pending = computed(() => pendingAmount(state.value.node))
 const isIntro = computed(() => view.value === 'intro')
 /**
  * 手机外框（状态栏 + 导航栏）的深浅。
- * 桌面是深色壁纸，其余应用页是浅色底，据此自动换色，避免深色条压在浅色页上。
+ *
+ * 桌面与锁屏压在壁纸上，所以要看壁纸主题：夜间壁纸深 → 深色条；
+ * 白天壁纸浅 → 浅色条（否则一条黑边压在浅色壁纸上很假）。
+ * 应用内部页面本来就是浅色底，一律用浅色条。
  */
-const chromeTone = computed<'dark' | 'light'>(() => (view.value === 'home' ? 'dark' : 'light'))
+const chromeTone = computed<'dark' | 'light'>(() => {
+  const onWallpaper = view.value === 'home' || view.value === 'intro'
+  if (!onWallpaper) return 'light'
+  return theme.value === 'day' ? 'light' : 'dark'
+})
 /** 当前已打开的应用（用于最近任务里标出「正在使用」）；结局/复盘/桌面不是应用。 */
 const currentAppId = computed<AppId | null>(() => asAppId(view.value))
 
@@ -449,10 +465,13 @@ function openOutcome(): void {
 
 /** 只读应用（相册 / 通知中心）。 */
 function openPlain(target: 'photos' | 'notifications'): void {
-  playSound('tap')
-  if (target === 'notifications') {
-    markNoticesRead()
+  if (target === 'photos') {
+    // 相册走自己的入口：每次都从网格开始
+    openPhotos()
+    return
   }
+  playSound('tap')
+  markNoticesRead()
   view.value = target
 }
 
@@ -497,8 +516,25 @@ function openSettings(): void {
 /** 打开消息应用（按当前节点定位到相关会话，而不是先看会话列表）。 */
 function openChat(): void {
   playSound('tap')
-  chatView.value = preferredChatView(state.value.node)
+  // 剧情已经产生结局/复盘后，不再把玩家扔回某个会话里，
+  // 而是给会话列表 —— 让他自己决定看哪一条。
+  const node = state.value.node
+  const hasStorySession =
+    node === 'invite' ||
+    node === 'group' ||
+    node === 'rebate' ||
+    node === 'freeze' ||
+    node === 'transfer-100' ||
+    node === 'transfer-300'
+  chatView.value = hasStorySession ? preferredChatView(node) : 'list'
   view.value = 'chat'
+}
+
+/** 打开相册：每次都从网格开始（真机相册不会记住上次翻到哪张）。 */
+function openPhotos(): void {
+  playSound('tap')
+  photosKey.value += 1
+  view.value = 'photos'
 }
 
 /** 打开钱包。 */
@@ -700,7 +736,7 @@ onBeforeUnmount(() => {
           </div>
         </section>
 
-          <PlainAppScene v-else-if="view === 'photos'" @back="goBack" />
+          <PlainAppScene v-else-if="view === 'photos'" :key="photosKey" @back="goBack" />
         </div>
       </main>
 

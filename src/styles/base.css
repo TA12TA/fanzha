@@ -200,3 +200,32 @@ button:focus-visible,
   font-weight: 700;
   color: var(--c-text-soft);
 }
+
+/*
+ * 文字层级工具类（2026-10-14 新增）。
+ *
+ * 一个页面上通常有三档信息：主内容、次要信息、辅助说明。
+ * 统一用这三个类，避免「这里 13px 灰、那里 12px 浅灰」的随机感。
+ */
+.t-primary {
+  font-size: var(--font-base);
+  font-weight: 600;
+  color: var(--c-text);
+}
+
+.t-secondary {
+  font-size: var(--font-sm);
+  font-weight: 500;
+  color: var(--c-text-secondary);
+}
+
+.t-tertiary {
+  font-size: var(--font-xs);
+  font-weight: 400;
+  color: var(--c-text-tertiary);
+}
+
+/* 数字（金额、时间）：等宽数字，避免跳动 */
+.t-num {
+  font-variant-numeric: tabular-nums;
+}

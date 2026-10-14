@@ -282,10 +282,6 @@ const canViewProfile = computed(
       </AppHeader>
 
       <div class="chat__body">
-        <div v-if="!allShown" class="chat__toolbar">
-          <button type="button" class="chat__skip" @click="showAll">显示全部</button>
-        </div>
-
         <ol class="chat__list">
           <li
             v-for="message in shownMessages"
@@ -316,6 +312,16 @@ const canViewProfile = computed(
             </template>
           </li>
         </ol>
+
+        <!--
+          「显示全部」是跳过消息动画的入口（动效不能成为必要交互）。
+          放在消息列表末尾而不是顶部：真机的消息列表就是从头往下读，
+          顶部突然插一个按钮会把第一条消息挤下去；放在末尾正好是
+          「后面还有」的位置，读到哪点到哪。
+        -->
+        <div v-if="!allShown" class="chat__skiprow">
+          <button type="button" class="chat__skip" @click="showAll">显示全部</button>
+        </div>
 
         <!-- 逐条呈现时的无障碍播报：视觉上不再显示「消息正在出现…」这类元叙述 -->
         <p v-if="!allShown" class="sr-only" aria-live="polite">消息正在出现</p>
@@ -448,6 +454,7 @@ const canViewProfile = computed(
 .session__name {
   font-size: var(--font-base);
   font-weight: 600;
+  color: var(--c-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -455,12 +462,13 @@ const canViewProfile = computed(
 
 .session__count {
   font-weight: 400;
-  color: var(--c-text-soft);
+  color: var(--c-text-tertiary);
 }
 
+/* 列表摘要：辅助信息，最浅一档 */
 .session__preview {
   font-size: var(--font-sm);
-  color: var(--c-text-soft);
+  color: var(--c-text-tertiary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -476,7 +484,8 @@ const canViewProfile = computed(
 
 .session__time {
   font-size: var(--font-xs);
-  color: var(--c-text-soft);
+  color: var(--c-text-tertiary);
+  font-variant-numeric: tabular-nums;
 }
 
 /* 未读角标：与桌面图标角标同一种数字样式 */
@@ -506,18 +515,20 @@ const canViewProfile = computed(
   -webkit-overflow-scrolling: touch;
 }
 
-.chat__toolbar {
+/* 跳过动画的入口：跟在消息末尾，低调不抢戏 */
+.chat__skiprow {
   display: flex;
-  justify-content: flex-end;
+  justify-content: center;
+  padding-top: var(--space-1);
 }
 
 .chat__skip {
   min-height: 32px;
-  padding: 0 var(--space-2);
+  padding: 0 var(--space-3);
   border: 1px solid var(--c-line);
   border-radius: var(--radius-sm);
   background: var(--c-surface);
-  color: var(--c-text-soft);
+  color: var(--c-text-tertiary);
   font-size: var(--font-xs);
 }
 
@@ -535,7 +546,15 @@ const canViewProfile = computed(
   list-style: none;
 }
 
-/* 一条消息：头像 + 气泡（群聊在气泡上方带发言人昵称） */
+/*
+ * 一条消息：头像 + 气泡（群聊在气泡上方带发言人昵称）。
+ *
+ * 两个容易出错的点，都在这轮修过：
+ * 1. 必须 `align-items: flex-start`：默认的 stretch 会把头像拉成和气泡
+ *    一样高，看起来像一个色块贴在气泡旁边（真机头像是固定 36px 方块）；
+ * 2. 「我」的消息用 `row-reverse`，头像落在右侧；配合上面的 flex-start，
+ *    头像顶端与气泡顶端对齐 —— 这正是真机消息列表的位置关系。
+ */
 .row {
   display: flex;
   align-items: flex-start;
@@ -567,7 +586,8 @@ const canViewProfile = computed(
 .row__name {
   margin-bottom: 3px;
   font-size: var(--font-xs);
-  color: var(--c-text-soft);
+  font-weight: 500;
+  color: var(--c-text-secondary);
 }
 
 .chat__pending,

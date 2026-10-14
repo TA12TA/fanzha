@@ -121,8 +121,12 @@ function badgeAria(id: string, badge: string): string {
 
 <template>
   <section class="home" aria-label="手机桌面">
-    <!-- 壁纸：多层渐变光斑 + 暗角，纯 CSS，无图片资源 -->
-    <div class="home__wall" aria-hidden="true"></div>
+    <!-- 壁纸：与锁屏共用同一份（styles/wallpaper.css），白天/夜间两套自动切换 -->
+    <div class="wall" aria-hidden="true">
+      <div class="wall__sky"></div>
+      <div class="wall__hills"></div>
+      <div class="wall__glow"></div>
+    </div>
 
     <div class="home__scroll">
       <!-- Widget 控件区：左侧时钟、右侧钱包（真实手机的两列组件排布） -->
@@ -210,55 +214,22 @@ function badgeAria(id: string, badge: string): string {
   flex-direction: column;
   flex: 1;
   min-height: 0;
-  color: var(--c-text-invert);
-  background: linear-gradient(165deg, var(--c-desktop-1), var(--c-desktop-2));
+  /* 压在壁纸上的内容统一用这套「on-wall」变量：白天壁纸浅、文字转深 */
+  color: var(--c-on-wall);
+  background: var(--c-desktop-2);
 }
 
 /*
- * 壁纸：夜空 + 光斑 + 星点 + 山峦剪影，纯 CSS。
- * 真实手机壁纸有明显的光影层次，而不是均匀渐变；
- * 留白区域也要有内容，否则空桌面会显得像没加载完。
- *
- * 注意：山峦位置在 84%~92%，必须落在可视区内（放到 100% 以上会被裁掉看不见）。
+ * 壁纸样式已移到共用的 styles/wallpaper.css：
+ * 锁屏与桌面用同一份壁纸，解锁时背景不会跳；
+ * 白天/夜间两套由 <html data-theme> 切换。
+ * 这里只补一层暗角，让浅色应用页之外仍像一块屏幕。
  */
-.home__wall {
-  position: absolute;
-  inset: 0;
-  background:
-    /* 星点（细小白点，低透明度） */
-      radial-gradient(circle 1.4px at 18% 22%, rgb(255 255 255 / 62%) 0 1.4px, transparent 1.5px),
-    radial-gradient(circle 1px at 33% 40%, rgb(255 255 255 / 45%) 0 1px, transparent 1.1px),
-    radial-gradient(circle 1.2px at 61% 26%, rgb(255 255 255 / 52%) 0 1.2px, transparent 1.3px),
-    radial-gradient(circle 1px at 74% 48%, rgb(255 255 255 / 40%) 0 1px, transparent 1.1px),
-    radial-gradient(circle 1.3px at 88% 33%, rgb(255 255 255 / 48%) 0 1.3px, transparent 1.4px),
-    radial-gradient(circle 1px at 46% 60%, rgb(255 255 255 / 34%) 0 1px, transparent 1.1px),
-    radial-gradient(circle 1.1px at 8% 52%, rgb(255 255 255 / 36%) 0 1.1px, transparent 1.2px),
-    /* 光斑 */
-      radial-gradient(circle at 78% 6%, rgb(70 140 230 / 34%), transparent 42%),
-    radial-gradient(circle at 10% 20%, rgb(120 90 220 / 22%), transparent 40%),
-    radial-gradient(circle at 92% 44%, rgb(52 120 200 / 16%), transparent 38%),
-    /* 山峦剪影：两段错落的椭圆，落在可视区下半部 */
-      radial-gradient(ellipse 120% 22% at 24% 90%, rgb(15 42 78 / 88%), transparent 74%),
-    radial-gradient(ellipse 132% 19% at 88% 95%, rgb(9 28 56 / 94%), transparent 76%),
-    linear-gradient(165deg, var(--c-desktop-1), var(--c-desktop-2));
-  pointer-events: none;
-}
-
-/* 地平线附近的暖光：让山峦剪影有层次，不是一块死黑 */
-.home__wall::before {
+.home::after {
   content: '';
   position: absolute;
   inset: 0;
-  background: radial-gradient(ellipse 66% 12% at 70% 84%, rgb(96 150 226 / 26%), transparent 70%);
-  pointer-events: none;
-}
-
-.home__wall::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  /* 轻微暗角：四周略暗，视觉上更像屏幕而非网页 */
-  background: radial-gradient(ellipse at 50% 40%, transparent 58%, rgb(4 10 20 / 42%));
+  background: radial-gradient(ellipse at 50% 40%, transparent 58%, var(--wall-vignette));
   pointer-events: none;
 }
 
@@ -284,10 +255,10 @@ function badgeAria(id: string, badge: string): string {
 }
 
 .widget {
-  border: 1px solid rgb(255 255 255 / 16%);
+  border: 1px solid var(--c-wall-border);
   border-radius: var(--radius-lg);
   /* 磨砂玻璃：真实手机的 Widget 都是半透明磨砂底 */
-  background: rgb(255 255 255 / 10%);
+  background: var(--c-wall-surface);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
 }
@@ -308,9 +279,11 @@ function badgeAria(id: string, badge: string): string {
   font-variant-numeric: tabular-nums;
 }
 
+/* 日期是时钟组件的次要信息：比时间浅一档 */
 .clock__date {
   font-size: var(--font-xs);
-  color: #b9c9de;
+  font-weight: 400;
+  color: var(--c-on-wall-soft);
 }
 
 .widget--wallet {
@@ -323,7 +296,8 @@ function badgeAria(id: string, badge: string): string {
 
 .walletcard__label {
   font-size: var(--font-xs);
-  color: #b9c9de;
+  font-weight: 500;
+  color: var(--c-on-wall-soft);
 }
 
 .walletcard__amount {
@@ -338,9 +312,11 @@ function badgeAria(id: string, badge: string): string {
   font-weight: 500;
 }
 
+/* 备注是辅助说明：最浅一档 */
 .walletcard__note {
   font-size: var(--font-xs);
-  color: #9fb2c9;
+  font-weight: 400;
+  color: var(--c-on-wall-dim);
 }
 
 .resume {
@@ -351,13 +327,14 @@ function badgeAria(id: string, badge: string): string {
   padding: var(--space-3) var(--space-4);
   color: inherit;
   text-align: left;
-  border-color: rgb(56 128 235 / 55%);
-  background: rgb(31 111 235 / 24%);
+  border-color: var(--c-wall-chip-border);
+  background: var(--c-wall-chip);
 }
 
 .resume__label {
   font-size: var(--font-xs);
-  color: #bcd2ec;
+  font-weight: 500;
+  color: var(--c-on-wall-soft);
 }
 
 .resume__text {
@@ -367,6 +344,7 @@ function badgeAria(id: string, badge: string): string {
 
 .resume__amount {
   font-size: var(--font-xs);
+  font-weight: 500;
   color: #ffd9a8;
 }
 
@@ -407,12 +385,20 @@ function badgeAria(id: string, badge: string): string {
  * 因此基于类名的自动化断言继续有效。
  */
 
-/* 标签：真手机图标文字都带细微投影，避免被壁纸亮部吃掉 */
+/*
+ * 标签：真手机图标文字都带细微投影，避免被壁纸亮部吃掉。
+ * 白天壁纸是浅色，投影改成白色描边式的浅影，否则会糊成一团灰。
+ */
 .app__label {
   font-size: 11px;
+  font-weight: 500;
   line-height: 1.25;
   text-align: center;
   text-shadow: 0 1px 3px rgb(4 10 20 / 80%);
+}
+
+[data-theme='day'] .app__label {
+  text-shadow: 0 1px 2px rgb(255 255 255 / 85%);
 }
 
 /* 全项目唯一的角标样式：数字徽标（不再有第二种圆点样式） */
@@ -442,13 +428,15 @@ function badgeAria(id: string, badge: string): string {
   padding: var(--space-2) 0;
 }
 
+/* 「重新开始本局」是桌面上的最低优先级操作：比标签还浅一档 */
 .home__restart {
   min-height: var(--tap-min);
   padding: 0 var(--space-3);
   border: none;
   background: transparent;
-  color: rgb(205 220 238 / 66%);
+  color: var(--c-on-wall-dim);
   font-size: var(--font-sm);
+  font-weight: 400;
 }
 
 /* ============ 程序坞（Dock） ============ */
@@ -462,12 +450,12 @@ function badgeAria(id: string, badge: string): string {
   flex: none;
   margin: 0 var(--space-3) calc(var(--space-3) + var(--safe-bottom, 0px));
   padding: var(--space-2) var(--space-2) calc(var(--space-2));
-  border: 1px solid rgb(255 255 255 / 18%);
+  border: 1px solid var(--c-wall-dock-border);
   border-radius: 28px;
-  background: rgb(255 255 255 / 12%);
+  background: var(--c-wall-dock);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  box-shadow: 0 8px 28px rgb(4 10 20 / 34%);
+  box-shadow: var(--shadow-dock);
 }
 
 .dock__list {
@@ -487,6 +475,7 @@ function badgeAria(id: string, badge: string): string {
 .dock__app .app__label {
   /* 真手机 Dock 内图标不显示文字（iOS），这里保留小字以维持可读性 */
   font-size: 10px;
-  color: rgb(230 240 252 / 88%);
+  /* 跟随壁纸主题：夜间用浅色字，白天壁纸浅 → 转深色字，否则看不见 */
+  color: var(--c-on-wall-soft);
 }
 </style>

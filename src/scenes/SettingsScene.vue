@@ -1,10 +1,11 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import AppHeader from '@/components/AppHeader.vue'
 import { playSound } from '@/app/sound'
-import { useSettings } from '@/app/settings'
+import { useSettings, THEME_MODES, type ThemeMode } from '@/app/settings'
 
 /**
- * 设置：真实可用的开关（音效、顶部提醒）+ 本局操作。
+ * 设置：真实可用的开关（音效、顶部提醒、壁纸主题）+ 本局操作。
  *
  * 列表统一使用全项目共用的 `.rows` / `.row` 样式，
  * 不再让每个页面各写一套行样式（真机上同一个系统里的列表长得一样）。
@@ -14,7 +15,16 @@ const emit = defineEmits<{
   (e: 'request-restart'): void
 }>()
 
-const { settings, setSound, setBanner } = useSettings()
+const { settings, setSound, setBanner, setTheme } = useSettings()
+
+/** 主题三档的中文名（分段控件用）。 */
+const THEME_LABELS: Record<ThemeMode, string> = {
+  auto: '自动',
+  day: '白天',
+  night: '夜间',
+}
+
+const themeLabel = computed(() => THEME_LABELS[settings.value.theme])
 
 function toggleSound(): void {
   const next = !settings.value.sound
@@ -25,6 +35,13 @@ function toggleSound(): void {
 
 function toggleBanner(): void {
   setBanner(!settings.value.banner)
+  playSound('toggle')
+}
+
+/** 切换壁纸主题：点了立刻生效（写到 html[data-theme]）。 */
+function chooseTheme(mode: ThemeMode): void {
+  if (settings.value.theme === mode) return
+  setTheme(mode)
   playSound('toggle')
 }
 
@@ -92,6 +109,35 @@ function requestRestart(): void {
         </ul>
       </section>
 
+      <section aria-label="外观">
+        <h2 class="groupcard__title">外观</h2>
+        <ul class="rows">
+          <li>
+            <div class="row">
+              <span class="row__main">
+                <span class="row__label">壁纸</span>
+                <span class="row__hint">自动按北京时间切换：7:00–19:00 白天，其余夜间</span>
+              </span>
+              <span class="seg" role="group" aria-label="壁纸主题">
+                <button
+                  v-for="mode in THEME_MODES"
+                  :key="mode"
+                  type="button"
+                  class="seg__btn"
+                  :class="{ 'seg__btn--on': settings.theme === mode }"
+                  :aria-pressed="settings.theme === mode ? 'true' : 'false'"
+                  :aria-label="`壁纸：${THEME_LABELS[mode]}`"
+                  @click="chooseTheme(mode)"
+                >
+                  {{ THEME_LABELS[mode] }}
+                </button>
+              </span>
+            </div>
+          </li>
+        </ul>
+        <p class="row__hint settings__themehint">当前：{{ themeLabel }}</p>
+      </section>
+
       <section aria-label="本局">
         <h2 class="groupcard__title">本局</h2>
         <ul class="rows">
@@ -146,6 +192,39 @@ function requestRestart(): void {
 
 .row__label--danger {
   color: var(--c-danger);
+}
+
+.settings__themehint {
+  margin-top: var(--space-2);
+  padding-left: var(--space-3);
+}
+
+/* 主题分段控件：三档，当前档位高亮（真机的「浅色/深色/自动」就是这个样子） */
+.seg {
+  display: inline-flex;
+  flex: none;
+  padding: 2px;
+  border-radius: var(--radius-sm);
+  background: var(--c-surface-2);
+}
+
+.seg__btn {
+  min-width: 46px;
+  min-height: 30px;
+  padding: 0 var(--space-2);
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--c-text-secondary);
+  font-size: var(--font-xs);
+  font-weight: 500;
+}
+
+.seg__btn--on {
+  background: var(--c-surface);
+  color: var(--c-text);
+  font-weight: 600;
+  box-shadow: var(--shadow-card);
 }
 
 /* 开关：44px 热区，键盘可达 */

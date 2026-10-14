@@ -1,0 +1,102 @@
+/*
+ * 壁纸（白天 / 夜间两套）。
+ *
+ * 一套壁纸由 `.wall` 基类 + `.wall__sky` 等图层组成，锁屏与桌面共用同一份，
+ * 保证「解锁前和解锁后是同一张壁纸」——真机就是这样，此前两处各画一套，
+ * 解锁时背景会跳一下。
+ *
+ * 主题由 `<html data-theme="day|night">` 决定（见 `app/theme.ts`）：
+ * - 夜间：深蓝夜空 + 星点 + 山峦剪影（原来的效果）；
+ * - 白天：晨光天空 + 云带 + 远山（新增，亮度更高但文字仍可读）。
+ *
+ * 全部是纯 CSS 渐变，不引入任何图片资源。
+ */
+
+.wall {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  /* 切主题时平滑过渡，避免夜里到点「啪」地跳成白天 */
+  transition: background-color 600ms ease;
+}
+
+/* ============ 夜间（默认） ============ */
+
+.wall {
+  background: linear-gradient(170deg, #16233a, #0b1424 62%, #080f1c);
+}
+
+.wall__sky {
+  position: absolute;
+  inset: 0;
+  background:
+    /* 星点：细小白点，低透明度 */
+      radial-gradient(circle 1.4px at 18% 12%, rgb(255 255 255 / 62%) 0 1.4px, transparent 1.5px),
+    radial-gradient(circle 1px at 33% 22%, rgb(255 255 255 / 45%) 0 1px, transparent 1.1px),
+    radial-gradient(circle 1.2px at 61% 15%, rgb(255 255 255 / 52%) 0 1.2px, transparent 1.3px),
+    radial-gradient(circle 1px at 74% 27%, rgb(255 255 255 / 40%) 0 1px, transparent 1.1px),
+    radial-gradient(circle 1.3px at 88% 18%, rgb(255 255 255 / 48%) 0 1.3px, transparent 1.4px),
+    radial-gradient(circle 1px at 46% 34%, rgb(255 255 255 / 34%) 0 1px, transparent 1.1px),
+    radial-gradient(circle 1.1px at 8% 29%, rgb(255 255 255 / 36%) 0 1.1px, transparent 1.2px),
+    radial-gradient(circle 1px at 27% 44%, rgb(255 255 255 / 28%) 0 1px, transparent 1.1px),
+    /* 月光光晕 */
+      radial-gradient(circle 26px at 76% 14%, rgb(226 236 255 / 26%) 0 26px, transparent 27px),
+    radial-gradient(circle at 76% 14%, rgb(214 228 255 / 16%), transparent 40%),
+    /* 城市天光 */
+      radial-gradient(circle at 12% 18%, rgb(120 90 220 / 20%), transparent 42%),
+    radial-gradient(circle at 92% 40%, rgb(52 120 200 / 14%), transparent 38%);
+  transition: opacity 600ms ease;
+}
+
+/* 山峦剪影：两段错落的椭圆，落在可视区下半部 */
+.wall__hills {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 120% 22% at 24% 90%, rgb(15 42 78 / 88%), transparent 74%),
+    radial-gradient(ellipse 132% 19% at 88% 95%, rgb(9 28 56 / 94%), transparent 76%);
+}
+
+/* 地平线暖光：让剪影有层次，不是一块死黑 */
+.wall__glow {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 66% 12% at 70% 84%, rgb(96 150 226 / 26%), transparent 70%);
+}
+
+/* ============ 白天 ============ */
+
+[data-theme='day'] .wall {
+  background: linear-gradient(170deg, #8fc4ef, #cfe6f8 55%, #eaf4fb);
+}
+
+[data-theme='day'] .wall__sky {
+  /* 白天没有星点：换成云带与暖阳 */
+  background:
+    radial-gradient(ellipse 34% 9% at 24% 20%, rgb(255 255 255 / 78%), transparent 70%),
+    radial-gradient(ellipse 26% 7% at 46% 13%, rgb(255 255 255 / 62%), transparent 70%),
+    radial-gradient(ellipse 30% 8% at 78% 26%, rgb(255 255 255 / 58%), transparent 70%),
+    radial-gradient(ellipse 22% 6% at 62% 33%, rgb(255 255 255 / 46%), transparent 70%),
+    /* 太阳与光晕 */
+      radial-gradient(circle 22px at 80% 15%, rgb(255 246 214 / 92%) 0 22px, transparent 23px),
+    radial-gradient(circle at 80% 15%, rgb(255 236 178 / 40%), transparent 44%),
+    radial-gradient(circle at 12% 16%, rgb(255 255 255 / 34%), transparent 40%);
+}
+
+[data-theme='day'] .wall__hills {
+  background:
+    radial-gradient(ellipse 120% 22% at 24% 90%, rgb(96 138 178 / 72%), transparent 74%),
+    radial-gradient(ellipse 132% 19% at 88% 95%, rgb(72 112 156 / 80%), transparent 76%);
+}
+
+[data-theme='day'] .wall__glow {
+  background: radial-gradient(ellipse 66% 12% at 70% 84%, rgb(255 240 200 / 34%), transparent 70%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wall,
+  .wall__sky {
+    transition: none;
+  }
+}
