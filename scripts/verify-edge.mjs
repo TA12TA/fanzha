@@ -1021,6 +1021,47 @@ async function main() {
       `主题=${autoTheme.theme} 模式=${autoTheme.mode}`,
     )
 
+    /*
+     * 回归：切到「正好等于当前自动解析结果」的那一档。
+     * 此时解析后的主题没变，若只监听解析值，模式标记就不会更新 ——
+     * 这个真实 bug 只在特定时段暴露（晚上把 auto 改成夜间时）。
+     */
+    const sameAsAuto = autoTheme.theme === 'day' ? '白天' : '夜间'
+    await cdp.eval(`
+      const b = [...document.querySelectorAll('.home .app')].find(x => (x.textContent||'').includes('设置'));
+      if (b) b.click();
+      return !!b;
+    `)
+    await sleep(350)
+    await cdp.eval(`
+      const b = [...document.querySelectorAll('button')].find(x => x.getAttribute('aria-label') === ${JSON.stringify(`壁纸：${sameAsAuto}`)});
+      if (b) b.click();
+      return !!b;
+    `)
+    await sleep(350)
+    const sameMode = await cdp.eval(`
+      const html = document.documentElement;
+      return { theme: html.getAttribute('data-theme'), mode: html.getAttribute('data-theme-mode') };
+    `)
+    record(
+      '切到与当前自动结果相同的模式，模式标记也要立刻更新',
+      sameMode.theme === autoTheme.theme && sameMode.mode === autoTheme.theme,
+      `锁定「${sameAsAuto}」后 主题=${sameMode.theme} 模式=${sameMode.mode}`,
+    )
+    // 复位成自动，继续后面的断言
+    await cdp.eval(`
+      const b = [...document.querySelectorAll('button')].find(x => x.getAttribute('aria-label') === '壁纸：自动');
+      if (b) b.click();
+      return !!b;
+    `)
+    await sleep(300)
+    await cdp.eval(`
+      const b = [...document.querySelectorAll('button')].find(x => x.getAttribute('aria-label') === '回到桌面');
+      if (b) b.click();
+      return !!b;
+    `)
+    await sleep(450)
+
     // 切到另一套主题（在设置页操作），然后回桌面测量
     const otherTheme = autoTheme.theme === 'day' ? 'night' : 'day'
     const homeWallBefore = await cdp.eval(`

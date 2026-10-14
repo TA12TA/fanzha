@@ -1362,6 +1362,43 @@ describe('T. 壁纸主题与应用打开逻辑', () => {
     expect(saved.theme).toBe('day')
   })
 
+  /**
+   * 回归：把模式切到「正好等于当前自动解析结果」的那一档。
+   *
+   * 之前的实现只 `watch(resolved)`，此时解析结果没变 → watch 不触发
+   * → `data-theme-mode` 停在旧值。这是真实 bug，且**只在特定时间暴露**：
+   * 白天把 auto 改成 day 会中招，晚上把 auto 改成 night 会中招。
+   * 所以这里两种情形都覆盖，避免测试结果随运行时段变化。
+   */
+  it('T02b 切到与当前自动结果相同的模式，模式标记也要立刻更新', async () => {
+    const wrapper = mountApp()
+    await swipeUnlock(wrapper)
+    await clickDesktopApp(wrapper, '设置')
+
+    const html = globalThis.document.documentElement
+
+    // 情形一：auto → day（当自动结果本就是 day 时，解析值不变）
+    await click(wrapper, '壁纸：白天')
+    expect(html.getAttribute('data-theme'), '锁定白天').toBe('day')
+    expect(html.getAttribute('data-theme-mode'), '模式标记应变成 day').toBe('day')
+
+    // 情形二：day → auto（解析值同样仍是 day）
+    await click(wrapper, '壁纸：自动')
+    expect(html.getAttribute('data-theme-mode'), '模式标记应回到 auto').toBe('auto')
+
+    // 情形三：auto → night（当自动结果本就是 night 时，解析值不变）
+    await click(wrapper, '壁纸：夜间')
+    expect(html.getAttribute('data-theme'), '锁定夜间').toBe('night')
+    expect(html.getAttribute('data-theme-mode'), '模式标记应变成 night').toBe('night')
+
+    // 情形四：night → auto（解析值仍为 night）
+    await click(wrapper, '壁纸：自动')
+    expect(html.getAttribute('data-theme-mode'), '模式标记应回到 auto').toBe('auto')
+
+    const saved = JSON.parse(globalThis.localStorage.getItem('fj-juzhongju:settings:v1') as string)
+    expect(saved.theme).toBe('auto')
+  })
+
   it('T03 打开相册总是回到网格第一屏，不停在上次翻到的那张', async () => {
     const wrapper = mountApp()
     await swipeUnlock(wrapper)

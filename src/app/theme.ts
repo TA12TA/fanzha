@@ -52,7 +52,16 @@ export function useTheme() {
     document.documentElement.setAttribute('data-theme-mode', settings.value.theme)
   }
 
-  watch(resolved, apply, { immediate: true })
+  watch(
+    // 必须同时监听「解析后的主题」和「玩家选的模式」。
+    // 只监听前者时，一旦模式变了但解析结果没变（例如晚上把 auto 改成 night，
+    // 解析结果本来就是 night），watch 不会触发，`data-theme-mode` 会一直停在
+    // 旧值。这个 bug 只在「切换到的模式正好等于当前自动结果」时出现 ——
+    // 白天跑测试看不出来，晚上跑才暴露（本轮就是这么发现的）。
+    [resolved, () => settings.value.theme],
+    () => apply(resolved.value),
+    { immediate: true },
+  )
 
   onBeforeUnmount(() => {
     if (typeof document !== 'undefined') {

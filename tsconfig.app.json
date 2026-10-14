@@ -5,7 +5,12 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "lib": ["ES2020", "DOM", "DOM.Iterable"],
-    "types": ["vite/client"],
+    /*
+     * 同时提供 vite/client 与 node 类型：
+     * 应用代码用前者；测试里会读源文件做静态检查（如 tests/tokens.spec.ts
+     * 读 tokens.css 校验颜色层级），需要 node 的 fs / path / __dirname。
+     */
+    "types": ["vite/client", "node"],
     "skipLibCheck": true,
     "allowImportingTsExtensions": false,
     "resolveJsonModule": true,
