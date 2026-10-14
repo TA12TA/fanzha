@@ -118,7 +118,8 @@ scripts/smoke-public.mjs # 公网地址冒烟测试（隧道/静态托管发布�
   顺带记下的坑：`npm run verify` 跑的是 **`dist/` 构建产物**，改完源码必须先 `npm run build` 再 verify，否则浏览器测的是旧代码（本轮先踩了一次，改完 theme 直接 verify 仍然红）。
 - **文案审计与去重（2026-10-14）**：写了一个临时脚本把每个界面**玩家真正看到的每一段文字**连同字号/粗细/颜色全打印出来（`.verify/text-audit.txt`），据此删掉两处重复提示：
   - 钱包组件在还没垫付时也写「已垫付 0 元」→ 改为只有垫付过才显示（0 元是废话）；
-  - 群里连续两条自称到账各带一句「他自己说的」→ 改为**整段会话只标一次**（满屏重复提示等于没提示）。
+  - 群里连续两条自称到账各带一句「他自己说的」→ 改为**整段会话只标一次**（满屏重复提示等于没提示）；
+  - 设置页「外观 → 壁纸」原本在分段控件下面又写一行「当前：自动」→ 删掉（控件自身的高亮已经在表达同一件事），解释自动切换规则的那一行保留但改为卡片下方占满整行，避免被右侧控件挤成两三行。
   另外口语化三处：「这个月生活费给你转过去了」→「这个月生活费转过去了」、「不用出门，手机上就能做」→「手机上就能做」、「就你还差这一步」→ 去掉。
   **所有被测试断言的文案（`群里说「到账」的`、`先垫 100`、`名额有限`、`有一笔待确认`、`不用输卡号…`、`重新开始本局` 等）都先查断言再动**，没有为了让文案顺眼而偷偷放宽测试。
 - **应用打开逻辑修正（2026-10-14）**：
@@ -186,8 +187,8 @@ scripts/smoke-public.mjs # 公网地址冒烟测试（隧道/静态托管发布�
 | `npm run dev`       | 成功，`http://127.0.0.1:5173/` 返回 200 且已注入 Vite 客户端                                                                  |
 | `npm run preview`   | 成功，`http://127.0.0.1:4173/` 返回构建产物（引用 hashed 资源）                                                                  |
 | `npm run typecheck` | 通过，无错误                                                                                                            |
-| `npm test`          | **144 项全部通过**（engine 17 / storage 10 / debrief 10 / clock 5 / unlock 6 / settings 14 / notifications 14 / app 64 / tokens 4） |
-| `npm run build`     | 成功，`dist/assets/index-*.js` 151.37 kB（gzip 54.09 kB）                                                              |
+| `npm test`          | **145 项全部通过**（engine 17 / storage 10 / debrief 10 / clock 5 / unlock 6 / settings 14 / notifications 14 / app 65 / tokens 4） |
+| `npm run build`     | 成功，`dist/assets/index-*.js` 151.29 kB（gzip 54.06 kB）                                                              |
 | `npm run verify`    | **83 项全部通过**（Edge 155.0.4283.45 headless）                                                                         |
 | `npm run smoke:public` | **13 项全部通过**（对 trycloudflare 公网地址实跑，2026-10-14）                                                              |
 

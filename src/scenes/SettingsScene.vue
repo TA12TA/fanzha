@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { computed } from 'vue'
 import AppHeader from '@/components/AppHeader.vue'
 import { playSound } from '@/app/sound'
 import { useSettings, THEME_MODES, type ThemeMode } from '@/app/settings'
@@ -23,8 +22,6 @@ const THEME_LABELS: Record<ThemeMode, string> = {
   day: '白天',
   night: '夜间',
 }
-
-const themeLabel = computed(() => THEME_LABELS[settings.value.theme])
 
 function toggleSound(): void {
   const next = !settings.value.sound
@@ -116,7 +113,6 @@ function requestRestart(): void {
             <div class="row">
               <span class="row__main">
                 <span class="row__label">壁纸</span>
-                <span class="row__hint">自动按北京时间切换：7:00–19:00 白天，其余夜间</span>
               </span>
               <span class="seg" role="group" aria-label="壁纸主题">
                 <button
@@ -135,7 +131,12 @@ function requestRestart(): void {
             </div>
           </li>
         </ul>
-        <p class="row__hint settings__themehint">当前：{{ themeLabel }}</p>
+        <!--
+          说明放在卡片下方占满整行。
+          两个考虑：一是分段控件自带高亮，再写一行「当前：自动」是重复信息（已删）；
+          二是放在行内会被右侧控件挤成两三行，反而不好读。
+        -->
+        <p class="settings__note">自动按北京时间切换：7:00–19:00 为白天，其余为夜间</p>
       </section>
 
       <section aria-label="本局">
@@ -194,9 +195,12 @@ function requestRestart(): void {
   color: var(--c-danger);
 }
 
-.settings__themehint {
+.settings__note {
   margin-top: var(--space-2);
-  padding-left: var(--space-3);
+  padding: 0 var(--space-1);
+  font-size: var(--font-xs);
+  font-weight: 400;
+  color: var(--c-text-tertiary);
 }
 
 /* 主题分段控件：三档，当前档位高亮（真机的「浅色/深色/自动」就是这个样子） */

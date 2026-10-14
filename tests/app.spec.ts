@@ -1487,4 +1487,24 @@ describe('U. 文案不重复', () => {
     expect(claims.length, '群里应有不止一条自称到账的消息').toBeGreaterThan(1)
     expect(notes.length, '「他自己说的」只标一次').toBe(1)
   })
+
+  it('U03 设置页壁纸不再重复写「当前：X」（分段控件已表示选中）', async () => {
+    const wrapper = mountApp()
+    await swipeUnlock(wrapper)
+    await clickDesktopApp(wrapper, '设置')
+
+    const text = wrapper.text()
+    // 分段控件已高亮当前档位，再来一行「当前：自动」是同一信息的第二次表达
+    expect(text, '不应再出现「当前：X」这种重复说明').not.toMatch(/当前：/)
+    // 但解释自动切换规则的一行要保留（这不是重复，是必要说明）
+    expect(text, '应保留自动切换规则说明').toContain('自动按北京时间切换')
+
+    // 切换档位后，选中态仍然由分段控件表达（aria-pressed）
+    await click(wrapper, '壁纸：夜间')
+    const pressed = wrapper
+      .findAll('.seg__btn')
+      .filter((b) => b.attributes('aria-pressed') === 'true')
+    expect(pressed.length, '应只有一个档位处于选中态').toBe(1)
+    expect(pressed[0].text()).toBe('夜间')
+  })
 })
