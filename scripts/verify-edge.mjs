@@ -320,9 +320,71 @@ async function main() {
     text = await cdp.text()
     record('青讯图标可进入邀请会话', text.includes('拒绝并举报'))
 
+    // 会话列表：区分群聊与私聊，生活费来源在「妈妈」会话里
+    await cdp.click('返回上一层')
+    const sessionRows = await cdp.eval(`
+      const rows = [...document.querySelectorAll('.session')];
+      return {
+        labels: rows.map(r => r.getAttribute('aria-label')),
+        hasGroupPreview: rows.some(r => (r.textContent || '').includes('先垫 100')),
+      };
+    `)
+    record(
+      '会话列表区分群聊与私聊',
+      sessionRows.labels.some((l) => (l || '').startsWith('私聊：')) &&
+        sessionRows.labels.some((l) => (l || '').startsWith('群聊：')),
+      `共 ${sessionRows.labels.length} 条：[${sessionRows.labels.join(' / ')}]`,
+    )
+    record(
+      '没进群之前看不到兼职群（避免提前剧透群里的话术）',
+      !sessionRows.hasGroupPreview,
+      sessionRows.hasGroupPreview ? '列表里已经能看到群里的话术' : '',
+    )
+
+    await cdp.eval(`
+      const b = [...document.querySelectorAll('.session')].find(x => (x.textContent||'').includes('妈妈'));
+      if (b) b.click();
+      return !!b;
+    `)
+    await sleep(300)
+    await cdp.click('显示全部')
+    const transfer = await cdp.eval(`
+      const card = document.querySelector('.msg--transfer');
+      return card ? (card.textContent || '').trim() : null;
+    `)
+    record(
+      '生活费 800 元在会话里以转账卡片呈现',
+      transfer !== null && transfer.includes('800') && transfer.includes('生活费'),
+      transfer ? transfer.replace(/\\s+/g, ' ') : '未找到转账卡片',
+    )
+
+    // 回到学姐会话，从这里进群（进群是剧情选项，只出现在学姐会话里）
+    await cdp.click('返回上一层')
+    await cdp.eval(`
+      const b = [...document.querySelectorAll('.session')].find(x => (x.textContent||'').includes('学姐'));
+      if (b) b.click();
+      return !!b;
+    `)
+    await sleep(300)
     await cdp.click('进群看看')
     await cdp.click('显示全部')
     await cdp.screenshot(path.join(shotsDir, '03-group.png'))
+
+    // 进群后：会话标题带成员数，且他人气泡上方显示发言人昵称
+    const groupNames = await cdp.eval(`
+      return [...document.querySelectorAll('.row__name')].map(n => (n.textContent || '').trim());
+    `)
+    record(
+      '群聊在他人气泡上方显示发言人昵称',
+      groupNames.length > 0,
+      `昵称=[${groupNames.slice(0, 3).join(' / ')}]`,
+    )
+    const subtitle = await cdp.eval(`
+      const el = document.querySelector('.appbar__subtitle');
+      return el ? (el.textContent || '').trim() : null;
+    `)
+    record('群聊标题带成员数，与私聊区分', subtitle !== null && subtitle.includes('人'), `副标题=${subtitle}`)
+
     text = await cdp.text()
     record('群聊显示「先垫 100」话术与风险提示', text.includes('先垫 100') && text.includes('群里说「到账」的'))
 

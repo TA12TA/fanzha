@@ -265,7 +265,9 @@ describe('E. 整部手机的交互（B01–B14）', () => {
     expect(wrapper.text()).toContain('接下任务')
 
     // 反复查看资料不改变余额、不重复推进
-    await click(wrapper, '再看群主资料')
+    // （资料入口现在是标题栏右侧的「···」，靠 aria-label 定位；
+    //  真机消息应用里这个按钮的文案不会因为看过一次就变，因此断言保持不变即可）
+    await click(wrapper, '群主资料')
     await click(wrapper, '返回群聊')
     await click(wrapper, '桌面')
     expect(wrapper.text()).toContain('800')
@@ -1115,5 +1117,89 @@ describe('N. 桌面外观（真实手机样式）', () => {
     expect(resume.exists(), '应有「继续当前事项」组件').toBe(true)
     await resume.trigger('click')
     expect(wrapper.find('.chat').exists(), '点击后应回到消息视图').toBe(true)
+  })
+})
+
+/**
+ * Q. 青讯重做成真手机消息应用的样子。
+ *
+ * 用户要求「聊天软件也需要重新设计一下，比如像微信一样，
+ * 同时必须区分群聊和私聊（比如生活费是父母转账过来的，也要在聊天软件里体现）」。
+ * 这些用例锁住三件事：会话列表分群聊/私聊、群聊与私聊的显示差异、
+ * 生活费 800 元在会话里有明确来源（转账卡片）。
+ */
+describe('Q. 青讯：会话列表 / 群聊与私聊 / 妈妈转账', () => {
+  it('Q01 会话列表区分群聊与私聊，群聊带成员数，未处理的邀请有角标', async () => {
+    const wrapper = mountApp()
+    await swipeUnlock(wrapper)
+    await clickDesktopApp(wrapper, '青讯')
+
+    // 从会话详情返回会话列表
+    await click(wrapper, '返回上一层')
+
+    const rows = wrapper.findAll('.session')
+    expect(rows.length, '会话列表应有多个会话').toBeGreaterThanOrEqual(3)
+
+    const labels = rows.map((r) => r.attributes('aria-label') ?? '')
+    // 私聊与群聊都要有，且类型写在无障碍标签里（读屏也能区分）
+    expect(labels.some((l) => l.startsWith('私聊：')), '应有私聊会话').toBe(true)
+    expect(labels.some((l) => l.startsWith('群聊：')), '应有群聊会话').toBe(true)
+    expect(labels).toContain('私聊：妈妈')
+    expect(labels).toContain('群聊：班级通知群')
+
+    // 群聊行显示成员数，私聊不显示
+    const groupRow = rows.find((r) => (r.text() ?? '').includes('班级通知群'))
+    expect(groupRow?.text(), '群聊应显示成员数').toContain('42')
+
+    // 未处理的学姐邀请在列表里有未读角标
+    const badge = wrapper.find('.session__badge')
+    expect(badge.exists(), '未处理的邀请应有未读角标').toBe(true)
+    expect(badge.text()).toBe('1')
+  })
+
+  it('Q02 生活费 800 元来自妈妈转账，以转账卡片呈现', async () => {
+    const wrapper = mountApp()
+    await swipeUnlock(wrapper)
+    await clickDesktopApp(wrapper, '青讯')
+    await click(wrapper, '返回上一层') // 回到会话列表
+
+    // 会话列表里能定位到妈妈（会话摘要按真机做法显示最新一条消息）
+    const momRow = wrapper.findAll('.session').find((r) => (r.text() ?? '').includes('妈妈'))
+    expect(momRow, '会话列表应有妈妈的会话').toBeTruthy()
+    expect(momRow?.text()).toContain('在外边别乱花')
+
+    // 打开妈妈会话：应有转账卡片，金额与钱包初始余额一致
+    await click(wrapper, '私聊：妈妈')
+    await click(wrapper, '显示全部') // 消息逐条出现，先跳过动画
+    const card = wrapper.find('.msg--transfer')
+    expect(card.exists(), '妈妈会话里应有转账卡片').toBe(true)
+    expect(card.text()).toContain('800')
+    expect(card.text()).toContain('生活费')
+    expect(card.text()).toContain('已收款')
+  })
+
+  it('Q03 群聊显示发言人昵称，私聊不显示（真机消息应用的做法）', async () => {
+    const wrapper = mountApp()
+    await swipeUnlock(wrapper)
+    await clickDesktopApp(wrapper, '青讯')
+    await click(wrapper, '进群看看')
+    await click(wrapper, '显示全部')
+
+    // 群聊：他人消息上方有发言人昵称
+    const groupNames = wrapper.findAll('.row__name').map((n) => n.text())
+    expect(groupNames.length, '群聊应显示发言人昵称').toBeGreaterThan(0)
+    expect(groupNames.join(' ')).toContain('群主')
+
+    // 群聊标题带成员数
+    expect(wrapper.text()).toContain('128 人')
+
+    // 私聊：不显示昵称（妈妈会话里没有任何 .row__name）
+    await click(wrapper, '返回上一层')
+    expect(wrapper.findAll('.row__name').length, '回到列表后不应有消息行').toBe(0)
+    await click(wrapper, '私聊：妈妈')
+    expect(wrapper.findAll('.row__name').length, '私聊不应显示发言人昵称').toBe(0)
+    expect(wrapper.findAll('.msg__name').length, '私聊气泡里也不该重复出现昵称').toBe(0)
+    // 但不影响消息本身
+    expect(wrapper.find('.chat__list').text()).toContain('生活费')
   })
 })

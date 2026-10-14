@@ -14,7 +14,8 @@ import PlainAppScene from '@/scenes/PlainAppScene.vue'
 import ReviewScene from '@/scenes/ReviewScene.vue'
 import SettingsScene from '@/scenes/SettingsScene.vue'
 import WalletScene from '@/scenes/WalletScene.vue'
-import { hasOutcome, pendingAmount, preferredChatView, type AppId } from '@/app/navigation'
+import { hasOutcome, pendingAmount, preferredChatView, type AppId, type ChatView } from '@/app/navigation'
+import type { ChatSessionId } from '@/data/level01'
 import { useNotifications } from '@/app/notifications'
 import { useSettings } from '@/app/settings'
 import { playSound, setSoundEnabled } from '@/app/sound'
@@ -231,10 +232,37 @@ const messageNotices = computed(() => notices.history.value.filter((n) => n.kind
 /** 桌面邀请通知：仅在 invite 节点可见（点开只切视图，不提交选项）。 */
 const showInviteNotice = computed(() => state.value.node === 'invite')
 
-/** 消息应用当前会话：邀请未处理时优先展示邀请。 */
-const chatSession = computed<'invite' | 'group'>(() =>
-  preferredChatView(state.value.node) === 'invite' ? 'invite' : 'group',
+/**
+ * 消息应用当前会话；null 表示在会话列表。
+ *
+ * 默认直接落到剧情相关的会话（邀请未处理时看学姐，进群后看兼职群），
+ * 这样从桌面点「青讯」就能接着推进；按「返回」才逐层退到会话列表。
+ */
+const chatView = ref<ChatView>(preferredChatView(state.value.node))
+
+/** 剧情推进后，会话定位跟随节点（与视图同步由 syncViewToNode 负责）。 */
+watch(
+  () => state.value.node,
+  (node) => {
+    chatView.value = preferredChatView(node)
+  },
 )
+
+/** 打开消息应用里的某个会话（只切 UI，不影响剧情）。 */
+function openSession(id: ChatSessionId): void {
+  playSound('tap')
+  chatView.value = id
+}
+
+/** 消息应用内的返回：会话 → 会话列表 → 桌面。 */
+function backFromChat(): void {
+  playSound('tap')
+  if (chatView.value !== 'list') {
+    chatView.value = 'list'
+    return
+  }
+  view.value = 'home'
+}
 
 /** 聚焦管理：切换视图后把焦点移到主内容区，便于键盘用户。 */
 const mainRef = ref<HTMLElement | null>(null)
@@ -328,6 +356,7 @@ function resume(): void {
     return
   }
   if (node === 'invite' || node === 'group' || node === 'rebate' || node === 'freeze') {
+    chatView.value = preferredChatView(node)
     view.value = 'chat'
     return
   }
@@ -369,6 +398,11 @@ function goBack(): void {
     return
   }
   if (view.value === 'home' || view.value === 'intro') return
+  // 消息应用内逐层退：会话 → 会话列表 → 桌面。
+  if (view.value === 'chat') {
+    backFromChat()
+    return
+  }
   playSound('tap')
   view.value = 'home'
 }
@@ -448,9 +482,10 @@ function openSettings(): void {
   view.value = 'settings'
 }
 
-/** 打开消息应用（按当前节点定位会话）。 */
+/** 打开消息应用（按当前节点定位到相关会话，而不是先看会话列表）。 */
 function openChat(): void {
   playSound('tap')
+  chatView.value = preferredChatView(state.value.node)
   view.value = 'chat'
 }
 
@@ -549,13 +584,13 @@ onBeforeUnmount(() => {
         <ChatScene
           v-else-if="view === 'chat'"
           :state="state"
-          :session="chatSession"
+          :session="chatView === 'list' ? null : chatView"
           :profile-open="profileOpen"
-          :profile-viewed="state.viewedProfile"
           @choose="submit"
+          @open-session="openSession"
           @open-profile="openProfile"
           @close-profile="closeProfile"
-          @back="goBack"
+          @back="backFromChat"
           @open-wallet="openWallet"
         />
 

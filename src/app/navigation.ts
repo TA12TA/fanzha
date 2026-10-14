@@ -1,4 +1,5 @@
 import type { NodeId } from '@/game/types'
+import type { ChatSessionId } from '@/data/level01'
 
 /**
  * UI 导航状态：只描述「当前打开哪个应用/哪层界面」。
@@ -8,8 +9,11 @@ import type { NodeId } from '@/game/types'
 /** 可打开的应用。 */
 export type AppId = 'chat' | 'wallet' | 'manual' | 'photos' | 'notifications' | 'settings'
 
-/** 消息应用内部的子视图。 */
-export type ChatView = 'list' | 'invite' | 'group'
+/**
+ * 消息应用内部的子视图。
+ * `list` 是会话列表（像真手机的消息应用首页），其余是具体会话。
+ */
+export type ChatView = 'list' | ChatSessionId
 
 /** 应用视图栈。 */
 export interface NavState {
@@ -44,14 +48,14 @@ export function chatViewForNode(node: NodeId): ChatView {
     case 'intro':
       return 'list'
     case 'invite':
-      return 'invite'
+      return 'senior'
     case 'group':
     case 'rebate':
     case 'freeze':
-      return 'group'
+      return 'taskgroup'
     case 'transfer-100':
     case 'transfer-300':
-      return 'group'
+      return 'taskgroup'
     case 'end-clear':
     case 'end-stop':
     case 'end-loss':
@@ -64,7 +68,7 @@ export function chatViewForNode(node: NodeId): ChatView {
 
 /** 打开消息应用时应定位到的会话（邀请未处理时先看邀请）。 */
 export function preferredChatView(node: NodeId): ChatView {
-  if (node === 'invite') return 'invite'
+  if (node === 'invite') return 'senior'
   if (
     node === 'group' ||
     node === 'rebate' ||
@@ -72,7 +76,7 @@ export function preferredChatView(node: NodeId): ChatView {
     node === 'transfer-100' ||
     node === 'transfer-300'
   ) {
-    return 'group'
+    return 'taskgroup'
   }
   return 'list'
 }

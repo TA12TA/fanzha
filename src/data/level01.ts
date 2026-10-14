@@ -41,6 +41,11 @@ export const BRAND = {
   senior: '自称“学姐”的林某',
   groupOwner: '群主·任务派单员',
   group: '校园兼职·日结任务群',
+  /** 家人（生活费来源，纯剧情，不对应任何真实的人）。 */
+  mom: '妈妈',
+  /** 班级通知群（纯拟真，不参与剧情分支）。 */
+  classGroup: '班级通知群',
+  counselor: '辅导员',
 } as const
 
 /** 节点定义。`onEnter` 效果在同一事务内应用，天然只生效一次。 */
@@ -255,6 +260,30 @@ export const ENDING_INFO: Record<
   },
 }
 
+/** 头像色调（自绘，不使用真实照片）。 */
+export type AvatarTone = 'blue' | 'green' | 'amber' | 'violet' | 'slate' | 'rose'
+
+/**
+ * 发言者头像。
+ * 用「一个字 + 一种色调」表示虚构联系人，避免任何真实照片或平台头像。
+ */
+export const SENDER_AVATARS: Record<string, { text: string; tone: AvatarTone }> = {
+  我: { text: '我', tone: 'blue' },
+  [BRAND.mom]: { text: '妈', tone: 'amber' },
+  [BRAND.senior]: { text: '姐', tone: 'violet' },
+  [BRAND.groupOwner]: { text: '群', tone: 'blue' },
+  '群成员 A': { text: 'A', tone: 'green' },
+  '群成员 B': { text: 'B', tone: 'slate' },
+  [BRAND.counselor]: { text: '辅', tone: 'green' },
+}
+
+/** 取某个发送者的头像；未知发送者回退到首字 + 灰调。 */
+export function avatarFor(name: string): { text: string; tone: AvatarTone } {
+  const hit = SENDER_AVATARS[name]
+  if (hit) return hit
+  return { text: name.slice(0, 1) || '?', tone: 'slate' }
+}
+
 /** 群聊消息。`delayMs` 仅用于逐条呈现，可跳过。 */
 export interface ChatMessage {
   id: string
@@ -262,9 +291,59 @@ export interface ChatMessage {
   /** 发言人显示名。 */
   name?: string
   text: string
-  /** 消息样式：普通气泡 / 收益自称卡片 / 风险提示卡。 */
-  variant?: 'text' | 'claim' | 'risk' | 'failed'
+  /**
+   * 消息样式：普通气泡 / 收益自称卡片 / 风险提示卡 / 提现失败 / 转账卡片。
+   * `transfer` 用于表现「妈妈转来的生活费」，让 800 元有明确来源。
+   */
+  variant?: 'text' | 'claim' | 'risk' | 'failed' | 'transfer'
+  /** 转账金额（仅 transfer 变体）。 */
+  amount?: number
+  /** 转账状态（仅 transfer 变体）。 */
+  transferStatus?: 'received' | 'pending'
+  /** 转账备注（仅 transfer 变体）。 */
+  transferNote?: string
 }
+
+/** 妈妈会话：生活费从哪来说清楚，顺带给一句真实提醒。 */
+export const MOM_MESSAGES: ChatMessage[] = [
+  {
+    id: 'm1',
+    from: 'them',
+    name: BRAND.mom,
+    text: '这个月生活费给你转过去了，收到回我一声。',
+  },
+  {
+    id: 'm2',
+    from: 'them',
+    name: BRAND.mom,
+    variant: 'transfer',
+    amount: INITIAL_BALANCE,
+    transferStatus: 'received',
+    transferNote: '生活费',
+    text: '转账给你',
+  },
+  {
+    id: 'm3',
+    from: 'me',
+    text: '收到啦，谢谢妈',
+  },
+  {
+    id: 'm4',
+    from: 'them',
+    name: BRAND.mom,
+    text: '在外边别乱花。要你交钱才能做兼职的，一律别信。',
+  },
+]
+
+/** 班级通知群：纯拟真，不参与剧情分支，用来让会话列表像个真的消息应用。 */
+export const CLASSGROUP_MESSAGES: ChatMessage[] = [
+  {
+    id: 'c1',
+    from: 'them',
+    name: BRAND.counselor,
+    text: '下周一上午 9 点，带学生证到教材科领本学期教材。',
+  },
+]
 
 /** 邀请会话消息。 */
 export const INVITE_MESSAGES: ChatMessage[] = [
@@ -368,6 +447,61 @@ export const FREEZE_MESSAGES: ChatMessage[] = [
   },
 ]
 
+/**
+ * 会话（聊天列表里的一行）。
+ *
+ * 区分群聊与私聊是这一轮的重点：群聊有成员数、消息带发言人昵称；
+ * 私聊没有成员数、只说「对方」。会话列表按下面的数组顺序展示。
+ */
+export interface ChatSession {
+  id: ChatSessionId
+  kind: 'private' | 'group'
+  name: string
+  /** 群成员数（仅群聊）。 */
+  memberCount?: number
+  /** 会话列表里显示的时间标签（虚构）。 */
+  lastTime: string
+  /** 消息（剧情推进后可能追加，见 ChatScene 中的推导）。 */
+  messages: ChatMessage[]
+}
+
+/** 会话 id。 */
+export type ChatSessionId = 'senior' | 'taskgroup' | 'mom' | 'classgroup'
+
+/** 会话列表（顺序即展示顺序；taskgroup 在玩家进群后才出现）。 */
+export const SESSIONS: ChatSession[] = [
+  {
+    id: 'senior',
+    kind: 'private',
+    name: BRAND.senior,
+    lastTime: '10:26',
+    messages: INVITE_MESSAGES,
+  },
+  {
+    id: 'taskgroup',
+    kind: 'group',
+    name: BRAND.group,
+    memberCount: 128,
+    lastTime: '10:31',
+    messages: GROUP_MESSAGES,
+  },
+  {
+    id: 'mom',
+    kind: 'private',
+    name: BRAND.mom,
+    lastTime: '08:12',
+    messages: MOM_MESSAGES,
+  },
+  {
+    id: 'classgroup',
+    kind: 'group',
+    name: BRAND.classGroup,
+    memberCount: 42,
+    lastTime: '昨天',
+    messages: CLASSGROUP_MESSAGES,
+  },
+]
+
 /** 对方资料弹层内容（虚构，不含真实个人信息）。 */
 export const PROFILE_INFO = {
   nickname: BRAND.senior,
@@ -379,6 +513,18 @@ export const PROFILE_INFO = {
   ],
   notice:
     '头像和自称的身份都证明不了什么。真要转账，用别的渠道自己核实一遍。',
+} as const
+
+/** 群主资料弹层内容（虚构；群聊里要转账的那个人）。 */
+export const PROFILE_INFO_OWNER = {
+  nickname: BRAND.groupOwner,
+  account: 'qx_****7731',
+  fields: [
+    { label: '注册时间', value: '最近 7 天内' },
+    { label: '资料完整度', value: '不完整：无学校、无实名信息' },
+    { label: '可核验线索', value: '无。无法通过独立渠道确认其身份' },
+  ],
+  notice: '头像是风景图，昵称是「群主」，这些都证明不了他是谁。真要转账，用别的渠道自己核实一遍。',
 } as const
 
 /**

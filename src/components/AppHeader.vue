@@ -1,5 +1,9 @@
 <script setup lang="ts">
-/** 应用内顶部标题栏：应用名 + 可选的返回与右侧操作。 */
+/**
+ * 应用内顶部标题栏（各应用统一使用）。
+ * 左返回、中间标题（可带一行灰字副标题）、右侧操作位。
+ * 右侧操作位优先用 `#action` 插槽，其次用 `actionLabel` 文案。
+ */
 defineProps<{
   title: string
   subtitle?: string
@@ -33,15 +37,17 @@ const emit = defineEmits<{
       <span v-if="subtitle" class="appbar__subtitle">{{ subtitle }}</span>
     </span>
 
-    <button
-      v-if="actionLabel"
-      type="button"
-      class="appbar__action"
-      @click="emit('action')"
-    >
-      {{ actionLabel }}
-    </button>
-    <span v-else class="appbar__spacer" aria-hidden="true"></span>
+    <slot name="action">
+      <button
+        v-if="actionLabel"
+        type="button"
+        class="appbar__action"
+        @click="emit('action')"
+      >
+        {{ actionLabel }}
+      </button>
+      <span v-else class="appbar__spacer" aria-hidden="true"></span>
+    </slot>
   </header>
 </template>
 
