@@ -70,6 +70,15 @@ const recentApps = ref<AppId[]>([])
 /** 提交后立即禁用按钮，避免连点导致二次扣款。 */
 const submitting = ref(false)
 
+/**
+ * 换页动画类型。
+ * - `unlock`：锁屏 → 桌面，桌面像被「揭开」一样进来；
+ * - `app`：应用之间切换，新界面轻微滑入。
+ * 只影响视觉：动画是 CSS 挂载动画，元素立即出现在 DOM 里，
+ * 不会延迟玩家操作（`prefers-reduced-motion` 下由 token 归零）。
+ */
+const transitionKind = ref<'unlock' | 'app'>('app')
+
 /** 六个真正的应用（结局/复盘/桌面/锁屏不算应用）。 */
 const APP_IDS: AppId[] = ['chat', 'wallet', 'manual', 'photos', 'notifications', 'settings']
 
@@ -78,7 +87,10 @@ function asAppId(value: ViewId): AppId | null {
   return APP_IDS.includes(value as AppId) ? (value as AppId) : null
 }
 
-watch(view, (next) => {
+watch(view, (next, prev) => {
+  // 换页动画：从锁屏进桌面用解锁动画，其余用应用切换动画。
+  transitionKind.value = prev === 'intro' && next === 'home' ? 'unlock' : 'app'
+
   const app = asAppId(next)
   if (!app) return
   recentApps.value = [app, ...recentApps.value.filter((a) => a !== app)].slice(0, 4)
@@ -563,7 +575,14 @@ onBeforeUnmount(() => {
       />
 
       <main ref="mainRef" class="phone__viewport" tabindex="-1">
-        <IntroScene v-if="view === 'intro'" @start="submit('start')" />
+        <!--
+          换页容器：`:key="view"` 让切换视图时重新挂载并播放进入动画。
+          用纯 CSS 挂载动画而不是 <Transition mode="out-in">，
+          因为 out-in 会等旧界面退场结束才挂载新界面，
+          既会拖慢操作，也会让自动化断言读到旧 DOM。
+        -->
+        <div :key="view" class="viewport__page" :class="`viewport__page--${transitionKind}`">
+          <IntroScene v-if="view === 'intro'" @start="submit('start')" />
 
         <HomeScene
           v-else-if="view === 'home'"
@@ -624,7 +643,11 @@ onBeforeUnmount(() => {
           @open-outcome="openOutcome"
         />
 
-        <SettingsScene v-else-if="view === 'settings'" @back="goBack" />
+        <SettingsScene
+          v-else-if="view === 'settings'"
+          @back="goBack"
+          @request-restart="requestRestart"
+        />
 
         <!-- 通知中心：预警与消息分组展示 -->
         <section v-else-if="view === 'notifications'" class="center" aria-label="通知中心">
@@ -660,7 +683,7 @@ onBeforeUnmount(() => {
                     >
                       <span class="center__itemtitle">{{ item.title }}</span>
                       <span class="center__itembody">{{ item.body }}</span>
-                      <span class="center__itemhint">点击查看</span>
+                      <span class="row__chev" aria-hidden="true"></span>
                     </button>
                   </li>
                 </ul>
@@ -677,7 +700,8 @@ onBeforeUnmount(() => {
           </div>
         </section>
 
-        <PlainAppScene v-else-if="view === 'photos'" @back="goBack" />
+          <PlainAppScene v-else-if="view === 'photos'" @back="goBack" />
+        </div>
       </main>
 
       <BottomNav
@@ -748,6 +772,48 @@ onBeforeUnmount(() => {
   flex: 1;
   min-height: 0;
   outline: none;
+}
+
+/*
+ * 换页容器：视图切换时重新挂载并播放进入动画。
+ * 动画只用 CSS，元素立即出现在 DOM 里 —— 动效不阻断操作。
+ */
+.viewport__page {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+/* 应用之间切换：轻微滑入 */
+.viewport__page--app {
+  animation: page-app-in var(--dur-base) ease-out;
+}
+
+/* 锁屏 → 桌面：桌面像被揭开一样放大淡入 */
+.viewport__page--unlock {
+  animation: page-unlock-in var(--dur-slow) ease-out;
+}
+
+@keyframes page-app-in {
+  from {
+    opacity: 0;
+    transform: translateX(10px);
+  }
+}
+
+@keyframes page-unlock-in {
+  from {
+    opacity: 0;
+    transform: scale(1.035) translateY(2%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .viewport__page--app,
+  .viewport__page--unlock {
+    animation: none;
+  }
 }
 
 .confirm__text {

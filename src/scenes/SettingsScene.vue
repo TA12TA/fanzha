@@ -4,10 +4,15 @@ import { playSound } from '@/app/sound'
 import { useSettings } from '@/app/settings'
 
 /**
- * 设置：真实可用的开关（音效、顶部提醒）。
- * 与只读的相册/通知不同，这里的开关会写入本地设置并立即生效。
+ * 设置：真实可用的开关（音效、顶部提醒）+ 本局操作。
+ *
+ * 列表统一使用全项目共用的 `.rows` / `.row` 样式，
+ * 不再让每个页面各写一套行样式（真机上同一个系统里的列表长得一样）。
  */
-const emit = defineEmits<{ (e: 'back'): void }>()
+const emit = defineEmits<{
+  (e: 'back'): void
+  (e: 'request-restart'): void
+}>()
 
 const { settings, setSound, setBanner } = useSettings()
 
@@ -22,6 +27,12 @@ function toggleBanner(): void {
   setBanner(!settings.value.banner)
   playSound('toggle')
 }
+
+/** 重新开始：这里只发请求，二次确认与清档由 AppShell 统一处理。 */
+function requestRestart(): void {
+  playSound('tap')
+  emit('request-restart')
+}
 </script>
 
 <template>
@@ -29,52 +40,75 @@ function toggleBanner(): void {
     <AppHeader title="设置" show-back @back="emit('back')" />
 
     <div class="settings__body">
-      <section class="group" aria-label="声音">
-        <h2 class="group__title">声音</h2>
-        <div class="row">
-          <span class="row__text">
-            <span class="row__label">音效</span>
-            <span class="row__hint">点击、消息、提醒的提示音</span>
-          </span>
-          <button
-            type="button"
-            class="switch"
-            role="switch"
-            :aria-checked="settings.sound ? 'true' : 'false'"
-            aria-label="音效"
-            :class="{ 'switch--on': settings.sound }"
-            @click="toggleSound"
-          >
-            <span class="switch__knob" aria-hidden="true"></span>
-            <span class="sr-only">{{ settings.sound ? '已开启' : '已关闭' }}</span>
-          </button>
-        </div>
+      <section aria-label="声音">
+        <h2 class="groupcard__title">声音</h2>
+        <ul class="rows">
+          <li>
+            <div class="row">
+              <span class="row__main">
+                <span class="row__label">音效</span>
+                <span class="row__hint">点击、消息、提醒的提示音</span>
+              </span>
+              <button
+                type="button"
+                class="switch"
+                role="switch"
+                :aria-checked="settings.sound ? 'true' : 'false'"
+                aria-label="音效"
+                :class="{ 'switch--on': settings.sound }"
+                @click="toggleSound"
+              >
+                <span class="switch__knob" aria-hidden="true"></span>
+                <span class="sr-only">{{ settings.sound ? '已开启' : '已关闭' }}</span>
+              </button>
+            </div>
+          </li>
+        </ul>
       </section>
 
-      <section class="group" aria-label="提醒">
-        <h2 class="group__title">提醒</h2>
-        <div class="row">
-          <span class="row__text">
-            <span class="row__label">顶部弹出通知</span>
-            <span class="row__hint">关闭后不再弹出横幅，通知仍会收进通知中心</span>
-          </span>
-          <button
-            type="button"
-            class="switch"
-            role="switch"
-            :aria-checked="settings.banner ? 'true' : 'false'"
-            aria-label="顶部弹出通知"
-            :class="{ 'switch--on': settings.banner }"
-            @click="toggleBanner"
-          >
-            <span class="switch__knob" aria-hidden="true"></span>
-            <span class="sr-only">{{ settings.banner ? '已开启' : '已关闭' }}</span>
-          </button>
-        </div>
+      <section aria-label="提醒">
+        <h2 class="groupcard__title">提醒</h2>
+        <ul class="rows">
+          <li>
+            <div class="row">
+              <span class="row__main">
+                <span class="row__label">顶部弹出通知</span>
+                <span class="row__hint">关闭后不再弹出横幅，通知仍会收进通知中心</span>
+              </span>
+              <button
+                type="button"
+                class="switch"
+                role="switch"
+                :aria-checked="settings.banner ? 'true' : 'false'"
+                aria-label="顶部弹出通知"
+                :class="{ 'switch--on': settings.banner }"
+                @click="toggleBanner"
+              >
+                <span class="switch__knob" aria-hidden="true"></span>
+                <span class="sr-only">{{ settings.banner ? '已开启' : '已关闭' }}</span>
+              </button>
+            </div>
+          </li>
+        </ul>
       </section>
 
-      <section class="group" aria-label="隐私">
-        <h2 class="group__title">关于本机</h2>
+      <section aria-label="本局">
+        <h2 class="groupcard__title">本局</h2>
+        <ul class="rows">
+          <li>
+            <button type="button" class="row row--action" @click="requestRestart">
+              <span class="row__main">
+                <span class="row__label row__label--danger">重新开始本局</span>
+                <span class="row__hint">清掉进度和余额，回到开场（会先问一句）</span>
+              </span>
+              <span class="row__chev" aria-hidden="true"></span>
+            </button>
+          </li>
+        </ul>
+      </section>
+
+      <section aria-label="关于本机">
+        <h2 class="groupcard__title">关于本机</h2>
         <ul class="plain">
           <li>不需要账号，也不要你填姓名、手机号、银行卡或验证码。</li>
           <li>进度和设置只存在这台设备的浏览器里，不会传出去。</li>
@@ -105,40 +139,13 @@ function toggleBanner(): void {
   -webkit-overflow-scrolling: touch;
 }
 
-.group__title {
-  margin-bottom: var(--space-2);
-  font-size: var(--font-sm);
-  font-weight: 700;
-  color: var(--c-text-soft);
+/* 可点击的整行（右侧带箭头） */
+.row--action:active {
+  background: var(--c-surface-2);
 }
 
-.row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  min-height: var(--tap-min);
-  padding: var(--space-3);
-  border-radius: var(--radius-md);
-  background: var(--c-surface);
-  box-shadow: var(--shadow-card);
-}
-
-.row__text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.row__label {
-  font-size: var(--font-base);
-  font-weight: 600;
-}
-
-.row__hint {
-  font-size: var(--font-xs);
-  color: var(--c-text-soft);
+.row__label--danger {
+  color: var(--c-danger);
 }
 
 /* 开关：44px 热区，键盘可达 */

@@ -289,6 +289,14 @@ async function main() {
     await cdp.swipeUp({ fromY: 620, toY: 600 })
     record('轻微上滑不解锁', await cdp.isLocked())
 
+    // 锁屏不该有大段解释（真手机的锁屏只有时间/日期/壁纸）
+    const lockText = await cdp.text()
+    record(
+      '锁屏无多余说明文字（只留必要的一行模拟标记）',
+      !lockText.includes('虚构的手机') && !lockText.includes('虚拟生活费'),
+      lockText.includes('剧情演示') ? '保留了「剧情演示」标记' : '缺少模拟标记',
+    )
+
     // 上滑解锁（真实触摸事件）
     await cdp.swipeUp({ fromY: 640, toY: 430 })
     await cdp.screenshot(path.join(shotsDir, '02-home.png'))
@@ -299,6 +307,21 @@ async function main() {
       '上滑解锁后进入桌面（邀请提示改为通知留存，桌面无邀请卡片）',
       onDesktop && hasCard === false,
       hasCard ? '桌面仍有卡片' : '',
+    )
+
+    // 解锁过渡动画：桌面所在的换页容器应带 unlock 动画
+    const unlockAnim = await cdp.eval(`
+      const page = document.querySelector('.viewport__page');
+      if (!page) return null;
+      const cs = getComputedStyle(page);
+      return { cls: page.className, anim: cs.animationName, dur: cs.animationDuration };
+    `)
+    record(
+      '解锁进桌面有过渡动画',
+      unlockAnim !== null &&
+        unlockAnim.cls.includes('viewport__page--unlock') &&
+        unlockAnim.anim !== 'none',
+      unlockAnim ? `${unlockAnim.cls} animation=${unlockAnim.anim} ${unlockAnim.dur}` : '未找到换页容器',
     )
 
     // 邀请入口：青讯图标角标 + 继续当前事项
@@ -946,6 +969,41 @@ async function main() {
     await sleep(300)
     const viewerClosed = await cdp.eval(`return !document.querySelector('.viewer')`)
     record('关闭查看器后回到相册网格', viewerClosed === true)
+    await cdp.click('返回')
+
+    // 设置页：真机把「清空数据」放在设置里；同时不再有元叙述提示
+    await cdp.eval(`
+      const b = [...document.querySelectorAll('.home .app')].find(x => (x.textContent||'').includes('设置'));
+      if (b) b.click();
+      return !!b;
+    `)
+    await sleep(400)
+    const settingsText = await cdp.text()
+    record(
+      '设置页提供「重新开始本局」入口',
+      settingsText.includes('重新开始本局'),
+      '',
+    )
+    record(
+      '设置页不再出现「点击查看」这类元叙述',
+      !settingsText.includes('点击查看'),
+      '',
+    )
+    await cdp.click('返回')
+
+    // 通知中心：可点的通知行改为箭头，不再写「点击查看」
+    await cdp.eval(`
+      const b = [...document.querySelectorAll('.home .app')].find(x => (x.textContent||'').includes('通知'));
+      if (b) b.click();
+      return !!b;
+    `)
+    await sleep(400)
+    const noticesCenterText = await cdp.text()
+    record(
+      '通知中心不再提示「点击查看」',
+      !noticesCenterText.includes('点击查看'),
+      '',
+    )
     await cdp.click('返回')
 
     // 音效：在文档创建前注入 AudioContext 探针，确保 App 首次加载就用被拦截的实现。

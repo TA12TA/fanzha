@@ -1254,3 +1254,76 @@ describe('R. 相册（自绘风景照片 + 全屏查看器）', () => {
     expect(wrapper.findAll('.thumb').length).toBeGreaterThan(0)
   })
 })
+
+/**
+ * S. 沉浸感：去掉多余的文字介绍 + 锁屏到桌面的过渡 + 设置页重开入口。
+ *
+ * 用户要求「在不需要文字介绍的地方去除掉文字介绍，要真实沉浸感」，
+ * 以及「锁屏解锁屏幕需要有一点过渡动画」。
+ * 真手机的锁屏只有时间、日期和壁纸，不会先解释一遍这是什么。
+ */
+describe('S. 沉浸感（去说明文字 / 解锁过渡 / 设置页重开）', () => {
+  it('S01 锁屏只留一行必要标记，不再有大段解释', async () => {
+    const wrapper = mountApp()
+
+    // 必要的模拟标记仍在（合规要求：持续可见）
+    expect(wrapper.text()).toContain('剧情演示')
+
+    // 元叙述已删除
+    expect(wrapper.text(), '不应再解释「这是虚构手机」').not.toContain('虚构的手机')
+    expect(wrapper.text(), '不应再解释「给你 800 元虚拟生活费」').not.toContain('虚拟生活费')
+    // 但仍要能正常解锁
+    expect(wrapper.text()).toContain('上滑解锁')
+  })
+
+  it('S02 解锁后桌面用解锁过渡进入（类名可断言）', async () => {
+    const wrapper = mountApp()
+    await swipeUnlock(wrapper)
+
+    const page = wrapper.find('.viewport__page')
+    expect(page.exists(), '换页容器应存在').toBe(true)
+    expect(page.classes(), '锁屏→桌面应使用解锁过渡').toContain('viewport__page--unlock')
+    expect(wrapper.find('.home').exists()).toBe(true)
+  })
+
+  it('S03 通知中心与结局/复盘不再有元叙述提示', async () => {
+    const wrapper = mountApp()
+    await swipeUnlockAndWaitNotices(wrapper)
+
+    // 通知中心：可点的通知行右侧改为箭头，不再写「点击查看」
+    await clickDesktopApp(wrapper, '通知')
+    expect(wrapper.find('.center__item--message').exists(), '应有可点的消息通知').toBe(true)
+    expect(wrapper.text(), '不应再提示「点击查看」').not.toContain('点击查看')
+    await click(wrapper, '返回')
+
+    // 结局与复盘：不再解释「可以先去别处逛逛」「会先问一句」
+    await clickDesktopApp(wrapper, '青讯')
+    await click(wrapper, '拒绝并举报')
+    await flush()
+    expect(wrapper.text()).toContain('提前识破')
+    expect(wrapper.text(), '结局页不应再解释怎么离开').not.toContain('先去别处逛逛')
+
+    await click(wrapper, '看复盘')
+    await flush()
+    expect(wrapper.text(), '复盘页不应再解释二次确认').not.toContain('会先问一句')
+  })
+
+  it('S04 设置页也提供「重新开始本局」，且仍需二次确认', async () => {
+    const wrapper = mountApp()
+    // startAndReachPayment 内部已包含「解锁 → 进群 → 接下任务」
+    await startAndReachPayment(wrapper)
+    await click(wrapper, '确认垫付 100 元')
+    await flush()
+    expect(readSave()?.balance).toBe(700)
+
+    // 从设置页重开（真机把「清空数据」放在设置里）
+    await click(wrapper, '回到桌面')
+    await clickDesktopApp(wrapper, '设置')
+    await click(wrapper, '重新开始本局')
+    expect(wrapper.text()).toContain('重来一次？')
+
+    // 取消后进度不变
+    await click(wrapper, '算了，接着玩')
+    expect(readSave()?.balance).toBe(700)
+  })
+})

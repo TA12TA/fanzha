@@ -68,7 +68,6 @@ const labels = computed(() => riskLabelsOf(props.state))
       <button type="button" class="btn btn--primary review__restart" @click="emit('request-restart')">
         再玩一次
       </button>
-      <p class="review__hint">会先问一句，免得手滑清掉记录。</p>
     </div>
   </section>
 </template>

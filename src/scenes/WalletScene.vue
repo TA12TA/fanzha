@@ -39,7 +39,8 @@ const cancelId = computed<OptionId | null>(() => {
 /** 模拟收支记录：完全由状态推导，不单独存储。 */
 const records = computed(() => {
   const list: { label: string; amount: number }[] = [
-    { label: '生活费', amount: INITIAL_BALANCE },
+    // 与青讯里妈妈的转账卡片对应：800 元有明确来源，不是凭空出现的数字。
+    { label: '妈妈转来的生活费', amount: INITIAL_BALANCE },
   ]
   if (props.state.paidTotal >= 100) list.push({ label: '垫付 · 第一单', amount: -100 })
   if (props.state.paidTotal >= 400) list.push({ label: '垫付 · 解冻费', amount: -300 })
@@ -71,7 +72,7 @@ const records = computed(() => {
       <section v-if="pendingAmount !== null" class="request" aria-label="待确认的垫付">
         <p class="request__title">有一笔待确认</p>
         <p class="request__amount">{{ pendingAmount }} <span>元</span></p>
-        <p class="request__hint">离开这页只是先放着，不会扣钱，也不会自动取消。</p>
+        <p class="request__hint">离开只是先放着，不会扣款或取消。</p>
         <SimulationBadge strong text="游戏内模拟，不会动你的真钱" />
         <div class="request__actions">
           <button

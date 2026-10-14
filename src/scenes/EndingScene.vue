@@ -64,7 +64,6 @@ const lossText = computed(() =>
       <button type="button" class="btn btn--primary ending__review" @click="emit('choose', 'review')">
         看复盘
       </button>
-      <p class="ending__hint">也可以先去别处逛逛，结果和复盘随时能回来。</p>
     </div>
   </section>
 </template>

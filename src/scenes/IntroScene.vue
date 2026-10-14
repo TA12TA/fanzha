@@ -120,12 +120,12 @@ const hintText = computed(() => {
           <span class="lock__subtitle">大学生反诈互动 · 第一关「刷单返利」</span>
         </span>
 
-        <span class="lock__note">
-          接下来你手上是一部虚构的手机，里面的群、人、钱都是编的。约 3 分钟。
-        </span>
-        <span class="lock__note lock__note--small">
-          游戏里给你 800 元虚拟生活费。本作只做反诈教育，不接支付、不收任何个人信息。
-        </span>
+        <!--
+          只保留一行必要的说明标记（AGENTS.md 要求持续可见的「剧情模拟」标识）。
+          原先这里还有两段解释（虚构手机、800 元生活费怎么来的），属于元叙述，
+          已删除：生活费来源改由青讯里妈妈的转账卡片交代，用叙事代替说明。
+        -->
+        <span class="lock__note">剧情演示 · 不涉及真实资金</span>
       </span>
 
       <!-- 解锁指示：可点、可键盘触发 -->
@@ -228,13 +228,8 @@ const hintText = computed(() => {
 }
 
 .lock__note {
-  font-size: var(--font-sm);
-  line-height: 1.6;
-  color: #9fb2c9;
-}
-
-.lock__note--small {
   font-size: var(--font-xs);
+  line-height: 1.6;
   color: #8ba0b8;
 }
 
