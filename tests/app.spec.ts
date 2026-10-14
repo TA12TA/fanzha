@@ -635,7 +635,9 @@ describe('E. 整部手机的交互（B01–B14）', () => {
 
     await click(wrapper, '返回')
     await click(wrapper, '相册')
-    expect(wrapper.text()).toContain('没有照片')
+    // 相册不再空着：有自绘风景照片
+    expect(wrapper.text()).toContain('张照片')
+    expect(wrapper.findAll('.thumb').length).toBeGreaterThan(0)
     await click(wrapper, '桌面')
 
     // 桌面「通知」图标进入同一个界面
@@ -896,7 +898,7 @@ describe('P. 底部导航键与最近任务', () => {
 
     // 点击记录可切回该应用
     await click(wrapper, '切到相册')
-    expect(wrapper.find('.plain').exists(), '应从最近任务切回首版相册').toBe(true)
+    expect(wrapper.find('.album').exists(), '应从最近任务切回相册').toBe(true)
   })
 })
 
@@ -1201,5 +1203,54 @@ describe('Q. 青讯：会话列表 / 群聊与私聊 / 妈妈转账', () => {
     expect(wrapper.findAll('.msg__name').length, '私聊气泡里也不该重复出现昵称').toBe(0)
     // 但不影响消息本身
     expect(wrapper.find('.chat__list').text()).toContain('生活费')
+  })
+})
+
+/**
+ * R. 相册：不能是空白的。
+ * 用户要求「相册里面也放一些风景照片不能空着」。
+ * 照片是自绘 SVG（无外部资源、无版权风险），这里锁住结构与交互。
+ */
+describe('R. 相册（自绘风景照片 + 全屏查看器）', () => {
+  it('R01 相册里有照片，按日期分组显示', async () => {
+    const wrapper = mountApp()
+    await swipeUnlock(wrapper)
+    await clickDesktopApp(wrapper, '相册')
+
+    const thumbs = wrapper.findAll('.thumb')
+    expect(thumbs.length, '相册应有照片').toBeGreaterThanOrEqual(6)
+    expect(wrapper.text(), '不再出现「相册是空的」这类说明').not.toContain('用不到它')
+
+    // 每张照片都有可读名称，供读屏与查看器使用
+    for (const thumb of thumbs) {
+      expect(thumb.attributes('aria-label') ?? '').toContain('查看照片：')
+    }
+
+    // 按日期分组
+    expect(wrapper.findAll('.album__date').length).toBeGreaterThan(0)
+    expect(wrapper.text()).toContain('张照片')
+  })
+
+  it('R02 点击照片可全屏查看，可翻页、可关闭', async () => {
+    const wrapper = mountApp()
+    await swipeUnlock(wrapper)
+    await clickDesktopApp(wrapper, '相册')
+
+    const first = wrapper.findAll('.thumb')[0]
+    await first?.trigger('click')
+
+    const viewer = wrapper.find('.viewer')
+    expect(viewer.exists(), '点击照片应打开全屏查看器').toBe(true)
+    expect(viewer.text()).toContain('第 1 / ')
+    expect(wrapper.find('.viewer__nav[aria-label="上一张"]').attributes('disabled')).toBeDefined()
+
+    // 翻到下一张
+    await click(wrapper, '下一张')
+    expect(wrapper.text()).toContain('第 2 / ')
+
+    // 关闭后回到网格
+    await click(wrapper, '关闭照片')
+    expect(wrapper.find('.viewer').exists(), '关闭后应回到网格').toBe(false)
+    expect(wrapper.findAll('.thumb').length).toBeGreaterThan(0)
   })
 })

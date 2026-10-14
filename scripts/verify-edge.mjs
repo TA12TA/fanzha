@@ -895,6 +895,59 @@ async function main() {
     `)
     record('状态栏不再显示「模拟」', !statusText.includes('模拟'))
 
+    // 相册：不为空，且有可全屏查看的照片（自绘 SVG，无外部资源）
+    await cdp.eval(`
+      const b = [...document.querySelectorAll('.home .app')].find(x => (x.textContent||'').includes('相册'));
+      if (b) b.click();
+      return !!b;
+    `)
+    await sleep(400)
+    const album = await cdp.eval(`
+      const thumbs = [...document.querySelectorAll('.thumb')];
+      const first = thumbs[0];
+      return {
+        count: thumbs.length,
+        svg: document.querySelectorAll('.thumb svg').length,
+        external: document.querySelectorAll('.thumb img').length,
+        label: first ? first.getAttribute('aria-label') : null,
+      };
+    `)
+    record(
+      '相册里有照片（自绘 SVG，无外部图片）',
+      album.count >= 6 && album.svg >= 6 && album.external === 0,
+      `照片=${album.count} 张，SVG=${album.svg}，img=${album.external}`,
+    )
+
+    await cdp.eval(`
+      const b = document.querySelector('.thumb');
+      if (b) b.click();
+      return !!b;
+    `)
+    await sleep(400)
+    const viewerInfo = await cdp.eval(`
+      const v = document.querySelector('.viewer');
+      const stage = document.querySelector('.viewer__stage svg');
+      return {
+        open: !!v,
+        text: v ? (v.textContent || '').trim().slice(0, 40) : '',
+        big: stage ? Math.round(stage.getBoundingClientRect().width) : 0,
+      };
+    `)
+    record(
+      '点击照片可全屏查看并可翻页',
+      viewerInfo.open && viewerInfo.text.includes('第 1 /'),
+      `查看器=${viewerInfo.open} 文案=${viewerInfo.text.replace(/\\s+/g, ' ')}`,
+    )
+    await cdp.eval(`
+      const b = document.querySelector('.viewer__close');
+      if (b) b.click();
+      return !!b;
+    `)
+    await sleep(300)
+    const viewerClosed = await cdp.eval(`return !document.querySelector('.viewer')`)
+    record('关闭查看器后回到相册网格', viewerClosed === true)
+    await cdp.click('返回')
+
     // 音效：在文档创建前注入 AudioContext 探针，确保 App 首次加载就用被拦截的实现。
     // （若在页面加载后再打补丁，App 已持有真实 AudioContext，探针会数不到。）
     await cdp.send('Page.addScriptToEvaluateOnNewDocument', {
