@@ -10,7 +10,15 @@ import type { ChatMessage } from '@/data/level01'
  * - `failed`  提现失败（系统）
  * - `transfer` 转账卡片（妈妈转来的生活费，让 800 元有明确来源）
  */
-defineProps<{ message: ChatMessage }>()
+defineProps<{
+  message: ChatMessage
+  /**
+   * 是否显示「他自己说的」这类小标注。
+   * 由会话决定只标一次（第一条自称到账的消息），
+   * 否则连续几条自称到账的气泡会各带一句重复说明 —— 满屏重复提示等于没提示。
+   */
+  annotate?: boolean
+}>()
 </script>
 
 <template>
@@ -33,7 +41,7 @@ defineProps<{ message: ChatMessage }>()
         （群聊在气泡上方显示昵称，私聊不显示），避免私聊里重复出现名字。
       -->
       <p class="msg__text">{{ message.text }}</p>
-      <p v-if="message.variant === 'claim'" class="msg__note">他自己说的</p>
+      <p v-if="annotate && message.variant === 'claim'" class="msg__note">他自己说的</p>
       <p v-else-if="message.variant === 'failed'" class="msg__note">模拟账户</p>
     </template>
   </div>

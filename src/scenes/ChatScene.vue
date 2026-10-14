@@ -146,6 +146,14 @@ const shownMessages = computed(() => messages.value.slice(0, visibleCount.value)
 const allShown = computed(() => visibleCount.value >= messages.value.length)
 
 /**
+ * 只给第一条「自称到账」的消息加「他自己说的」标注。
+ * 连续几条都标一遍会变成满屏重复提示，反而没人看。
+ */
+const firstClaimId = computed(
+  () => messages.value.find((m) => m.variant === 'claim')?.id ?? null,
+)
+
+/**
  * 一个会话是否显示发言人昵称。
  * 真机消息应用里只有群聊才在气泡上方标出「谁说的」，私聊不需要。
  */
@@ -301,7 +309,7 @@ const canViewProfile = computed(
               />
               <span class="row__main">
                 <span v-if="showSenderName(message)" class="row__name">{{ message.name }}</span>
-                <MessageBubble :message="message" />
+                <MessageBubble :message="message" :annotate="message.id === firstClaimId" />
               </span>
               <ChatAvatar
                 v-if="message.from === 'me'"

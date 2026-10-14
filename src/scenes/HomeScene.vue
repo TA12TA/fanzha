@@ -140,7 +140,7 @@ function badgeAria(id: string, badge: string): string {
           <p class="walletcard__label">{{ BRAND.wallet }}</p>
           <p class="walletcard__amount">{{ state.balance }} <span>元</span></p>
           <p class="walletcard__note">
-            生活费 {{ INITIAL_BALANCE }} · 已垫付 {{ state.paidTotal }} 元
+            生活费 {{ INITIAL_BALANCE }} 元<span v-if="state.paidTotal > 0"> · 已垫付 {{ state.paidTotal }} 元</span>
           </p>
         </div>
       </div>

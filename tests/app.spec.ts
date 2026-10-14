@@ -1408,3 +1408,46 @@ describe('T. 壁纸主题与应用打开逻辑', () => {
     expect(list.exists()).toBe(true)
   })
 })
+
+/**
+ * U. 文案冗余（实拍审计发现）
+ *
+ * 用脚本把每个界面玩家真正看到的文字全打印出来后，发现两处「重复提示」：
+ * 钱包组件在没垫付时也写「已垫付 0 元」，以及群里连续两条自称到账
+ * 各带一句「他自己说的」。重复提示等于没有提示，这里锁住修复结果。
+ */
+describe('U. 文案不重复', () => {
+  it('U01 钱包组件没垫付时不写「已垫付 0 元」，垫付后才显示', async () => {
+    const wrapper = mountApp()
+    // startAndReachPayment 内部已包含「解锁 → 进群 → 接下任务」，
+    // 这里不要再单独解锁一次（会因为没有锁屏而失败）。
+    await startAndReachPayment(wrapper)
+    await click(wrapper, '回到桌面')
+
+    const note = wrapper.find('.walletcard__note')
+    expect(note.text()).toContain('生活费 800 元')
+    expect(note.text(), '没垫付时不必显示「已垫付 0 元」').not.toContain('已垫付')
+
+    // 垫付一笔后，这条信息才有意义
+    await click(wrapper, '继续当前事项')
+    await click(wrapper, '确认垫付 100 元')
+    await flush()
+    await click(wrapper, '回到桌面')
+    const after = wrapper.find('.walletcard__note')
+    expect(after.text(), '垫付后应显示已垫付金额').toContain('已垫付 100 元')
+  })
+
+  it('U02 「他自己说的」只标一次，不逐条重复', async () => {
+    const wrapper = mountApp()
+    await swipeUnlock(wrapper)
+    await clickDesktopApp(wrapper, '青讯')
+    await click(wrapper, '进群看看')
+    await click(wrapper, '显示全部')
+
+    // 群里有多条自称到账的消息，但标注只应出现一次
+    const claims = wrapper.findAll('.msg--claim')
+    const notes = wrapper.findAll('.msg__note').filter((n) => n.text().includes('他自己说的'))
+    expect(claims.length, '群里应有不止一条自称到账的消息').toBeGreaterThan(1)
+    expect(notes.length, '「他自己说的」只标一次').toBe(1)
+  })
+})
