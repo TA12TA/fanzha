@@ -18,6 +18,7 @@ import { hasOutcome, pendingAmount, preferredChatView, type AppId, type ChatView
 import type { ChatSessionId } from '@/data/level01'
 import { useNotifications } from '@/app/notifications'
 import { useSettings } from '@/app/settings'
+import { resetChatReveal } from '@/app/chatReveal'
 import { useTheme } from '@/app/theme'
 import { playSound, setSoundEnabled } from '@/app/sound'
 import { useGame } from '@/app/useGame'
@@ -450,6 +451,8 @@ function requestRestart(): void {
 function doRestart(): void {
   playSound('cancel')
   game.restart()
+  // 新的一局应当重新逐条播放每个会话，清掉上一局「看过哪些消息」的记忆
+  resetChatReveal()
   confirmRestart.value = false
   profileOpen.value = false
   notices.clear()

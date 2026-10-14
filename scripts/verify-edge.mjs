@@ -515,6 +515,52 @@ async function main() {
       groupNames.length > 0,
       `昵称=[${groupNames.slice(0, 3).join(' / ')}]`,
     )
+
+    /*
+     * 回归：第二次进同一个会话不该重播「逐条出现」。
+     *
+     * 用户反馈的问题。进度记在模块级（app/chatReveal.ts），看过的部分直接出现。
+     * 这里真实浏览器里走一遍：看完群聊 → 退回列表 → 再点进同一个会话，
+     * 消息应当立刻全部可见，且不该再出现「显示全部」。
+     */
+    const firstVisit = await cdp.eval(`
+      return {
+        rows: document.querySelectorAll('.chat__list .row').length,
+        skip: !!document.querySelector('.chat__skiprow'),
+      };
+    `)
+    await cdp.eval(`
+      const b = [...document.querySelectorAll('button')].find(x => (x.getAttribute('aria-label')||'') === '返回上一层');
+      if (b) b.click();
+      return !!b;
+    `)
+    await sleep(400)
+    await cdp.eval(`
+      const b = [...document.querySelectorAll('.session')].find(x => (x.textContent||'').includes('校园兼职'));
+      if (b) b.click();
+      return !!b;
+    `)
+    await sleep(600)
+    const secondVisit = await cdp.eval(`
+      return {
+        rows: document.querySelectorAll('.chat__list .row').length,
+        skip: !!document.querySelector('.chat__skiprow'),
+      };
+    `)
+    record(
+      '第二次进同一个会话，消息直接全部出现（不重播逐条动画）',
+      secondVisit.rows === firstVisit.rows && secondVisit.rows > 1 && secondVisit.skip === false,
+      `第一次 ${firstVisit.rows} 条（跳过按钮=${firstVisit.skip}）→ 第二次 ${secondVisit.rows} 条（跳过按钮=${secondVisit.skip}）`,
+    )
+    // 继续后面的断言
+    await cdp.click('返回上一层')
+    await sleep(300)
+    await cdp.eval(`
+      const b = [...document.querySelectorAll('.session')].find(x => (x.textContent||'').includes('校园兼职'));
+      if (b) b.click();
+      return !!b;
+    `)
+    await sleep(300)
     const subtitle = await cdp.eval(`
       const el = document.querySelector('.appbar__subtitle');
       return el ? (el.textContent || '').trim() : null;

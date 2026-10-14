@@ -4,6 +4,7 @@ import AppHeader from '@/components/AppHeader.vue'
 import ChatAvatar from '@/components/ChatAvatar.vue'
 import MessageBubble from '@/components/MessageBubble.vue'
 import { playSound } from '@/app/sound'
+import { markRevealed, revealedCountFor } from '@/app/chatReveal'
 import {
   FREEZE_MESSAGES,
   GROUP_MESSAGES,
@@ -92,7 +93,14 @@ function previewOf(id: ChatSessionId): string {
   return last.text
 }
 
-/** 逐条呈现：已显示条数。减弱动效时直接全部显示。 */
+/**
+ * 逐条呈现：已显示条数。
+ *
+ * 只在**第一次**看某个会话时逐条出现；重看时已看过的部分直接显示，
+ * 只有剧情推进后新来的消息才继续逐条出现。
+ * 进度记在 `app/chatReveal.ts`（模块级），因为这个组件在离开消息应用时会被卸载。
+ * 减弱动效时一律直接全部显示。
+ */
 const visibleCount = ref(0)
 const reduceMotion = ref(false)
 let timers: ReturnType<typeof setTimeout>[] = []
@@ -107,23 +115,43 @@ function showAll(): void {
   playSound('tap')
   clearTimers()
   visibleCount.value = messages.value.length
+  if (props.session) markRevealed(props.session, visibleCount.value)
 }
 
 function animate(): void {
   clearTimers()
+  const id = props.session
   const total = messages.value.length
-  if (reduceMotion.value) {
+  // 会话列表不需要动效
+  if (!id) {
     visibleCount.value = total
     return
   }
-  visibleCount.value = Math.min(1, total)
-  for (let i = 1; i < total; i += 1) {
+
+  const seen = Math.min(revealedCountFor(id), total)
+  if (reduceMotion.value || seen >= total) {
+    visibleCount.value = total
+    markRevealed(id, total)
+    return
+  }
+
+  // 已看过的部分立刻出现；剩下的（新来的）逐条出现。
+  visibleCount.value = Math.max(seen, Math.min(1, total))
+  let step = 0
+  for (let i = visibleCount.value; i < total; i += 1) {
+    step += 1
     timers.push(
-      setTimeout(() => {
-        visibleCount.value = Math.max(visibleCount.value, i + 1)
-      }, 260 * i),
+      setTimeout(
+        () => {
+          visibleCount.value = Math.max(visibleCount.value, i + 1)
+          // 看到哪记到哪：中途离开再回来，只补没看到的那几条
+          markRevealed(id, visibleCount.value)
+        },
+        260 * step,
+      ),
     )
   }
+  if (step === 0) markRevealed(id, total)
 }
 
 onMounted(() => {
@@ -133,7 +161,7 @@ onMounted(() => {
   animate()
 })
 
-// 节点或会话变化（新卡片到来、切换会话）时重新逐条呈现，
+// 节点或会话变化（切换会话、剧情推进带来新卡片）时重新计算该显示到第几条，
 // 并在卸载/切换时清理定时器，避免旧消息延迟覆盖新界面。
 watch(
   () => [props.state.node, props.session],

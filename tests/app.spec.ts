@@ -1,10 +1,11 @@
 import { mount, type VueWrapper } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import AppShell from '@/app/AppShell.vue'
+import { resetChatReveal } from '@/app/chatReveal'
 import { DEFAULT_DURATIONS, FIRST_NOTICE_DELAY_MS, LEAVE_MS } from '@/app/notifications'
 import { reloadSettings } from '@/app/settings'
 import { __resetSoundForTests } from '@/app/sound'
-import { BRAND } from '@/data/level01'
+import { BRAND, GROUP_MESSAGES, REBATE_MESSAGES } from '@/data/level01'
 import { findForbiddenClaim } from '@/game/debrief'
 import { SAVE_KEY, saveGame } from '@/game/storage'
 import { choose, createInitialState } from '@/game/engine'
@@ -20,6 +21,13 @@ const mounted: VueWrapper[] = []
 /** 挂载一部新的手机；默认先清空存档（模拟全新开局）。 */
 function mountApp(options: { keepSave?: boolean } = {}): VueWrapper {
   if (!options.keepSave) globalThis.localStorage.clear()
+  /*
+   * 会话「逐条出现」的进度记在模块级（app/chatReveal.ts），这样离开消息应用
+   * 再回来时不用重播动画。但它在同一个测试文件里会跨用例残留 ——
+   * 真实场景中刷新页面等于新开局、这份内存记忆会一起重置，所以这里也重置，
+   * 让每个用例都从「第一次进入会话」开始。
+   */
+  resetChatReveal()
   const wrapper = mount(AppShell)
   mounted.push(wrapper)
   return wrapper
@@ -1506,5 +1514,81 @@ describe('U. 文案不重复', () => {
       .filter((b) => b.attributes('aria-pressed') === 'true')
     expect(pressed.length, '应只有一个档位处于选中态').toBe(1)
     expect(pressed[0].text()).toBe('夜间')
+  })
+})
+
+/**
+ * W. 会话「逐条出现」只播一次
+ *
+ * 用户反馈：第二次进同一个会话，消息又像第一次那样一条一条蹦出来。
+ * 原因是进度只存在组件里，而离开消息应用时 ChatScene 会被卸载，
+ * 组件状态一起丢掉。现在进度记在模块级（app/chatReveal.ts）：
+ * 看过的立刻出现，只有**新来的**消息才继续逐条出现。
+ */
+describe('W. 会话逐条出现只播一次', () => {
+  /** 打开会话列表里的某个会话。 */
+  async function openSession(wrapper: VueWrapper, keyword: string): Promise<void> {
+    const row = wrapper.findAll('.session').find((s) => s.text().includes(keyword))
+    expect(row, `会话列表里应有「${keyword}」`).toBeTruthy()
+    await row!.trigger('click')
+    await flush()
+  }
+
+  it('W01 第二次进同一个会话，消息直接全部出现，不再逐条播放', async () => {
+    const wrapper = mountApp()
+    await swipeUnlock(wrapper)
+
+    // 第一次进入群聊（打开青讯会直接落到剧情相关会话）：先看到一部分
+    await clickDesktopApp(wrapper, '青讯')
+    await click(wrapper, '进群看看')
+    expect(
+      wrapper.findAll('.chat__list .row').length,
+      '第一次进入时消息是逐条出现的，不是一次全出来',
+    ).toBeLessThan(GROUP_MESSAGES.length)
+    await click(wrapper, '显示全部')
+    expect(wrapper.findAll('.chat__list .row').length).toBe(GROUP_MESSAGES.length)
+
+    // 退回会话列表，再点进同一个会话：应当立刻全部可见
+    await click(wrapper, '返回上一层')
+    expect(wrapper.findAll('.session').length, '返回后是会话列表').toBeGreaterThan(0)
+    await openSession(wrapper, '校园兼职')
+
+    expect(
+      wrapper.findAll('.chat__list .row').length,
+      '第二次进入应当直接全部显示，而不是又从第一条开始',
+    ).toBe(GROUP_MESSAGES.length)
+    expect(
+      wrapper.find('.chat__skiprow').exists(),
+      '已经没有要跳过的内容，不该再出现「显示全部」',
+    ).toBe(false)
+  })
+
+  it('W02 剧情推进带来的新消息仍然逐条出现（看过的部分不重播）', async () => {
+    const wrapper = mountApp()
+    await startAndEnterGroup(wrapper)
+    // 先看完群聊，已看过的记为 GROUP_MESSAGES.length
+    await click(wrapper, '显示全部')
+    expect(wrapper.findAll('.chat__list .row').length).toBe(GROUP_MESSAGES.length)
+
+    // 推进到返利节点：群里会多出返利卡片
+    await click(wrapper, '接下任务')
+    await flush()
+    await click(wrapper, '回到桌面')
+    await click(wrapper, '继续当前事项')
+    await click(wrapper, '确认垫付 100 元')
+    await flush()
+
+    // 再打开青讯：剧情节点是 rebate，会直接落到群聊
+    await click(wrapper, '回到桌面')
+    await clickDesktopApp(wrapper, '青讯')
+
+    const total = GROUP_MESSAGES.length + REBATE_MESSAGES.length
+    const now = wrapper.findAll('.chat__list .row').length
+    expect(now, '看过的部分应当立刻出现').toBeGreaterThanOrEqual(GROUP_MESSAGES.length)
+    expect(now, '新卡片还没到时间，不应一次全出').toBeLessThan(total)
+    expect(wrapper.find('.chat__skiprow').exists(), '有新内容时仍应提供「显示全部」').toBe(true)
+
+    await click(wrapper, '显示全部')
+    expect(wrapper.findAll('.chat__list .row').length, '跳过动画后应看到全部').toBe(total)
   })
 })
