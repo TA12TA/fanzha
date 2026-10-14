@@ -78,6 +78,10 @@
   --c-on-wall: #f7fafc;
   --c-on-wall-soft: #c3d0e2;
   --c-on-wall-dim: #93a5bd;
+  /* 强调色（「继续当前事项」里的待付金额）：夜间暖黄 */
+  --c-on-wall-accent: #ffd9a8;
+  /* 上滑解锁提示条：轨道（填充用 --c-on-wall） */
+  --c-wall-hint-track: rgb(255 255 255 / 26%);
   --c-wall-surface: rgb(255 255 255 / 10%);
   --c-wall-border: rgb(255 255 255 / 16%);
   --c-wall-dock: rgb(255 255 255 / 12%);
@@ -107,11 +111,17 @@
  * 白天壁纸上的内容用色：壁纸变浅，压在它上面的文字/组件随之转深色。
  * 只影响桌面与锁屏（`--c-on-wall*` 与 `--c-wall-*`），应用内部页面本来
  * 就是浅色底，不参与这套切换。
+ *
+ * 三档都按「压在浅蓝天空上仍能读」来取值，实测（对最亮处 #eef7fd）：
+ * 主 ~15:1、次 ~8.4:1、辅 ~5.8:1。白天这组的对比度比夜间那组更保守，
+ * 因为浅色壁纸的局部亮度比深色壁纸更难预测。
  */
 [data-theme='day'] {
   --c-on-wall: #10233c;
-  --c-on-wall-soft: #3d5372;
-  --c-on-wall-dim: #5c718c;
+  --c-on-wall-soft: #2f4a6d;
+  --c-on-wall-dim: #4a6382;
+  --c-on-wall-accent: #8a4b06;
+  --c-wall-hint-track: rgb(16 35 60 / 20%);
   --c-wall-surface: rgb(255 255 255 / 62%);
   --c-wall-border: rgb(255 255 255 / 72%);
   --c-wall-dock: rgb(255 255 255 / 58%);

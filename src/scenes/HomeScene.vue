@@ -345,7 +345,8 @@ function badgeAria(id: string, badge: string): string {
 .resume__amount {
   font-size: var(--font-xs);
   font-weight: 500;
-  color: #ffd9a8;
+  /* 待付金额用强调色：夜间暖黄、白天深琥珀，浅色壁纸上也读得出 */
+  color: var(--c-on-wall-accent);
 }
 
 /* ============ 应用网格（无卡片，裸浮壁纸上） ============ */

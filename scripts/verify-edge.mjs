@@ -314,6 +314,90 @@ async function main() {
       `主题=${lockWall.theme}`,
     )
 
+    /*
+     * 锁屏文字在两种主题下都必须看得清。
+     *
+     * 起因：白天壁纸下锁屏几乎不可读 —— 日期/副标题/「剧情演示」/「上滑解锁」
+     * 都是写死的浅灰，压在浅蓝天空上等于没有。桌面当时已经改成跟随主题，
+     * 锁屏漏了。所以这里不逐条检查某个颜色，而是**遍历锁屏上每一段文字**，
+     * 检查它的明暗是否与壁纸相反：
+     *   白天（浅壁纸）→ 文字必须偏深；夜间（深壁纸）→ 文字必须偏浅。
+     * 这样以后任何新增文字只要颜色跟壁纸同向，就会立刻被抓出来。
+     *
+     * 为了不受运行时段影响（auto 白天/夜间取决于当前北京时间），
+     * 这里直接把设置写成 day / night 各跑一遍。
+     */
+    const measureOnWallText = `
+      const root = document.querySelector('.lock') || document.querySelector('.home');
+      if (!root) return [];
+      const lum = (css) => {
+        const m = (css || '').match(/\\d+/g);
+        if (!m) return null;
+        const [r, g, b] = [0, 1, 2].map((i) => {
+          const v = Number(m[i]) / 255;
+          return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+        });
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+      };
+      const out = [];
+      const walk = (el) => {
+        const cs = getComputedStyle(el);
+        if (cs.display === 'none' || cs.visibility === 'hidden' || Number(cs.opacity) === 0) return;
+        // 图标底板与角标自带底色（白字压彩色块），不参与「压壁纸」的判断
+        const inTile = el.closest && el.closest('.app__glyph, .app__badge, .sim');
+        const own = [...el.childNodes]
+          .filter((n) => n.nodeType === 3)
+          .map((n) => n.textContent.trim())
+          .join(' ')
+          .replace(/\\s+/g, ' ')
+          .trim();
+        if (own && !inTile) {
+          const l = lum(cs.color);
+          if (l !== null) {
+            out.push({
+              text: own.slice(0, 18),
+              cls: (el.className || '').toString().split(' ')[0],
+              color: cs.color,
+              lum: Number(l.toFixed(3)),
+            });
+          }
+        }
+        for (const c of el.children) walk(c);
+      };
+      walk(root);
+      return out;
+    `
+
+    for (const mode of ['day', 'night']) {
+      await cdp.eval(`
+        localStorage.setItem('fj-juzhongju:settings:v1', JSON.stringify({
+          version: 1, sound: true, banner: true, theme: ${JSON.stringify(mode)},
+        }));
+        return true;
+      `)
+      await cdp.send('Page.navigate', { url: BASE })
+      await sleep(1100)
+      const rows = await cdp.eval(measureOnWallText)
+      // day：浅壁纸 → 文字偏深（lum < 0.25）；night：深壁纸 → 文字偏浅（lum > 0.3）
+      const bad = rows.filter((r) => (mode === 'day' ? r.lum >= 0.25 : r.lum <= 0.3))
+      record(
+        `锁屏文字在${mode === 'day' ? '白天' : '夜间'}壁纸下可读（明暗与壁纸相反）`,
+        rows.length > 0 && bad.length === 0,
+        bad.length
+          ? `有问题：${bad.map((b) => `「${b.text}」${b.color} lum=${b.lum}`).join('；')}`
+          : `${rows.length} 段文字全部合格`,
+      )
+    }
+
+    // 恢复干净状态（清设置与存档），回到锁屏继续后面的流程
+    await cdp.eval(`localStorage.clear(); return true`)
+    await cdp.send('Page.navigate', { url: BASE })
+    await sleep(1100)
+    record(
+      '恢复默认设置后回到锁屏（auto 模式）',
+      (await cdp.eval(`return document.documentElement.getAttribute('data-theme-mode')`)) === 'auto',
+    )
+
     // 上滑解锁（真实触摸事件）
     await cdp.swipeUp({ fromY: 640, toY: 430 })
     await cdp.screenshot(path.join(shotsDir, '02-home.png'))

@@ -151,7 +151,12 @@ const hintText = computed(() => {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  color: var(--c-text-invert);
+  /*
+   * 锁屏文字全部走「壁纸上的内容」变量组，跟桌面同一套。
+   * 之前这里是写死的浅灰（#b9c9de / #8ba0b8 / #cddcee）与深色兜底色，
+   * 白天壁纸一切换，字就压在浅蓝天空上几乎看不见 —— 桌面改了、锁屏没改。
+   */
+  color: var(--c-on-wall);
   /* 底色由 .wall 提供（白天/夜间两套），这里只兜底 */
   background: var(--c-desktop-2);
   overflow: hidden;
@@ -203,7 +208,7 @@ const hintText = computed(() => {
 .lock__date {
   margin-top: calc(-1 * var(--space-1));
   font-size: var(--font-sm);
-  color: #b9c9de;
+  color: var(--c-on-wall-soft);
 }
 
 .lock__brand {
@@ -221,13 +226,17 @@ const hintText = computed(() => {
 
 .lock__subtitle {
   font-size: var(--font-base);
-  color: #b9c9de;
+  color: var(--c-on-wall-soft);
 }
 
+/*
+ * 「剧情演示 · 不涉及真实资金」是必须看清的模拟标记，
+ * 所以用第二档（不是最浅的 dim），浅色壁纸上也要读得出来。
+ */
 .lock__note {
   font-size: var(--font-xs);
   line-height: 1.6;
-  color: #8ba0b8;
+  color: var(--c-on-wall-soft);
 }
 
 /* 底部上滑提示 */
@@ -245,7 +254,7 @@ const hintText = computed(() => {
   width: 46px;
   height: 5px;
   border-radius: 999px;
-  background: rgb(255 255 255 / 26%);
+  background: var(--c-wall-hint-track);
   overflow: hidden;
 }
 
@@ -253,7 +262,8 @@ const hintText = computed(() => {
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background: #ffffff;
+  /* 浅色壁纸上白色填充看不见，跟着壁纸主题走 */
+  background: var(--c-on-wall);
   transform: scaleX(var(--drag-progress, 0));
   transform-origin: center;
   transition: transform var(--dur-fast) ease-out;
@@ -262,7 +272,7 @@ const hintText = computed(() => {
 .lock__hinttext {
   font-size: var(--font-sm);
   letter-spacing: 1px;
-  color: #cddcee;
+  color: var(--c-on-wall-soft);
   animation: hint-breathe 2.4s ease-in-out infinite;
 }
 
