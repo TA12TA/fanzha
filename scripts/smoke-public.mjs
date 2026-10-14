@@ -204,7 +204,7 @@ try {
       hasHome: !!document.querySelector('.home'),
       hasLock: !!document.querySelector('.lock__surface'),
       apps: [...document.querySelectorAll('.home .app')].map(a => (a.textContent || '').trim()),
-      navs: [...document.querySelectorAll('.nav__btn')].map(b => b.textContent.trim()),
+      navs: [...document.querySelectorAll('.nav__btn')].map(b => b.getAttribute('aria-label')),
       dockCount: document.querySelectorAll('.dock .app').length,
     }
   `)
@@ -216,7 +216,11 @@ try {
   record('桌面六个图标齐全（网格 + 程序坞）', home.apps.length === 6, home.apps.join(' / '))
   record('桌面含国家反诈中心', home.apps.some((a) => a.includes('国家反诈中心')))
   record('程序坞有三个常用应用', home.dockCount === 3, `dock=${home.dockCount}`)
-  record('底部导航三个入口', home.navs.length === 3, home.navs.join(' / '))
+  record(
+    '底部为三大金刚键',
+    home.navs.join(',') === '返回上一层,回到桌面,最近任务',
+    home.navs.join(' / '),
+  )
 
   // 官方 logo 是公网上最容易挂的资源：轮询到真正解码出像素为止
   const imgs = await waitForImages(cdp)
@@ -226,9 +230,10 @@ try {
     `count=${imgs.count} naturalWidth=[${(imgs.widths || []).join(',')}]`,
   )
 
-  // 点底部导航「反诈」→ 反诈应用
+  // 点程序坞里的「国家反诈中心」→ 反诈应用
+  // （底部已改为三大金刚键，不再有反诈快捷入口）
   await cdp.eval(`
-    const b = document.querySelector('.nav__btn[aria-label="打开国家反诈中心"]');
+    const b = document.querySelector('.dock .app[aria-label="打开国家反诈中心"]');
     if (b) b.click();
     return true;
   `)

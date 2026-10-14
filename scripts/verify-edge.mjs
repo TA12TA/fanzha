@@ -621,6 +621,50 @@ async function main() {
       `共 ${iconStyles.length} 个，首个=${JSON.stringify(iconStyles[0])}`,
     )
 
+    // 底部三大金刚键：3 个键、aria-label 正确、不再有重复的「反诈」入口
+    const navKeys = await cdp.eval(`
+      const keys = [...document.querySelectorAll('.nav__btn')];
+      return {
+        count: keys.length,
+        labels: keys.map(k => k.getAttribute('aria-label')),
+        text: keys.map(k => (k.textContent || '').trim()).join(''),
+        disabled: keys.filter(k => k.disabled).length,
+      };
+    `)
+    record(
+      '底部为三大金刚键（返回/主页/最近任务）且无「反诈」重复入口',
+      navKeys.count === 3 &&
+        navKeys.labels.join(',') === '返回上一层,回到桌面,最近任务' &&
+        navKeys.text === '' &&
+        navKeys.disabled === 0,
+      `共 ${navKeys.count} 个：[${navKeys.labels.join(' / ')}]`,
+    )
+
+    // 最近任务面板：真实可用的最近应用列表（不是死按钮）
+    await cdp.eval(`
+      const b = document.querySelector('.nav__btn[aria-label="最近任务"]');
+      if (b) b.click();
+      return true;
+    `)
+    await sleep(300)
+    const recentsPanel = await cdp.eval(`
+      const panel = document.querySelector('.recents__panel');
+      const items = [...document.querySelectorAll('.recents__item')].map(i => (i.textContent || '').trim());
+      return { open: !!panel, items, empty: !!document.querySelector('.recents__empty') };
+    `)
+    record(
+      '最近任务面板可打开并列出打开过的应用',
+      recentsPanel.open && (recentsPanel.items.length > 0 || recentsPanel.empty),
+      recentsPanel.items.length ? `记录=[${recentsPanel.items.join(' / ')}]` : '空态',
+    )
+    // 关闭面板，避免影响后续步骤
+    await cdp.eval(`
+      const b = document.querySelector('.recents__clear');
+      if (b) b.click();
+      return true;
+    `)
+    await sleep(200)
+
     // 真实手机桌面样式：图标不套卡片（无边框、无底色、无内边距）
     const iconNoCard = await cdp.eval(`
       const list = [...document.querySelectorAll('.home .app')].map(a => {
@@ -851,20 +895,28 @@ async function main() {
 
       await cdp.click('桌面')
       await sleep(200)
-      const beforeAntifraudNav = await cdp.eval(`return window.__osc || 0`)
-      const navClicked = await cdp.eval(`
-        const b = document.querySelector('.nav__btn[aria-label="打开国家反诈中心"]');
+      const beforeRecents = await cdp.eval(`return window.__osc || 0`)
+      const recentsClicked = await cdp.eval(`
+        const b = document.querySelector('.nav__btn[aria-label="最近任务"]');
         if (!b) return false;
         b.click();
         return true;
       `)
       await sleep(250)
-      const afterAntifraudNav = await cdp.eval(`return window.__osc || 0`)
+      const afterRecents = await cdp.eval(`return window.__osc || 0`)
       record(
-        '点击底部导航「反诈」小图标有音效',
-        navClicked && afterAntifraudNav > beforeAntifraudNav,
-        `之前=${beforeAntifraudNav} 之后=${afterAntifraudNav}`,
+        '点击底部「最近任务」键有音效',
+        recentsClicked && afterRecents > beforeRecents,
+        `之前=${beforeRecents} 之后=${afterRecents}`,
       )
+
+      // 关掉刚才打开的最近任务面板，避免挡住后面的操作
+      await cdp.eval(`
+        const b = document.querySelector('.recents__clear');
+        if (b) b.click();
+        return true;
+      `)
+      await sleep(250)
 
       // 关闭音效后不再产生新的振荡器
       await cdp.click('桌面')

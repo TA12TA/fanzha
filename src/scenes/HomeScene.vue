@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import AppIcon from '@/components/AppIcon.vue'
 import { BRAND, INITIAL_BALANCE } from '@/data/level01'
 import { resumeLabel } from '@/game/engine'
 import { hasOutcome, isPendingPayment, pendingAmount } from '@/app/navigation'
 import { useBeijingClock } from '@/app/clock'
-import antifraudLogo from '@/assets/antifraud-logo.png'
 import type { GameState } from '@/game/types'
 
 /**
@@ -156,51 +156,7 @@ function badgeAria(id: string, badge: string): string {
             :aria-label="app.hint"
             @click="onAppClick(app.id)"
           >
-            <span class="app__glyph" :class="`app__glyph--${app.id}`" aria-hidden="true">
-              <svg
-                v-if="app.id === 'photos'"
-                viewBox="0 0 24 24"
-                width="34"
-                height="34"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.7"
-              >
-                <path d="M3.8 5.4h16.4v13.2H3.8Z" stroke-linejoin="round" />
-                <path d="M3.8 15.2l4.6-4.2 4 3.4 3-2.6 4.8 4.2" stroke-linejoin="round" />
-                <circle cx="8.6" cy="9" r="1.3" />
-              </svg>
-              <svg
-                v-else-if="app.id === 'notifications'"
-                viewBox="0 0 24 24"
-                width="34"
-                height="34"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.7"
-              >
-                <path d="M6.4 16.4V10.6a5.6 5.6 0 0 1 11.2 0v5.8Z" stroke-linejoin="round" />
-                <path d="M4.8 16.4h14.4" stroke-linecap="round" />
-                <path d="M10.2 19.2a1.9 1.9 0 0 0 3.6 0" stroke-linecap="round" />
-              </svg>
-              <svg
-                v-else
-                viewBox="0 0 24 24"
-                width="34"
-                height="34"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.7"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <!-- 齿轮：中心圆 + 8 个齿（原先是太阳/亮度图标，已修正） -->
-                <circle cx="12" cy="12" r="3" />
-                <path
-                  d="M12 2.6l1.4 2.2a7.6 7.6 0 0 1 2.1.9l2.5-.7 1.7 3-1.7 1.9c.1.4.1.8.1 1.2s0 .8-.1 1.2l1.7 1.9-1.7 3-2.5-.7a7.6 7.6 0 0 1-2.1.9L12 21.4l-1.4-2.2a7.6 7.6 0 0 1-2.1-.9l-2.5.7-1.7-3 1.7-1.9A7.9 7.9 0 0 1 6 12c0-.4 0-.8.1-1.2L4.4 8.9l1.7-3 2.5.7a7.6 7.6 0 0 1 2.1-.9Z"
-                />
-              </svg>
-            </span>
+            <AppIcon :id="app.id" :size="58" />
             <span class="app__label">{{ app.label }}</span>
             <span
               v-if="badgeOf(app.id)"
@@ -231,45 +187,7 @@ function badgeAria(id: string, badge: string): string {
             :aria-label="app.hint"
             @click="onAppClick(app.id)"
           >
-            <span
-              class="app__glyph"
-              :class="app.id === 'manual' ? 'app__glyph--brand' : `app__glyph--${app.id}`"
-              aria-hidden="true"
-            >
-              <!-- 反诈应用用官方 logo 图片，其余为自绘 SVG -->
-              <img
-                v-if="app.id === 'manual'"
-                :src="antifraudLogo"
-                alt=""
-                width="58"
-                height="58"
-                class="app__logo"
-              />
-              <svg
-                v-else-if="app.id === 'chat'"
-                viewBox="0 0 24 24"
-                width="34"
-                height="34"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.7"
-              >
-                <path d="M3.6 6.2h16.8v10.4H8.8l-4 3.4v-3.4H3.6Z" stroke-linejoin="round" />
-              </svg>
-              <svg
-                v-else
-                viewBox="0 0 24 24"
-                width="34"
-                height="34"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.7"
-              >
-                <path d="M3.5 7.2h17v11H3.5Z" stroke-linejoin="round" />
-                <path d="M3.5 7.2 15.5 3.8v3.4" stroke-linejoin="round" />
-                <circle cx="16.8" cy="12.7" r="1.2" fill="currentColor" stroke="none" />
-              </svg>
-            </span>
+            <AppIcon :id="app.id" :size="58" />
             <span class="app__label">{{ app.label }}</span>
             <span
               v-if="badgeOf(app.id)"
@@ -481,62 +399,13 @@ function badgeAria(id: string, badge: string): string {
   font-size: var(--font-xs);
 }
 
-.app__glyph {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 58px;
-  height: 58px;
-  border-radius: 14px;
-  color: #ffffff;
-  /* 默认底板：每个图标都有自己的彩色底板（图标本体，不是卡片） */
-  background: linear-gradient(150deg, #5a7ea8, #3d5a7d);
-  box-shadow: 0 4px 12px rgb(4 10 20 / 30%);
-}
-
 /*
- * 各应用的彩色底板：统一为「彩色渐变底 + 白色图标」，
- * 与「国家反诈中心」的官方 logo（彩色实心图标）保持同一种呈现方式。
- * 反诈中心用官方图片，不套底板。
+ * 图标底板样式已移到共用组件 `components/AppIcon.vue`：
+ * 桌面网格、程序坞、最近任务面板、通知中心共用同一份图标，
+ * 避免同批图标在多个地方各画一遍导致风格漂移。
+ * 组件根元素仍带 `app__glyph` / `app__glyph--{id}` 类名，
+ * 因此基于类名的自动化断言继续有效。
  */
-.app__glyph--chat {
-  background: linear-gradient(150deg, #3f9bf5, #1f6fd0);
-}
-
-.app__glyph--wallet {
-  background: linear-gradient(150deg, #35b98a, #178a63);
-}
-
-.app__glyph--photos {
-  background: linear-gradient(150deg, #f0885a, #d15f36);
-}
-
-.app__glyph--notifications {
-  background: linear-gradient(150deg, #f0b73f, #d18f1c);
-}
-
-.app__glyph--settings {
-  background: linear-gradient(150deg, #8a93a6, #5f6a7e);
-}
-
-/*
- * 反诈应用图标：使用官方 logo 图片。
- * 来源：Apple App Store 官方接口（开发者署名 criminal investigation department
- * ministry of public security，即公安部刑事侦查局）。图片已缩放到 256×256 PNG。
- * 官方 logo 自带蓝色底与金色盾牌，因此不再叠加底板。
- */
-.app__glyph--brand {
-  background: transparent;
-  box-shadow: none;
-  padding: 0;
-}
-
-.app__logo {
-  display: block;
-  width: 58px;
-  height: 58px;
-  border-radius: 14px;
-}
 
 /* 标签：真手机图标文字都带细微投影，避免被壁纸亮部吃掉 */
 .app__label {

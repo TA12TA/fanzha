@@ -515,7 +515,10 @@ describe('E. 整部手机的交互（B01–B14）', () => {
     await click(wrapper, '继续当前事项')
     expect(wrapper.text()).toContain('提前识破')
 
-    await click(wrapper, '国家反诈中心')
+    // 从结局回到桌面，再经桌面图标进入反诈应用（底部导航已改为三大金刚键，
+    // 不再提供「反诈」快捷入口，因此这里显式走桌面图标）。
+    await click(wrapper, '桌面')
+    await clickDesktopApp(wrapper, '国家反诈中心')
     await click(wrapper, '看本局结果')
     expect(wrapper.text()).toContain('提前识破')
 
@@ -526,7 +529,7 @@ describe('E. 整部手机的交互（B01–B14）', () => {
 
     // 复盘也可以离开再进入
     await click(wrapper, '桌面')
-    await click(wrapper, '国家反诈中心')
+    await clickDesktopApp(wrapper, '国家反诈中心')
     expect(wrapper.text()).toContain('你碰到的')
   })
 
@@ -790,9 +793,9 @@ function installFakeAudio(): { count: () => number } {
  * 音效覆盖：每个应用入口都必须出声。
  *
  * 回归用例：`openManual()` 曾经漏调 playSound，
- * 导致桌面「国家反诈中心」大图标和底部导航「反诈」小图标点击都没有声音。
+ * 导致桌面「国家反诈中心」图标点击没有声音。
  */
-describe('L. 音效覆盖（桌面大图标 / 底部导航小图标）', () => {
+describe('L. 音效覆盖（桌面大图标 / 底部导航）', () => {
   let audio: { count: () => number }
 
   beforeEach(() => {
@@ -817,19 +820,81 @@ describe('L. 音效覆盖（桌面大图标 / 底部导航小图标）', () => {
     expect(audio.count(), '桌面反诈图标点击后应创建振荡器').toBeGreaterThan(before)
   })
 
-  it('L02 点击底部导航「反诈」按钮播放点击音效', async () => {
+  it('L02 点击底部「最近任务」键播放点击音效', async () => {
     const wrapper = mountApp()
     await swipeUnlock(wrapper)
 
-    const nav = wrapper
+    const key = wrapper
       .findAll('button')
-      .find((b) => b.attributes('aria-label') === '打开国家反诈中心')
-    expect(nav, '底部导航应有「反诈」按钮').toBeTruthy()
+      .find((b) => b.attributes('aria-label') === '最近任务')
+    expect(key, '底部三大金刚键应有「最近任务」').toBeTruthy()
 
     const before = audio.count()
-    await nav?.trigger('click')
+    await key?.trigger('click')
 
-    expect(audio.count(), '底部导航反诈按钮点击后应创建振荡器').toBeGreaterThan(before)
+    expect(audio.count(), '「最近任务」点击后应创建振荡器').toBeGreaterThan(before)
+  })
+})
+
+/**
+ * 底部三大金刚键（Android 导航栏）与最近任务面板。
+ *
+ * 背景：原先底部是「桌面/返回/反诈」，其中「反诈」与桌面程序坞里的
+ * 「国家反诈中心」重复；换成真机的三个导航键后不再重复。
+ * 最近任务必须是真实可用的面板，不能做成点了没反应的死按钮。
+ */
+describe('P. 底部导航键与最近任务', () => {
+  it('P01 底部是三大金刚键，且不再有重复的「反诈」按钮', async () => {
+    const wrapper = mountApp()
+    await swipeUnlock(wrapper)
+
+    const keys = wrapper.findAll('.nav__btn')
+    expect(keys.length, '底部应有三个导航键').toBe(3)
+
+    const labels = keys.map((k) => k.attributes('aria-label'))
+    expect(labels).toEqual(['返回上一层', '回到桌面', '最近任务'])
+
+    // 三个键都必须可点（真机主页键不会变灰）
+    for (const key of keys) {
+      expect(key.attributes('disabled'), `${key.attributes('aria-label')} 不应被禁用`).toBeUndefined()
+    }
+
+    // 反诈入口只保留桌面程序坞那一个，底部不再重复
+    const navText = keys.map((k) => k.text()).join('')
+    expect(navText.trim(), '导航键不应有可见文字').toBe('')
+    const manualInNav = wrapper
+      .findAll('.nav__btn')
+      .filter((b) => (b.attributes('aria-label') ?? '').includes('反诈'))
+    expect(manualInNav.length, '底部导航不应再有反诈入口').toBe(0)
+  })
+
+  it('P02 最近任务列出打开过的应用，可再次打开，且空态明确', async () => {
+    const wrapper = mountApp()
+    await swipeUnlock(wrapper)
+
+    // 还没打开过任何应用：面板给出空态，而不是空白
+    await click(wrapper, '最近任务')
+    expect(wrapper.find('.recents__empty').exists(), '未打开过应用时应显示空态').toBe(true)
+    await click(wrapper, '关闭最近任务')
+
+    // 打开两个应用后，最近任务里应能看到它们（最新在前）
+    await clickDesktopApp(wrapper, '相册')
+    await click(wrapper, '最近任务')
+    let items = wrapper.findAll('.recents__item')
+    expect(items.length, '打开过相册后应有记录').toBe(1)
+    expect(items[0]?.text()).toContain('相册')
+    await click(wrapper, '关闭最近任务')
+
+    await click(wrapper, '回到桌面')
+    await clickDesktopApp(wrapper, '设置')
+    await click(wrapper, '最近任务')
+    items = wrapper.findAll('.recents__item')
+    expect(items.length, '打开过两个应用后应有两条记录').toBe(2)
+    expect(items[0]?.text(), '最近打开的应排在最前').toContain('设置')
+
+    // 点击记录可切回该应用
+    await click(wrapper, '切到相册')
+    expect(wrapper.find('.plain').exists(), '应从最近任务切回首版相册').toBe(true)
   })
 })
 

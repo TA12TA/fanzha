@@ -15,6 +15,11 @@ const props = defineProps<{
   clickable?: boolean
   /** 通知面板是否已展开。 */
   expanded?: boolean
+  /**
+   * 深浅色：桌面（深色壁纸）用 dark，浅色应用页用 light。
+   * 真机的状态栏会跟着当前页面调整图标颜色。
+   */
+  tone?: 'dark' | 'light'
 }>()
 
 const emit = defineEmits<{ (e: 'toggle-notice'): void }>()
@@ -28,7 +33,7 @@ const tag = computed(() => (props.expanded ? '收起通知' : '打开通知'))
 </script>
 
 <template>
-  <div class="statusbar">
+  <div class="statusbar" :class="`statusbar--${tone ?? 'dark'}`">
     <span class="statusbar__time">
       <span class="sr-only">{{ displayDate }}</span>
       <span aria-hidden="true">{{ displayTime }}</span>
@@ -137,11 +142,25 @@ const tag = computed(() => (props.expanded ? '收起通知' : '打开通知'))
   gap: var(--space-2);
   height: 30px;
   padding: 0 var(--space-3);
-  background: rgb(10 18 30 / 88%);
-  color: var(--c-text-invert);
   font-size: var(--font-xs);
   letter-spacing: 0.2px;
   flex: none;
+  transition:
+    background-color var(--dur-fast) ease,
+    color var(--dur-fast) ease;
+}
+
+/* 桌面/锁屏：深色状态栏，浅色图标 */
+.statusbar--dark {
+  background: rgb(10 18 30 / 88%);
+  color: var(--c-text-invert);
+}
+
+/* 浅色应用页：浅色状态栏，深色图标（真机状态栏会跟着页面变） */
+.statusbar--light {
+  background: rgb(247 247 249 / 92%);
+  color: #2b3340;
+  border-bottom: 1px solid var(--c-line);
 }
 
 .statusbar__time {
@@ -177,5 +196,11 @@ button.statusbar__right {
 
 button.statusbar__right:focus-visible {
   outline-offset: 1px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .statusbar {
+    transition: none;
+  }
 }
 </style>

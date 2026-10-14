@@ -123,3 +123,80 @@ button:focus-visible,
   font-size: var(--font-xs);
   font-weight: 600;
 }
+
+/*
+ * 共用列表样式（设置、通知中心、最近任务等都用这一套）。
+ * 目的：同一个 OS 里的列表长得一样，不要再各写一份。
+ */
+.rows {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-radius: var(--radius-md);
+  background: var(--c-surface);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: var(--row-min);
+  padding: var(--space-3);
+  border: 0;
+  border-bottom: 1px solid var(--c-line);
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+
+.rows > li:last-child .row {
+  border-bottom: 0;
+}
+
+.row__main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.row__label {
+  font-size: var(--font-base);
+  font-weight: 600;
+}
+
+.row__hint {
+  font-size: var(--font-xs);
+  color: var(--c-text-soft);
+  line-height: 1.5;
+}
+
+.row__value {
+  flex: none;
+  font-size: var(--font-sm);
+  color: var(--c-text-soft);
+}
+
+.row__chev {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-top: 2px solid var(--c-text-soft);
+  border-right: 2px solid var(--c-text-soft);
+  transform: rotate(45deg);
+  opacity: 0.7;
+}
+
+/* 分组卡片标题（列表上方的小标题） */
+.groupcard__title {
+  margin-bottom: var(--space-2);
+  font-size: var(--font-sm);
+  font-weight: 700;
+  color: var(--c-text-soft);
+}

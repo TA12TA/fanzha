@@ -4,6 +4,7 @@ import BottomNav from '@/components/BottomNav.vue'
 import NotificationBanner from '@/components/NotificationBanner.vue'
 import OverlaySheet from '@/components/OverlaySheet.vue'
 import PhoneStatusBar from '@/components/PhoneStatusBar.vue'
+import RecentsSheet from '@/components/RecentsSheet.vue'
 import ChatScene from '@/scenes/ChatScene.vue'
 import EndingScene from '@/scenes/EndingScene.vue'
 import HomeScene from '@/scenes/HomeScene.vue'
@@ -13,7 +14,7 @@ import PlainAppScene from '@/scenes/PlainAppScene.vue'
 import ReviewScene from '@/scenes/ReviewScene.vue'
 import SettingsScene from '@/scenes/SettingsScene.vue'
 import WalletScene from '@/scenes/WalletScene.vue'
-import { hasOutcome, pendingAmount, preferredChatView } from '@/app/navigation'
+import { hasOutcome, pendingAmount, preferredChatView, type AppId } from '@/app/navigation'
 import { useNotifications } from '@/app/notifications'
 import { useSettings } from '@/app/settings'
 import { playSound, setSoundEnabled } from '@/app/sound'
@@ -58,8 +59,48 @@ watch(
 const view = ref<ViewId>(state.value.node === 'intro' ? 'intro' : 'home')
 const profileOpen = ref(false)
 const confirmRestart = ref(false)
+/** 最近任务面板是否展开（Android 三大金刚键的第三个键）。 */
+const recentsOpen = ref(false)
+/**
+ * 最近打开过的应用（最新在前，去重，最多 4 个）。
+ * 纯 UI 状态：只记录「开过哪些应用」，不涉及剧情与金额。
+ */
+const recentApps = ref<AppId[]>([])
 /** 提交后立即禁用按钮，避免连点导致二次扣款。 */
 const submitting = ref(false)
+
+/** 六个真正的应用（结局/复盘/桌面/锁屏不算应用）。 */
+const APP_IDS: AppId[] = ['chat', 'wallet', 'manual', 'photos', 'notifications', 'settings']
+
+/** 把当前视图收敛成「应用 id」；不是应用时返回 null。 */
+function asAppId(value: ViewId): AppId | null {
+  return APP_IDS.includes(value as AppId) ? (value as AppId) : null
+}
+
+watch(view, (next) => {
+  const app = asAppId(next)
+  if (!app) return
+  recentApps.value = [app, ...recentApps.value.filter((a) => a !== app)].slice(0, 4)
+})
+
+/** 打开最近任务面板。 */
+function openRecents(): void {
+  playSound('tap')
+  recentsOpen.value = true
+}
+
+/** 关闭最近任务面板。 */
+function closeRecents(): void {
+  playSound('tap')
+  recentsOpen.value = false
+}
+
+/** 从最近任务切到某个应用（只切视图，不影响剧情）。 */
+function openFromRecents(app: AppId): void {
+  playSound('tap')
+  recentsOpen.value = false
+  view.value = app
+}
 
 /** 当前展示的通知与等待条数。 */
 const currentNotice = computed(() => notices.current.value)
@@ -159,8 +200,13 @@ watch(view, (next) => {
 
 const pending = computed(() => pendingAmount(state.value.node))
 const isIntro = computed(() => view.value === 'intro')
-const atHome = computed(() => view.value === 'home')
-const canGoBack = computed(() => view.value !== 'home' && view.value !== 'intro')
+/**
+ * 手机外框（状态栏 + 导航栏）的深浅。
+ * 桌面是深色壁纸，其余应用页是浅色底，据此自动换色，避免深色条压在浅色页上。
+ */
+const chromeTone = computed<'dark' | 'light'>(() => (view.value === 'home' ? 'dark' : 'light'))
+/** 当前已打开的应用（用于最近任务里标出「正在使用」）；结局/复盘/桌面不是应用。 */
+const currentAppId = computed<AppId | null>(() => asAppId(view.value))
 
 /**
  * 是否应展示横幅。
@@ -300,17 +346,29 @@ function goHome(): void {
   playSound('tap')
   view.value = 'home'
   profileOpen.value = false
+  recentsOpen.value = false
 }
 
+/**
+ * 返回上一层。
+ * 优先级：最近任务面板 → 确认弹层 → 资料弹层 → 上一个视图。
+ * 在桌面按返回为空操作，不会把玩家带出游戏（真机返回键在主页才会退出，
+ * 这里不退出，避免玩家误触丢进度）。
+ */
 function goBack(): void {
+  if (recentsOpen.value) {
+    closeRecents()
+    return
+  }
   if (confirmRestart.value) {
-    confirmRestart.value = false
+    cancelRestart()
     return
   }
   if (profileOpen.value) {
-    profileOpen.value = false
+    closeProfile()
     return
   }
+  if (view.value === 'home' || view.value === 'intro') return
   playSound('tap')
   view.value = 'home'
 }
@@ -452,6 +510,7 @@ onBeforeUnmount(() => {
       <PhoneStatusBar
         v-if="!isIntro"
         clickable
+        :tone="chromeTone"
         :expanded="view === 'notifications'"
         @toggle-notice="openNotificationCenter"
       />
@@ -588,11 +647,19 @@ onBeforeUnmount(() => {
 
       <BottomNav
         v-if="!isIntro"
-        :at-home="atHome"
-        :can-go-back="canGoBack"
+        :tone="chromeTone"
         @home="goHome"
         @back="goBack"
-        @manual="openManual"
+        @recents="openRecents"
+      />
+
+      <!-- 最近任务（多任务键）：真实可用的最近应用面板 -->
+      <RecentsSheet
+        v-if="recentsOpen"
+        :apps="recentApps"
+        :current="currentAppId"
+        @open="openFromRecents"
+        @close="closeRecents"
       />
 
       <!-- 重开二次确认 -->
