@@ -125,13 +125,16 @@ async function startAndReachPayment(wrapper: VueWrapper): Promise<void> {
   await click(wrapper, '接下任务')
 }
 
-/** 点击桌面上的应用图标（避免与状态栏按钮的同名 aria-label 冲突）。 */
+/**
+ * 点击桌面上的应用图标（避免与状态栏按钮的同名 aria-label 冲突）。
+ * 图标分布在网格区与程序坞（Dock）两处，因此按整个桌面查找。
+ */
 async function clickDesktopApp(wrapper: VueWrapper, label: string): Promise<void> {
   const icon = wrapper
-    .findAll('.apps .app')
+    .findAll('.home .app')
     .find((b) => (b.text() ?? '').includes(label))
   if (!icon) {
-    const available = wrapper.findAll('.apps .app').map((b) => b.text().trim()).join(' | ')
+    const available = wrapper.findAll('.home .app').map((b) => b.text().trim()).join(' | ')
     throw new Error(`桌面找不到「${label}」图标。当前可用：${available}`)
   }
   await icon.trigger('click')
@@ -970,5 +973,82 @@ describe('M. 音效覆盖：没有静音按钮', () => {
     // 复盘页 → 再玩一次（会弹二次确认）
     await flush()
     expect(await soundDelta(wrapper, '.review__restart', '再玩一次'), '复盘页「再玩一次」应出声').toBeGreaterThan(0)
+  })
+})
+
+/**
+ * 桌面外观：模仿真实手机桌面。
+ *
+ * 用结构断言锁住这次改版的关键决策：
+ * 图标不再套卡片、分网格区与程序坞两处、桌面有时钟组件。
+ * （具体的尺寸/圆角/毛玻璃在真实浏览器由 verify-edge.mjs 断言。）
+ */
+describe('N. 桌面外观（真实手机样式）', () => {
+  const dockLabels = ['青讯', '安心钱包', '国家反诈中心']
+  const gridLabels = ['相册', '通知', '设置']
+
+  it('N01 图标分布在程序坞与网格区，六个应用一个不少', async () => {
+    const wrapper = mountApp()
+    await swipeUnlock(wrapper)
+
+    const dock = wrapper.findAll('.dock .app')
+    const grid = wrapper.findAll('.apps .app')
+    expect(dock.length, '程序坞应有 3 个应用').toBe(3)
+    expect(grid.length, '网格区应有 3 个应用').toBe(3)
+
+    // 六个应用恰好各出现一次，没有重复也没有遗漏
+    const labels = [...dock, ...grid].map((b) => b.text().replace(/\s+/g, ''))
+    for (const label of [...dockLabels, ...gridLabels]) {
+      expect(labels.filter((l) => l.includes(label)), `「${label}」应恰好出现一次`).toHaveLength(1)
+    }
+  })
+
+  it('N02 图标本体不含卡片容器（真实手机桌面图标是裸浮的）', async () => {
+    const wrapper = mountApp()
+    await swipeUnlock(wrapper)
+
+    const buttons = wrapper.findAll('.home .app')
+    expect(buttons.length).toBe(6)
+    for (const btn of buttons) {
+      // 图标容器只包含「图标 + 标签（+ 角标）」，不应再有卡片式的额外结构
+      const classes = btn.classes()
+      expect(classes).toContain('app')
+      // 不再有旧的卡片式类名残留
+      expect(classes).not.toContain('app--card')
+      expect(btn.find('.app__glyph').exists(), '每个图标都应有图标本体').toBe(true)
+      expect(btn.find('.app__label').exists(), '每个图标都应有文字标签').toBe(true)
+    }
+  })
+
+  it('N03 桌面有时钟组件，显示北京时间 HH:mm', async () => {
+    const wrapper = mountApp()
+    await swipeUnlock(wrapper)
+
+    const time = wrapper.find('.clock__time')
+    expect(time.exists(), '桌面应有时钟组件').toBe(true)
+    expect(time.text(), '时钟应按 HH:mm 显示').toMatch(/^\d{2}:\d{2}$/)
+
+    const date = wrapper.find('.clock__date')
+    expect(date.exists(), '时钟组件应带日期').toBe(true)
+    expect(date.text()).toContain('星期')
+  })
+
+  it('N04 钱包与继续当前事项以组件形式呈现，且仍可点击进入', async () => {
+    const wrapper = mountApp()
+    await swipeUnlock(wrapper)
+
+    // 钱包组件展示余额
+    const wallet = wrapper.find('.widget--wallet')
+    expect(wallet.exists(), '应有钱包组件').toBe(true)
+    expect(wallet.text()).toContain('800')
+
+    // 继续当前事项组件仍能导航（不推进剧情、不扣款）
+    await clickDesktopApp(wrapper, '青讯')
+    await click(wrapper, '进群看看')
+    await click(wrapper, '桌面')
+    const resume = wrapper.find('.resume')
+    expect(resume.exists(), '应有「继续当前事项」组件').toBe(true)
+    await resume.trigger('click')
+    expect(wrapper.find('.chat').exists(), '点击后应回到消息视图').toBe(true)
   })
 })

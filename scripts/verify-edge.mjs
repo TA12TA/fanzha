@@ -306,7 +306,7 @@ async function main() {
     // 因此这里先等过延迟再查。
     await sleep(3400)
     const chatBadge = await cdp.eval(`
-      const el = [...document.querySelectorAll('.apps .app')].find(x => (x.textContent||'').includes('青讯'));
+      const el = [...document.querySelectorAll('.home .app')].find(x => (x.textContent||'').includes('青讯'));
       const badge = el ? el.querySelector('.app__badge') : null;
       return badge ? badge.textContent.trim() : null;
     `)
@@ -603,9 +603,9 @@ async function main() {
       `延迟期角标数=${badgesDuringDelay}`,
     )
 
-    // 图标风格统一：六个图标尺寸与圆角一致
+    // 图标风格统一：六个图标（网格区 + 程序坞）尺寸与圆角一致
     const iconStyles = await cdp.eval(`
-      const list = [...document.querySelectorAll('.apps .app .app__glyph')].map(g => {
+      const list = [...document.querySelectorAll('.home .app .app__glyph')].map(g => {
         const cs = getComputedStyle(g);
         const r = g.getBoundingClientRect();
         return { size: Math.round(r.width) + 'x' + Math.round(r.height), radius: cs.borderRadius };
@@ -616,9 +616,64 @@ async function main() {
       iconStyles.length === 6 &&
       iconStyles.every((s) => s.size === iconStyles[0].size && s.radius === iconStyles[0].radius)
     record(
-      '六个桌面图标尺寸与圆角统一',
+      '六个桌面图标尺寸与圆角统一（含程序坞）',
       uniformIcons,
       `共 ${iconStyles.length} 个，首个=${JSON.stringify(iconStyles[0])}`,
+    )
+
+    // 真实手机桌面样式：图标不套卡片（无边框、无底色、无内边距）
+    const iconNoCard = await cdp.eval(`
+      const list = [...document.querySelectorAll('.home .app')].map(a => {
+        const cs = getComputedStyle(a);
+        return { border: cs.borderTopStyle, bg: cs.backgroundColor, pad: cs.paddingTop };
+      });
+      return list;
+    `)
+    const allBare =
+      iconNoCard.length === 6 &&
+      iconNoCard.every(
+        (s) => s.border === 'none' && s.bg === 'rgba(0, 0, 0, 0)' && s.pad === '0px',
+      )
+    record(
+      '图标不套卡片（真实手机样式）',
+      allBare,
+      allBare ? '' : JSON.stringify(iconNoCard.slice(0, 2)),
+    )
+
+    // 程序坞：磨砂玻璃 Dock 存在且含三个常用应用
+    const dockInfo = await cdp.eval(`
+      const dock = document.querySelector('.dock');
+      if (!dock) return null;
+      const cs = getComputedStyle(dock);
+      return {
+        labels: [...dock.querySelectorAll('.app')].map(a => (a.textContent || '').trim()),
+        blur: cs.backdropFilter || cs.webkitBackdropFilter || '',
+        radius: cs.borderRadius,
+      };
+    `)
+    record(
+      '程序坞存在且含青讯/安心钱包/国家反诈中心',
+      dockInfo !== null &&
+        dockInfo.labels.length === 3 &&
+        dockInfo.labels.some((l) => l.includes('青讯')) &&
+        dockInfo.labels.some((l) => l.includes('安心钱包')) &&
+        dockInfo.labels.some((l) => l.includes('国家反诈中心')),
+      dockInfo ? `应用=[${dockInfo.labels.join(' / ')}] blur=${dockInfo.blur}` : '无 .dock',
+    )
+
+    // 状态栏使用图形图标（SVG），不再是纯文字「信号 · 78%」
+    const sbIcons = await cdp.eval(`
+      const sb = document.querySelector('.statusbar__right');
+      if (!sb) return null;
+      return {
+        svgCount: sb.querySelectorAll('svg').length,
+        text: (sb.textContent || '').trim(),
+      };
+    `)
+    record(
+      '状态栏右侧为图形图标（信号/WiFi/电池 SVG）',
+      sbIcons !== null && sbIcons.svgCount >= 3 && sbIcons.text.includes('%'),
+      sbIcons ? `SVG=${sbIcons.svgCount} 个，文字=${sbIcons.text}` : '未找到状态栏右侧',
     )
 
     // 等过首条延迟（3 秒）后通知才出现
@@ -681,7 +736,7 @@ async function main() {
     // 两类通知在通知中心分组保留，且进入时横幅已收起、不遮挡标题
     await cdp.click('桌面')
     await cdp.eval(`
-      const b = [...document.querySelectorAll('.apps .app')].find(x => (x.textContent||'').includes('通知'));
+      const b = [...document.querySelectorAll('.home .app')].find(x => (x.textContent||'').includes('通知'));
       if (b) b.click();
       return !!b;
     `)
@@ -780,7 +835,7 @@ async function main() {
       await sleep(200)
       const beforeAntifraudTile = await cdp.eval(`return window.__osc || 0`)
       const tileClicked = await cdp.eval(`
-        const b = [...document.querySelectorAll('.apps .app')]
+        const b = [...document.querySelectorAll('.home .app')]
           .find(el => (el.textContent || '').includes('国家反诈中心'));
         if (!b) return false;
         b.click();

@@ -203,8 +203,9 @@ try {
     return {
       hasHome: !!document.querySelector('.home'),
       hasLock: !!document.querySelector('.lock__surface'),
-      apps: [...document.querySelectorAll('.apps .app')].map(a => (a.textContent || '').trim()),
+      apps: [...document.querySelectorAll('.home .app')].map(a => (a.textContent || '').trim()),
       navs: [...document.querySelectorAll('.nav__btn')].map(b => b.textContent.trim()),
+      dockCount: document.querySelectorAll('.dock .app').length,
     }
   `)
   record(
@@ -212,8 +213,9 @@ try {
     lockedBefore && !home.hasLock && home.hasHome,
     `解锁前锁屏=${lockedBefore} 解锁后桌面=${home.hasHome}`,
   )
-  record('桌面六个图标齐全', home.apps.length === 6, home.apps.join(' / '))
+  record('桌面六个图标齐全（网格 + 程序坞）', home.apps.length === 6, home.apps.join(' / '))
   record('桌面含国家反诈中心', home.apps.some((a) => a.includes('国家反诈中心')))
+  record('程序坞有三个常用应用', home.dockCount === 3, `dock=${home.dockCount}`)
   record('底部导航三个入口', home.navs.length === 3, home.navs.join(' / '))
 
   // 官方 logo 是公网上最容易挂的资源：轮询到真正解码出像素为止

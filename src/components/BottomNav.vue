@@ -68,7 +68,10 @@ const emit = defineEmits<{
   flex: none;
   padding: var(--space-2) var(--space-3);
   padding-bottom: calc(var(--space-2) + var(--safe-bottom));
-  background: rgb(12 20 32 / 92%);
+  /* 磨砂半透明：与桌面的程序坞同一种质感 */
+  background: rgb(12 20 32 / 78%);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border-top: 1px solid rgb(255 255 255 / 10%);
 }
 
