@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { INITIAL_BALANCE, MAX_PAID_TOTAL } from '@/data/level01'
+import { MAX_PAID_TOTAL } from '@/data/levels/level01'
+import { INITIAL_BALANCE } from '@/data/levels/shared'
 import { choose, createInitialState, isStateConsistent } from '@/game/engine'
 import type { GameState, OptionId } from '@/game/types'
 

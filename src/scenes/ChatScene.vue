@@ -3,20 +3,12 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import AppHeader from '@/components/AppHeader.vue'
 import ChatAvatar from '@/components/ChatAvatar.vue'
 import MessageBubble from '@/components/MessageBubble.vue'
+import OverlaySheet from '@/components/OverlaySheet.vue'
 import { playSound } from '@/app/sound'
 import { markRevealed, revealedCountFor } from '@/app/chatReveal'
-import {
-  FREEZE_MESSAGES,
-  GROUP_MESSAGES,
-  PLATFORM_REBATE_DISPLAY,
-  PROFILE_INFO,
-  PROFILE_INFO_OWNER,
-  REBATE_MESSAGES,
-  SESSIONS,
-  avatarFor,
-  type ChatMessage,
-  type ChatSessionId,
-} from '@/data/level01'
+import { avatarFor } from '@/data/levels/shared'
+import { pendingRequestOf } from '@/app/navigation'
+import type { ChatMessage, PlayableLevel } from '@/game/level'
 import type { GameState, OptionId } from '@/game/types'
 
 /**
@@ -26,39 +18,50 @@ import type { GameState, OptionId } from '@/game/types'
  * - 会话列表：私聊与群聊混排，群聊显示成员数、用拼图头像，未读有数字角标；
  * - 会话详情：群聊在他人气泡上方显示发言人昵称，私聊不显示。
  *
- * 生活费 800 元的来源在「妈妈」会话里以转账卡片呈现，让账本数字有叙事依据。
- *
- * 剧情推进只通过 emit('choose', optionId)；本组件不修改任何金额，
- * 也不自行决定「当前该看哪个会话」——那是 AppShell（导航层）的职责。
+ * **本组件不含任何具体关卡的剧情判断**：哪些会话可见、哪个会话显示选项、
+ * 哪个节点追加哪些卡片、资料弹层内容，全部来自 `level.chat`（关卡规格）。
+ * 剧情推进只通过 emit('choose', optionId)；金额一分也不在这里改。
  */
 const props = defineProps<{
   state: GameState
+  level: PlayableLevel
   /** 当前会话；null 表示在会话列表。 */
-  session: ChatSessionId | null
+  session: string | null
   /** 是否显示资料弹层。 */
   profileOpen: boolean
+  /** 是否显示详情弹层（订单等）。 */
+  detailOpen: boolean
 }>()
 
 const emit = defineEmits<{
   (e: 'choose', optionId: OptionId): void
-  (e: 'open-session', id: ChatSessionId): void
+  (e: 'open-session', id: string): void
   (e: 'open-profile'): void
   (e: 'close-profile'): void
+  (e: 'open-detail'): void
+  (e: 'close-detail'): void
   (e: 'back'): void
   (e: 'open-wallet'): void
 }>()
 
+const spec = computed(() => props.level.chat)
+
 /** 当前会话定义（在列表时为 null）。 */
-const active = computed(() => SESSIONS.find((s) => s.id === props.session) ?? null)
+const active = computed(() => spec.value.sessions.find((s) => s.id === props.session) ?? null)
 
 const isGroupChat = computed(() => active.value?.kind === 'group')
 
-/** 会话消息：群聊会话按剧情节点追加返利 / 提现异常卡片。 */
-function messagesOf(id: ChatSessionId): ChatMessage[] {
-  if (id !== 'taskgroup') return SESSIONS.find((s) => s.id === id)?.messages ?? []
-  const list = [...GROUP_MESSAGES]
-  if (props.state.node === 'rebate' || props.state.node === 'freeze') list.push(...REBATE_MESSAGES)
-  if (props.state.node === 'freeze') list.push(...FREEZE_MESSAGES)
+/**
+ * 某会话在当前剧情节点下的消息 = 基础消息 + 该节点追加的卡片。
+ * 追加顺序即 `extraMessages` 里声明的顺序。
+ */
+function messagesOf(id: string): ChatMessage[] {
+  const base = spec.value.sessions.find((s) => s.id === id)?.messages ?? []
+  const extra = spec.value.extraMessages?.[props.state.node] ?? []
+  const list = [...base]
+  for (const item of extra) {
+    if (item.session === id) list.push(...item.messages)
+  }
   return list
 }
 
@@ -68,28 +71,27 @@ const messages = computed<ChatMessage[]>(() =>
 
 /**
  * 会话列表要显示的会话。
- * 兼职群只有在玩家真的「进群看看」之后才出现在列表里 ——
- * 进群是剧情里的一个明确选择（`entered-group`），没进之前不该能看到群里的话术。
+ * `hiddenAt` 声明「哪些会话在哪些节点还看不到」——例如第一关的兼职群，
+ * 只有玩家真的点了「进群看看」之后才出现，否则会提前泄露群里的话术。
  */
-const NOT_JOINED_YET = ['intro', 'invite']
 const sessions = computed(() =>
-  SESSIONS.filter(
-    (s) => s.id !== 'taskgroup' || !NOT_JOINED_YET.includes(props.state.node),
-  ).map((s) => ({
-    ...s,
-    /** 列表里显示的最后一条消息摘要。 */
-    preview: previewOf(s.id),
-    /** 未读：只有未处理的学姐邀请算未读。 */
-    unread: s.id === 'senior' && props.state.node === 'invite',
-  })),
+  spec.value.sessions
+    .filter((s) => !(spec.value.hiddenAt?.[s.id] ?? []).includes(props.state.node))
+    .map((s) => ({
+      ...s,
+      preview: previewOf(s.id),
+      unread: spec.value.unread?.[props.state.node] === s.id,
+    })),
 )
 
 /** 会话列表里的一行摘要。 */
-function previewOf(id: ChatSessionId): string {
+function previewOf(id: string): string {
   const list = messagesOf(id)
   const last = list[list.length - 1]
   if (!last) return ''
   if (last.variant === 'transfer') return `[转账] ${last.transferNote ?? ''}`
+  if (last.variant === 'order') return `[订单] ${last.orderTitle ?? ''}`
+  if (last.variant === 'refund') return `[退款进度] ¥${last.refundAmount ?? ''}`
   return last.text
 }
 
@@ -98,12 +100,16 @@ function previewOf(id: ChatSessionId): string {
  *
  * 只在**第一次**看某个会话时逐条出现；重看时已看过的部分直接显示，
  * 只有剧情推进后新来的消息才继续逐条出现。
- * 进度记在 `app/chatReveal.ts`（模块级），因为这个组件在离开消息应用时会被卸载。
+ * 进度记在 `app/chatReveal.ts`（模块级，按关卡 + 会话区分），
+ * 因为这个组件在离开消息应用时会被卸载。
  * 减弱动效时一律直接全部显示。
  */
 const visibleCount = ref(0)
 const reduceMotion = ref(false)
 let timers: ReturnType<typeof setTimeout>[] = []
+
+/** 进度记忆的键：关卡 + 会话，避免两关同名会话互相污染。 */
+const revealKey = computed(() => `${props.level.meta.id}:${props.session ?? ''}`)
 
 function clearTimers(): void {
   timers.forEach((t) => clearTimeout(t))
@@ -115,7 +121,7 @@ function showAll(): void {
   playSound('tap')
   clearTimers()
   visibleCount.value = messages.value.length
-  if (props.session) markRevealed(props.session, visibleCount.value)
+  if (props.session) markRevealed(revealKey.value, visibleCount.value)
 }
 
 function animate(): void {
@@ -128,10 +134,10 @@ function animate(): void {
     return
   }
 
-  const seen = Math.min(revealedCountFor(id), total)
+  const seen = Math.min(revealedCountFor(revealKey.value), total)
   if (reduceMotion.value || seen >= total) {
     visibleCount.value = total
-    markRevealed(id, total)
+    markRevealed(revealKey.value, total)
     return
   }
 
@@ -145,13 +151,13 @@ function animate(): void {
         () => {
           visibleCount.value = Math.max(visibleCount.value, i + 1)
           // 看到哪记到哪：中途离开再回来，只补没看到的那几条
-          markRevealed(id, visibleCount.value)
+          markRevealed(revealKey.value, visibleCount.value)
         },
         260 * step,
       ),
     )
   }
-  if (step === 0) markRevealed(id, total)
+  if (step === 0) markRevealed(revealKey.value, total)
 }
 
 onMounted(() => {
@@ -196,68 +202,54 @@ function senderAvatar(message: ChatMessage) {
 }
 
 /**
- * 剧情选项归属的会话：邀请属于学姐私聊，群聊相关属于兼职群。
- * 只有在对应会话里才显示选项，避免在别的会话里误点。
+ * 当前会话底部的剧情选项。
+ *
+ * 全部来自关卡声明：`optionSession` 决定「这个节点的选项显示在哪个会话」，
+ * `hiddenOptions` 里的选项由专门入口触发（资料 / 订单详情），不占底部按钮。
  */
-const optionSession = computed<ChatSessionId | null>(() => {
-  switch (props.state.node) {
-    case 'invite':
-      return 'senior'
-    case 'group':
-    case 'rebate':
-    case 'freeze':
-      return 'taskgroup'
-    default:
-      return null
-  }
-})
-
-/** 当前会话底部的剧情选项（仅当前节点、且属于本会话时可用）。 */
 const options = computed<{ id: OptionId; label: string; kind: 'primary' | 'secondary' }[]>(() => {
-  if (optionSession.value === null || optionSession.value !== props.session) return []
-  switch (props.state.node) {
-    case 'invite':
-      return [
-        { id: 'enter-group', label: '进群看看', kind: 'primary' },
-        { id: 'reject-invite', label: '拒绝并举报', kind: 'secondary' },
-      ]
-    case 'group':
-      return [
-        { id: 'accept-task', label: '接下任务', kind: 'primary' },
-        { id: 'report-group', label: '退出并举报', kind: 'secondary' },
-      ]
-    case 'rebate':
-      return [
-        { id: 'continue-task', label: '继续查看任务', kind: 'primary' },
-        { id: 'stop-after-100', label: '到此为止', kind: 'secondary' },
-      ]
-    case 'freeze':
-      return [
-        { id: 'accept-extra', label: '查看追加垫付', kind: 'primary' },
-        { id: 'stop-at-freeze', label: '停止操作并保留证据', kind: 'secondary' },
-      ]
-    default:
-      return []
-  }
+  const owner = spec.value.optionSession[props.state.node]
+  if (!owner || owner !== props.session) return []
+  const hidden = spec.value.hiddenOptions ?? []
+  return (props.level.nodeOptions[props.state.node] ?? [])
+    .filter((id) => !hidden.includes(id))
+    .map((id) => ({
+      id,
+      label: props.level.options[id]?.label ?? id,
+      kind: spec.value.secondaryOptions.includes(id) ? 'secondary' : 'primary',
+    }))
 })
 
 /** 待确认付款节点：消息应用给出跳转钱包的入口（不自动付款）。 */
 const pending = computed(() => {
-  if (props.session !== 'taskgroup') return null
-  if (props.state.node === 'transfer-100') return 100
-  if (props.state.node === 'transfer-300') return 300
-  return null
+  const request = pendingRequestOf(props.level, props.state.node)
+  if (!request || !props.session) return null
+  // 只在剧情相关的会话里提示，避免在班级群里突然出现付款提示。
+  const owner = spec.value.optionSession[props.state.node] ?? spec.value.preferredSession[props.state.node]
+  if (owner && owner !== props.session) return null
+  return request.amount
 })
 
-/** 资料弹层内容：群聊看群主，私聊看对方。 */
-const profile = computed(() => (isGroupChat.value ? PROFILE_INFO_OWNER : PROFILE_INFO))
+/** 资料弹层内容（按会话取）。 */
+const profile = computed(() => (props.session ? spec.value.profiles[props.session] : undefined))
 
 const profileLabel = computed(() => (isGroupChat.value ? '群主资料' : '对方资料'))
 
-/** 是否显示「看资料」入口（只在这两个与剧情有关的会话里给）。 */
-const canViewProfile = computed(
-  () => props.session === 'taskgroup' || props.session === 'senior',
+/** 该会话是否提供「看资料」入口。 */
+const canViewProfile = computed(() =>
+  props.session ? spec.value.profile.some((p) => p.session === props.session) : false,
 )
+
+/** 该会话在当前节点是否可打开详情弹层（订单等）。 */
+const detail = computed(() => {
+  const sheet = spec.value.detailSheet
+  if (!sheet || !props.session) return null
+  if (!sheet.nodes.includes(props.state.node)) return null
+  // 详情弹层属于哪个会话：由触发它的选项归属决定（没有归属时任何会话都能开）。
+  const owner = sheet.option ? spec.value.optionSession[props.state.node] : undefined
+  if (owner && owner !== props.session) return null
+  return sheet
+})
 </script>
 
 <template>
@@ -304,8 +296,17 @@ const canViewProfile = computed(
         @back="emit('back')"
       >
         <template #action>
+          <!-- 详情入口（订单等）：真实按钮，键盘可达 -->
           <button
-            v-if="canViewProfile"
+            v-if="detail"
+            type="button"
+            class="appbar__action chat__detail"
+            @click="emit('open-detail')"
+          >
+            {{ detail.title }}
+          </button>
+          <button
+            v-else-if="canViewProfile"
             type="button"
             class="appbar__action chat__more"
             :aria-label="profileLabel"
@@ -366,7 +367,7 @@ const canViewProfile = computed(
       <!-- 待确认付款：只提供跳转入口，确认/取消必须在钱包内显式操作 -->
       <div v-if="pending" class="chat__pending">
         <p class="chat__pendingtext">
-          有一笔 {{ pending }} 元等着你处理。走开不算付，也不算取消。
+          {{ level.copy.pendingHint.replace('{n}', String(pending)) }}
         </p>
         <button type="button" class="btn btn--primary" @click="emit('open-wallet')">
           去安心钱包处理
@@ -387,18 +388,16 @@ const canViewProfile = computed(
         </button>
       </div>
 
-      <!-- 平台展示返利：与钱包余额明确区分 -->
+      <!-- 平台展示数字：与钱包余额明确区分 -->
       <div v-if="state.platformDisplayed > 0" class="chat__platform">
-        <p class="chat__platformlabel">平台内显示</p>
-        <p class="chat__platformamount">{{ PLATFORM_REBATE_DISPLAY }} <span>元</span></p>
-        <p class="chat__platformnote">
-          页面上的数字，提不出来。钱包还是 {{ state.balance }} 元。
-        </p>
+        <p class="chat__platformlabel">{{ level.copy.platformLabel }}</p>
+        <p class="chat__platformamount">{{ state.platformDisplayed }} <span>元</span></p>
+        <p class="chat__platformnote">{{ level.copy.platformChatNote(state.balance) }}</p>
       </div>
 
       <!-- 资料弹层 -->
       <div
-        v-if="profileOpen"
+        v-if="profileOpen && profile"
         class="profilesheet"
         role="dialog"
         aria-modal="true"
@@ -434,6 +433,26 @@ const canViewProfile = computed(
           </footer>
         </div>
       </div>
+
+      <!-- 详情弹层（订单等）：复用统一弹层，内容由关卡提供 -->
+      <OverlaySheet
+        v-if="detailOpen && detail"
+        :title="detail.title"
+        @close="emit('close-detail')"
+      >
+        <dl class="ordersheet__fields">
+          <div v-for="field in detail.fields" :key="field.label">
+            <dt>{{ field.label }}</dt>
+            <dd>{{ field.value }}</dd>
+          </div>
+        </dl>
+        <p class="ordersheet__notice">{{ detail.notice }}</p>
+        <template #footer>
+          <button type="button" class="btn btn--primary" @click="emit('close-detail')">
+            返回聊天
+          </button>
+        </template>
+      </OverlaySheet>
     </template>
   </section>
 </template>
@@ -731,31 +750,36 @@ const canViewProfile = computed(
   color: var(--c-text-soft);
 }
 
-.profilesheet__fields {
+.profilesheet__fields,
+.ordersheet__fields {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
   margin: var(--space-1) 0;
 }
 
-.profilesheet__fields div {
+.profilesheet__fields div,
+.ordersheet__fields div {
   display: flex;
   gap: var(--space-2);
   font-size: var(--font-sm);
 }
 
-.profilesheet__fields dt {
+.profilesheet__fields dt,
+.ordersheet__fields dt {
   flex: none;
-  width: 5.6em;
+  width: 6.4em;
   color: var(--c-text-soft);
 }
 
-.profilesheet__fields dd {
+.profilesheet__fields dd,
+.ordersheet__fields dd {
   margin: 0;
   color: var(--c-text);
 }
 
-.profilesheet__notice {
+.profilesheet__notice,
+.ordersheet__notice {
   padding: var(--space-2);
   border-radius: var(--radius-sm);
   background: var(--c-warn-bg);

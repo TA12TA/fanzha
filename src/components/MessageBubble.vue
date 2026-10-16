@@ -1,14 +1,19 @@
 <script setup lang="ts">
-import type { ChatMessage } from '@/data/level01'
+import type { ChatMessage } from '@/game/level'
 
 /**
  * 单条聊天气泡。所有文案以文本插值渲染，不使用 v-html。
  *
  * 变体：
- * - `claim`   群成员自称到账（示意卡片）
- * - `risk`    风险提示卡（系统）
- * - `failed`  提现失败（系统）
+ * - `claim`    对方自称收益/到账（示意卡片）
+ * - `risk`     风险提示卡（系统）
+ * - `failed`   提现失败（系统）
  * - `transfer` 转账卡片（妈妈转来的生活费，让 800 元有明确来源）
+ * - `order`    订单卡（第二关：购物订单，纯文字）
+ * - `refund`   退款进度卡（第二关：平台内**未兑现**的数字）
+ *
+ * 订单卡与退款卡都是**纯文字 + 金额 + 状态**，不绘制任何平台 logo、
+ * 不产出可以被单独传播的「诈骗素材截图」。
  */
 defineProps<{
   message: ChatMessage
@@ -33,6 +38,22 @@ defineProps<{
       <p class="transfer__status">
         {{ message.transferStatus === 'received' ? '已收款' : '待确认收款' }}
       </p>
+    </template>
+
+    <!-- 订单卡：购物订单（纯文字，不画平台 logo） -->
+    <template v-else-if="message.variant === 'order'">
+      <p class="card__label">订单</p>
+      <p class="card__title">{{ message.orderTitle }}</p>
+      <p class="card__amount">¥{{ message.orderAmount }}</p>
+      <p class="card__status">{{ message.orderStatus }}</p>
+    </template>
+
+    <!-- 退款进度卡：平台内未兑现的数字，样式上明确区别于钱包余额 -->
+    <template v-else-if="message.variant === 'refund'">
+      <p class="card__label">退款进度</p>
+      <p class="card__amount">¥{{ message.refundAmount }}</p>
+      <p class="card__status">{{ message.refundStatus }}</p>
+      <p class="refund__note">平台内显示 · 未到账</p>
     </template>
 
     <template v-else>
@@ -89,6 +110,79 @@ defineProps<{
   background: linear-gradient(150deg, #f7b955, #ef9d2b);
   color: #fff;
   box-shadow: 0 3px 10px rgb(160 100 20 / 26%);
+}
+
+/*
+ * 订单卡与退款进度卡：真机消息应用里的「业务卡片」是一张独立卡片，
+ * 有标题、金额和状态，不是普通气泡。
+ * 退款卡刻意用虚线边框 + 暖色，与钱包余额（实底深蓝）拉开距离 ——
+ * 让玩家一眼看出「这是平台里显示的数字」，而不是自己账上的钱。
+ */
+.msg--order {
+  min-width: 190px;
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--c-surface);
+  border: 1px solid var(--c-line);
+  box-shadow: var(--shadow-card);
+}
+
+.msg--refund {
+  min-width: 190px;
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--c-warn-bg);
+  border: 1px dashed var(--c-warn-line);
+}
+
+.card__label {
+  font-size: var(--font-xs);
+  font-weight: 700;
+  color: var(--c-text-soft);
+}
+
+.msg--refund .card__label,
+.msg--refund .card__status,
+.msg--refund .refund__note {
+  color: var(--c-warn-text);
+}
+
+.card__title {
+  margin-top: 2px;
+  font-size: var(--font-base);
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.card__amount {
+  margin-top: var(--space-1);
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
+.msg--refund .card__amount {
+  color: var(--c-warn-text);
+}
+
+.card__status {
+  margin-top: var(--space-2);
+  padding-top: var(--space-1);
+  border-top: 1px solid var(--c-line);
+  font-size: var(--font-xs);
+  color: var(--c-text-soft);
+}
+
+.msg--refund .card__status {
+  border-top-color: var(--c-warn-line);
+}
+
+/* 「未到账」是这张卡最要紧的一句话，单独一行加重 */
+.refund__note {
+  margin-top: var(--space-1);
+  font-size: var(--font-xs);
+  font-weight: 700;
 }
 
 .transfer__amount {

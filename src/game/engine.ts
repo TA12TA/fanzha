@@ -1,13 +1,11 @@
-import {
-  INITIAL_BALANCE,
-  NODES,
-  NODE_OPTIONS,
-  OPTIONS,
-} from '@/data/level01'
+import { DEFAULT_LEVEL_ID, getLevel, requireLevel } from '@/data/levels'
+import type { LevelEntry, PlayableLevel } from '@/game/level'
+import { resumeTextOf } from '@/game/level'
 import type {
   EndingId,
   GameState,
   HistoryEntry,
+  LevelId,
   NodeId,
   OptionEffect,
   OptionId,
@@ -16,17 +14,16 @@ import type {
 } from '@/game/types'
 
 /** 当前存档结构版本。变更状态结构时必须同步提升。 */
-export const STATE_VERSION = 1
+export const STATE_VERSION = 2
 
-/** 合法的模拟余额取值（由数值口径推出，用于校验与断言）。 */
-export const VALID_BALANCES = [800, 700, 400] as const
-
-/** 创建初始状态。 */
-export function createInitialState(): GameState {
+/** 创建初始状态。每关都从自己的初始模拟余额开始。 */
+export function createInitialState(levelId: LevelId = DEFAULT_LEVEL_ID): GameState {
+  const level = requireLevel(levelId)
   return {
     version: STATE_VERSION,
-    node: 'intro',
-    balance: INITIAL_BALANCE,
+    levelId: level.meta.id,
+    node: level.startNode,
+    balance: level.initialBalance,
     platformDisplayed: 0,
     paidTotal: 0,
     paidCount: 0,
@@ -90,17 +87,25 @@ function applyEffect(state: GameState, effect: OptionEffect | undefined): boolea
 /**
  * 剧情状态转移的唯一入口。
  *
+ * 选项与可选项都从 `state.levelId` 对应的关卡读取，因此同一个选项 id
+ * 在别的关卡里不会被误用（那是 `illegal-option`，不改变任何状态）。
+ *
  * - 非法选项、过期选项、一次性选项重复提交：返回 `{ ok: false }`，**不改变状态、不产生副作用**。
  * - 合法选项：在副本上应用效果，返回新状态；入参对象保持不变。
  */
 export function choose(state: GameState, optionId: string): TransitionResult {
-  const option = (OPTIONS as Record<string, (typeof OPTIONS)[OptionId] | undefined>)[optionId]
+  const level = getLevel(state.levelId)
+  if (!level || level.kind !== 'playable') {
+    return { ok: false, reason: 'unknown-option', state, optionId }
+  }
+
+  const option = level.options[optionId]
 
   if (!option) {
     return { ok: false, reason: 'unknown-option', state, optionId }
   }
 
-  const allowed = NODE_OPTIONS[state.node] ?? []
+  const allowed = level.nodeOptions[state.node] ?? []
   if (!allowed.includes(option.id)) {
     return { ok: false, reason: 'illegal-option', state, optionId }
   }
@@ -109,11 +114,11 @@ export function choose(state: GameState, optionId: string): TransitionResult {
     return { ok: false, reason: 'already-applied', state, optionId }
   }
 
-  // `restart`：清空全部进度，恢复初始模拟余额与空历史。
+  // `restart`：清空本关全部进度，恢复初始模拟余额与空历史。
   if (option.effect?.reset) {
     return {
       ok: true,
-      state: createInitialState(),
+      state: createInitialState(state.levelId),
       optionId: option.id,
       effect: option.effect,
     }
@@ -135,7 +140,7 @@ export function choose(state: GameState, optionId: string): TransitionResult {
   next.history.push(entry)
 
   // 进入目标节点：应用一次性的进入效果（同一事务内，天然不会重复）。
-  const targetNode = NODES[option.to]
+  const targetNode = level.nodes[option.to]
   if (targetNode?.onEnter) {
     applyEffect(next, targetNode.onEnter)
   }
@@ -152,25 +157,38 @@ export function chooseOrKeep(state: GameState, optionId: string): GameState {
   return result.state
 }
 
-/** 判断状态是否满足内部不变式。开发期断言与存档校验共用。 */
+/**
+ * 判断状态是否满足内部不变式。开发期断言与存档校验共用。
+ *
+ * 所有金额口径都从状态所属关卡读取 —— 绝不能用第一关的 800/700/400
+ * 去校验第二关的 600/300。
+ */
 export function isStateConsistent(state: GameState): boolean {
   if (state.version !== STATE_VERSION) return false
-  if (!(state.node in NODES)) return false
+  const level = getLevel(state.levelId)
+  if (!level || level.kind !== 'playable') return false
+  if (!(state.node in level.nodes)) return false
   if (!Number.isFinite(state.balance) || !Number.isFinite(state.paidTotal)) return false
   if (state.paidTotal < 0 || state.balance < 0) return false
-  // 核心不变式：可支配余额 = 初始余额 - 累计已确认垫付。
-  if (state.balance !== INITIAL_BALANCE - state.paidTotal) return false
-  if (![0, 130].includes(state.platformDisplayed)) return false
+  // 核心不变式：可支配余额 = 本关初始余额 - 累计已确认付出。
+  if (state.balance !== level.initialBalance - state.paidTotal) return false
+  if (!level.validBalances.includes(state.balance)) return false
+  if (!level.validPlatformDisplays.includes(state.platformDisplayed)) return false
   if (state.paidCount < 0) return false
-  // 平台展示金额永不计入余额：它只能在首次垫付之后出现，且不影响 balance。
-  if (state.platformDisplayed === 130 && state.paidTotal < 100) return false
+  // 平台展示金额永不计入余额：它只能在满足本关声明的付款条件之后出现。
+  for (const rule of level.platformRequiresPaid) {
+    if (state.platformDisplayed === rule.display && state.paidTotal < rule.minPaid) return false
+  }
   const ending = state.ending
-  if (ending !== null && NODES[ending]?.ending !== ending) return false
-  // 结局节点本身，或结局之后进入的复盘节点，都允许保留已记录的结局。
-  if (ending !== null && state.node !== ending && state.node !== 'debrief') return false
+  if (ending !== null) {
+    if (!(ending in level.endings)) return false
+    if (level.nodes[ending]?.ending !== ending) return false
+    // 结局节点本身，或结局之后进入的复盘节点，都允许保留已记录的结局。
+    if (state.node !== ending && state.node !== level.debriefNode) return false
+  }
   // 复盘必须已经有结局，避免通过伪造存档进入复盘。
-  if (state.node === 'debrief' && ending === null) return false
-  if (state.node === 'intro' && state.history.length > 0 && state.paidTotal !== 0) return false
+  if (state.node === level.debriefNode && ending === null) return false
+  if (state.node === level.startNode && state.history.length > 0 && state.paidTotal !== 0) return false
   return true
 }
 
@@ -183,7 +201,7 @@ export interface OutcomeView {
   stoppedBeforePaying: boolean
 }
 
-/** 由状态推导结局视图，保证 `end-stop` 不把止损误写成零损失。 */
+/** 由状态推导结局视图，保证「及时止损」不把止损误写成零损失。 */
 export function outcomeOf(state: GameState): OutcomeView | null {
   if (!state.ending) return null
   return {
@@ -195,34 +213,30 @@ export function outcomeOf(state: GameState): OutcomeView | null {
 }
 
 /** 桌面「继续当前事项」入口文案，仅用于导航，不触发剧情。 */
-export function resumeLabel(node: NodeId): string {
-  switch (node) {
-    case 'intro':
-      return '开始体验'
-    case 'invite':
-      return '有人拉你进兼职群'
-    case 'group':
-      return '回群里看看'
-    case 'transfer-100':
-      return '有一笔 100 元等你处理'
-    case 'rebate':
-      return '看看任务结果'
-    case 'freeze':
-      return '提现出了点问题'
-    case 'transfer-300':
-      return '有一笔 300 元等你处理'
-    case 'end-clear':
-    case 'end-stop':
-    case 'end-loss':
-      return '看本局结果与复盘'
-    case 'debrief':
-      return '看本局结果与复盘'
-    default:
-      return '继续当前事项'
-  }
+export function resumeLabel(level: PlayableLevel, node: NodeId): string {
+  return resumeTextOf(level, node)
 }
 
 /** 该节点是否已经进入过结局。 */
-export function isEndingNode(node: NodeId): boolean {
-  return node === 'end-clear' || node === 'end-stop' || node === 'end-loss'
+export function isEndingNode(level: PlayableLevel, node: NodeId): boolean {
+  return node in level.endings
+}
+
+/** 该状态所属关卡（可玩）。调用方保证 levelId 合法。 */
+export function levelOf(state: GameState): PlayableLevel {
+  return requireLevel(state.levelId)
+}
+
+/** 关卡条目（可能为锁定关卡），供界面展示。 */
+export function entryOf(state: GameState): LevelEntry | null {
+  return getLevel(state.levelId)
+}
+
+/** 该选项是否属于该状态所属关卡（不改变状态）。 */
+export function canSubmit(state: GameState, optionId: OptionId): boolean {
+  const level = getLevel(state.levelId)
+  if (!level || level.kind !== 'playable') return false
+  const option = level.options[optionId]
+  if (!option) return false
+  return (level.nodeOptions[state.node] ?? []).includes(option.id)
 }

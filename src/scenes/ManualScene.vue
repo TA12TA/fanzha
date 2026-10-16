@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import AppHeader from '@/components/AppHeader.vue'
-import { BRAND, MANUAL_GENERAL } from '@/data/level01'
+import { BRAND, MANUAL_GENERAL } from '@/data/levels/shared'
 import { hasOutcome } from '@/app/navigation'
 import antifraudLogo from '@/assets/antifraud-logo.png'
+import type { PlayableLevel } from '@/game/level'
 import type { GameState } from '@/game/types'
 
 /**
@@ -10,8 +11,14 @@ import type { GameState } from '@/game/types'
  * 结局/复盘产生后提供「看本局结果」入口。
  *
  * 「识骗手册」已并入本应用，作为应用内的栏目名，不再单独占一个桌面图标。
+ *
+ * 通用条目与具体骗局无关（放在 shared）；这里额外钉一句**本关的正确做法**，
+ * 让手册在玩的这一关里有针对性，而不是一份和本局无关的说明书。
  */
-const props = defineProps<{ state: GameState }>()
+const props = defineProps<{
+  state: GameState
+  level: PlayableLevel
+}>()
 
 const emit = defineEmits<{
   (e: 'back'): void
@@ -35,6 +42,12 @@ const emit = defineEmits<{
         </span>
       </div>
 
+      <!-- 本关一句话正确做法：与关卡大厅卡片、复盘页共用同一句 -->
+      <article class="goal">
+        <p class="goal__label">{{ level.meta.ordinal }}「{{ level.meta.title }}」</p>
+        <p class="goal__text">{{ level.meta.goal }}</p>
+      </article>
+
       <h2 class="manual__title">{{ MANUAL_GENERAL.title }}</h2>
 
       <ul class="manual__list">
@@ -48,7 +61,7 @@ const emit = defineEmits<{
 
       <!-- 已产生结局时，应用提供再次进入本局结果与复盘的入口 -->
       <button
-        v-if="hasOutcome(props.state.node)"
+        v-if="hasOutcome(props.level, props.state.node)"
         type="button"
         class="btn btn--primary manual__outcome"
         @click="emit('open-outcome')"
@@ -124,6 +137,29 @@ const emit = defineEmits<{
 .appbrand__desc {
   font-size: var(--font-xs);
   color: #bcd2ec;
+}
+
+/* 本关正确做法 */
+.goal {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-3);
+  border: 1px solid var(--c-line);
+  border-radius: var(--radius-md);
+  background: var(--c-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.goal__label {
+  font-size: var(--font-xs);
+  color: var(--c-text-soft);
+}
+
+.goal__text {
+  font-size: var(--font-base);
+  font-weight: 700;
+  line-height: 1.5;
 }
 
 .manual__title {

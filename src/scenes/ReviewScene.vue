@@ -1,19 +1,26 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import AppHeader from '@/components/AppHeader.vue'
-import { BRAND } from '@/data/level01'
+import { BRAND } from '@/data/levels/shared'
 import { buildDebrief, riskLabelsOf } from '@/game/debrief'
+import type { PlayableLevel } from '@/game/level'
 import type { GameState } from '@/game/types'
 
 /**
  * S9 手机内反诈复盘：以识骗手册的标记会话形式，按玩家实际经历逐段展示。
  * 只引用亲历环节；结尾给出可执行建议，不承诺追回。
+ *
+ * 复盘内容全部来自当前关卡，本组件不含任何具体骗局的话术。
  */
-const props = defineProps<{ state: GameState }>()
+const props = defineProps<{
+  state: GameState
+  level: PlayableLevel
+}>()
 
 const emit = defineEmits<{
   (e: 'back'): void
   (e: 'request-restart'): void
+  (e: 'open-levels'): void
 }>()
 
 const debrief = computed(() => buildDebrief(props.state))
@@ -24,7 +31,7 @@ const labels = computed(() => riskLabelsOf(props.state))
   <section class="review" aria-label="反诈复盘">
     <AppHeader
       :title="`${BRAND.manual} · 复盘`"
-      subtitle="按你这局实际遇到的"
+      :subtitle="`${level.meta.ordinal}「${level.meta.title}」· 按你这局实际遇到的`"
       show-back
       @back="emit('back')"
     />
@@ -65,8 +72,15 @@ const labels = computed(() => riskLabelsOf(props.state))
         </p>
       </section>
 
+      <!-- 正确做法：来自本关元数据，复盘与大厅卡片共用同一句话 -->
+      <p class="review__goal">{{ level.meta.goal }}</p>
+
       <button type="button" class="btn btn--primary review__restart" @click="emit('request-restart')">
         再玩一次
+      </button>
+
+      <button type="button" class="btn btn--secondary review__levels" @click="emit('open-levels')">
+        返回关卡大厅
       </button>
     </div>
   </section>
@@ -214,7 +228,19 @@ const labels = computed(() => riskLabelsOf(props.state))
   color: var(--c-text-soft);
 }
 
-.review__restart {
+/* 一句话正确做法：复盘最后再钉一遍，与大厅卡片上的表述一致 */
+.review__goal {
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--c-primary-soft);
+  color: var(--c-text);
+  font-size: var(--font-sm);
+  font-weight: 600;
+  line-height: 1.6;
+}
+
+.review__restart,
+.review__levels {
   min-height: 50px;
 }
 

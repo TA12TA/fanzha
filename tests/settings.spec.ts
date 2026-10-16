@@ -7,8 +7,8 @@ import {
   saveSettings,
 } from '@/app/settings'
 import { DAY_END_HOUR, DAY_START_HOUR, resolveTheme, themeForHour } from '@/app/theme'
+import { playableLevels } from '@/data/levels'
 import { REMINDER_TITLE, allReminders, reminderFor } from '@/data/antifraud'
-import type { NodeId } from '@/game/types'
 
 class MemoryStorage implements Storage {
   private map = new Map<string, string>()
@@ -152,45 +152,47 @@ describe('I. 反诈提醒内容', () => {
     expect(REMINDER_TITLE).toBe('国家反诈中心提醒您')
   })
 
-  it('关键节点都有提醒，开场与复盘不需要', () => {
-    const required: NodeId[] = [
-      'invite',
-      'group',
-      'transfer-100',
-      'rebate',
-      'freeze',
-      'transfer-300',
-      'end-clear',
-      'end-stop',
-      'end-loss',
-    ]
-    for (const node of required) {
-      expect(reminderFor(node), `节点 ${node} 应有提醒`).toBeTruthy()
+  it('每个可玩关卡的关键节点都有提醒，开场与复盘不需要', () => {
+    for (const level of playableLevels()) {
+      // 所有非开场、非复盘的节点都应当有提醒（有节点没提醒就是漏写）
+      const required = Object.keys(level.nodes).filter(
+        (node) => node !== level.startNode && node !== level.debriefNode,
+      )
+      for (const node of required) {
+        expect(
+          reminderFor(level.meta.id, node),
+          `${level.meta.id} 的节点 ${node} 应有提醒`,
+        ).toBeTruthy()
+      }
+      expect(reminderFor(level.meta.id, level.startNode)).toBeNull()
+      expect(reminderFor(level.meta.id, level.debriefNode)).toBeNull()
     }
-    expect(reminderFor('intro')).toBeNull()
-    expect(reminderFor('debrief')).toBeNull()
+    // 未知关卡不应崩，返回 null
+    expect(reminderFor('level-99', 'anything')).toBeNull()
+    // 锁定关卡没有提醒
+    expect(reminderFor('level-03', 'anything')).toBeNull()
   })
 
   it('提醒内容不写具体报警电话与外部链接', () => {
-    for (const { node, body } of allReminders()) {
-      expect(body, `节点 ${node} 不应含网址`).not.toMatch(/https?:\/\//)
-      expect(body, `节点 ${node} 不应含 11 位号码`).not.toMatch(/\b1[3-9]\d{9}\b/)
+    for (const { levelId, node, body } of allReminders()) {
+      expect(body, `${levelId}/${node} 不应含网址`).not.toMatch(/https?:\/\//)
+      expect(body, `${levelId}/${node} 不应含 11 位号码`).not.toMatch(/\b1[3-9]\d{9}\b/)
       // 不写具体报警电话号码（如 110 / 96110）
-      expect(body, `节点 ${node} 不应写具体报警号码`).not.toMatch(/96110|\b110\b/)
+      expect(body, `${levelId}/${node} 不应写具体报警号码`).not.toMatch(/96110|\b110\b/)
     }
   })
 
   it('提醒内容不承诺追回损失', () => {
-    for (const { node, body } of allReminders()) {
-      expect(body, `节点 ${node} 不应承诺追回`).not.toMatch(/保证追回|必定追回|一定能追回/)
-      expect(body, `节点 ${node} 不应出现反杀表述`).not.toMatch(/反杀/)
+    for (const { levelId, node, body } of allReminders()) {
+      expect(body, `${levelId}/${node} 不应承诺追回`).not.toMatch(/保证追回|必定追回|一定能追回/)
+      expect(body, `${levelId}/${node} 不应出现反杀表述`).not.toMatch(/反杀/)
     }
   })
 
   it('提醒文案长度适中，便于顶部横幅阅读', () => {
-    for (const { node, body } of allReminders()) {
-      expect(body.length, `节点 ${node} 提醒过长`).toBeLessThanOrEqual(70)
-      expect(body.length, `节点 ${node} 提醒过短`).toBeGreaterThan(10)
+    for (const { levelId, node, body } of allReminders()) {
+      expect(body.length, `${levelId}/${node} 提醒过长`).toBeLessThanOrEqual(70)
+      expect(body.length, `${levelId}/${node} 提醒过短`).toBeGreaterThan(10)
     }
   })
 

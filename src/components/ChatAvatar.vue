@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { AvatarTone } from '@/data/level01'
+import type { AvatarTone } from '@/game/level'
 
 /**
  * 聊天头像（自绘）。

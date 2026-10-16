@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import AppIcon from '@/components/AppIcon.vue'
-import { BRAND } from '@/data/level01'
+import { BRAND } from '@/data/levels/shared'
 import type { AppId } from '@/app/navigation'
 
 /**

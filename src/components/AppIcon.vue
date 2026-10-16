@@ -9,13 +9,18 @@ import type { AppId } from '@/app/navigation'
  * 桌面网格、程序坞、最近任务面板、通知中心都从这里取图标，
  * 避免同一批图标在多个组件里各画一份导致风格漂移。
  *
+ * `levels` 是桌面上的「关卡」入口（打开关卡大厅），它不是一个应用，
+ * 因此不属于 `AppId`，但同样需要图标与角标样式。
+ *
  * 根元素沿用 `app__glyph` / `app__glyph--{id}` 类名：
  * 自动化验证（verify-edge）会读这两个类名下的计算尺寸与圆角。
  * 「国家反诈中心」使用官方 logo 图片，其余为自绘 SVG，不套底板。
  */
+export type IconId = AppId | 'levels'
+
 const props = withDefaults(
   defineProps<{
-    id: AppId
+    id: IconId
     /** 图标底板边长（px）；内部图形按比例缩放。 */
     size?: number
   }>(),
@@ -74,6 +79,21 @@ const style = computed(() => ({
       <path d="M3.8 5.4h16.4v13.2H3.8Z" stroke-linejoin="round" />
       <path d="M3.8 15.2l4.6-4.2 4 3.4 3-2.6 4.8 4.2" stroke-linejoin="round" />
       <circle cx="8.6" cy="9" r="1.3" />
+    </svg>
+
+    <svg
+      v-else-if="id === 'levels'"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.7"
+      stroke-linejoin="round"
+    >
+      <!-- 关卡：三级台阶 + 顶端小旗（「闯关」的通用图形，不涉及任何真实品牌） -->
+      <path d="M3.6 19.4h4.2v-4.2H3.6z" />
+      <path d="M9.9 19.4h4.2V10.4H9.9z" />
+      <path d="M16.2 19.4h4.2V6.6h-4.2z" />
+      <path d="M16.2 6.6 20.4 4.4v4.4z" fill="currentColor" stroke="none" />
     </svg>
 
     <svg
@@ -139,6 +159,11 @@ const style = computed(() => ({
 
 .app__glyph--photos {
   background: linear-gradient(150deg, #f0885a, #d15f36);
+}
+
+/* 关卡入口：用紫罗兰色与六个应用区分开（它不是一个「应用」） */
+.app__glyph--levels {
+  background: linear-gradient(150deg, #8b7ae0, #5f4fc0);
 }
 
 .app__glyph--notifications {

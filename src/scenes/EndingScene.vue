@@ -1,14 +1,19 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import AppHeader from '@/components/AppHeader.vue'
-import { ENDING_INFO, INITIAL_BALANCE } from '@/data/level01'
+import type { PlayableLevel } from '@/game/level'
 import type { GameState } from '@/game/types'
 
 /**
  * S8 手机内结局：仍在手机壳内，以系统结果卡呈现。
- * `end-stop` 区分「转账前取消」（损失 0）与「首次垫付后止损」（损失 100）。
+ *
+ * 结局文案、初始余额都从当前关卡读取；「及时止损」区分
+ * 「转账前取消」（损失 0）与「付过一笔后止损」。
  */
-const props = defineProps<{ state: GameState }>()
+const props = defineProps<{
+  state: GameState
+  level: PlayableLevel
+}>()
 
 const emit = defineEmits<{
   (e: 'choose', optionId: 'review'): void
@@ -16,8 +21,9 @@ const emit = defineEmits<{
 }>()
 
 const info = computed(() => {
-  const key = props.state.ending ?? 'end-stop'
-  return ENDING_INFO[key]
+  const fallback = Object.keys(props.level.endings)[0] ?? ''
+  const key = props.state.ending ?? fallback
+  return props.level.endings[key] ?? { title: '本局结果', reason: '' }
 })
 
 const stoppedBeforePaying = computed(() => props.state.paidTotal === 0)
@@ -57,7 +63,7 @@ const lossText = computed(() =>
 
         <p class="resultcard__loss">{{ lossText }}</p>
         <p class="resultcard__note">
-          开始时有 {{ INITIAL_BALANCE }} 元。这只是游戏里的账，现实中钱转出去不保证能追回来。
+          开始时有 {{ level.initialBalance }} 元。这只是游戏里的账，现实中钱转出去不保证能追回来。
         </p>
       </article>
 

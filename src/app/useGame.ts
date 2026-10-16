@@ -1,19 +1,25 @@
 import { computed, ref } from 'vue'
 import { choose, createInitialState, isStateConsistent } from '@/game/engine'
-import { clearSave, restoreOrInitial, saveGame } from '@/game/storage'
-import type { GameState, OptionId, TransitionFailure } from '@/game/types'
+import { clearSave, restoreOrInitial, saveActiveLevel, saveGame } from '@/game/storage'
+import type { GameState, LevelId, OptionId, TransitionFailure } from '@/game/types'
 
 /**
- * 游戏状态组合式封装。
+ * 游戏状态组合式封装（**每个关卡一个实例**）。
  *
  * 唯一写入口是 `dispatch`：所有剧情推进、金额变更都经过 `engine.choose`。
  * UI 组件不得直接修改余额或节点。
+ *
+ * 每关独立保存：切关等于换一个 `useGame` 实例（由 AppShell 用 `:key` 重挂载），
+ * 因此不存在「两关互相覆盖」的可能。
  */
-export function useGame() {
-  const initial = restoreOrInitial()
+export function useGame(levelId: LevelId) {
+  const initial = restoreOrInitial(undefined, levelId)
   const state = ref<GameState>(initial)
   /** 最近一次被拒绝的选项，供界面给出提示（不改变剧情）。 */
   const lastRejection = ref<TransitionFailure | null>(null)
+
+  // 记住「当前在玩哪一关」，刷新后回到同一关。
+  saveActiveLevel(levelId)
 
   function persist(next: GameState): void {
     saveGame(next)
@@ -35,10 +41,10 @@ export function useGame() {
     return true
   }
 
-  /** 重新开始：清空存档并回到开场。 */
+  /** 重新开始：清空**本关**存档并回到本关开场。 */
   function restart(): void {
-    clearSave()
-    state.value = createInitialState()
+    clearSave(undefined, levelId)
+    state.value = createInitialState(levelId)
     lastRejection.value = null
   }
 

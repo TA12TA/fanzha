@@ -2,61 +2,32 @@
  * 剧情与状态类型定义。
  *
  * 所有金额均为**游戏模拟余额**，与真实资金无关；本文件不含任何真实支付概念。
+ *
+ * 本项目是**多关卡**结构：每个关卡的节点/选项 ID 由各自的 `defineLevel`
+ * （见 `game/level.ts`）收窄成字面量联合，引擎在边界上按 string 消费。
+ * 因此这里的 `NodeId` / `OptionId` / `RiskTag` / `EndingId` 都是 string 别名 ——
+ * 这样各关文件之间不会因为「id 并集」互相依赖，也不会产生循环引用。
+ *
+ * 安全性由三处补回，缺一不可：
+ * 1. `defineLevel` 的泛型约束：各关文件内写错 id 在编译期就报错；
+ * 2. `tests/levels.spec.ts` 的注册表守卫：遍历所有关卡的转移表与可达性；
+ * 3. `game/storage.ts` 的存档校验：未知 id 一律判为损坏存档。
  */
 
-/** 剧情节点 ID。保持稳定，供转移表、复盘与测试引用。 */
-export type NodeId =
-  | 'intro' // 开场 / 锁屏
-  | 'invite' // 邀请会话
-  | 'group' // 兼职群聊
-  | 'transfer-100' // 首次模拟垫付待确认
-  | 'rebate' // 平台展示返利
-  | 'freeze' // 提现异常
-  | 'transfer-300' // 追加模拟垫付待确认
-  | 'end-clear' // 结局：提前识破
-  | 'end-stop' // 结局：及时止损
-  | 'end-loss' // 结局：追加后损失
-  | 'debrief' // 复盘
+/** 关卡 ID。新增关卡时在这里登记，并在 `data/levels/index.ts` 注册。 */
+export type LevelId = 'level-01' | 'level-02' | 'level-03'
+
+/** 剧情节点 ID。具体取值由各关 `defineLevel` 收窄。 */
+export type NodeId = string
 
 /** 剧情选项 ID。所有状态推进只能通过这些 ID 触发。 */
-export type OptionId =
-  | 'start'
-  | 'reject-invite'
-  | 'enter-group'
-  | 'report-group'
-  | 'accept-task'
-  | 'view-profile'
-  | 'cancel-100'
-  | 'confirm-100'
-  | 'stop-after-100'
-  | 'continue-task'
-  | 'stop-at-freeze'
-  | 'accept-extra'
-  | 'cancel-300'
-  | 'confirm-300'
-  | 'review'
-  | 'restart'
+export type OptionId = string
 
 /** 结局 ID（与结局节点同名）。 */
-export type EndingId = 'end-clear' | 'end-stop' | 'end-loss'
+export type EndingId = string
 
 /** 玩家实际经历的风险标记，用于按经历生成复盘，避免复述未发生的话术。 */
-export type RiskTag =
-  | 'early-reject' // 一开始就拒绝邀请
-  | 'entered-group' // 进过群
-  | 'reported-in-group' // 进群后退出并举报
-  | 'viewed-profile' // 查看过对方资料
-  | 'saw-pad-request' // 见过「先垫 100」话术
-  | 'stopped-before-pay' // 转账前取消
-  | 'paid-100' // 确认过首次模拟垫付
-  | 'saw-rebate-claim' // 见过「平台显示返 130」
-  | 'stopped-after-100' // 首次垫付后停止
-  | 'withdraw-failed' // 遇到提现失败
-  | 'asked-freeze-fee' // 被要求交「解冻费」
-  | 'stopped-at-freeze' // 提现异常时停止
-  | 'asked-extra' // 见过追加 300 的要求
-  | 'stopped-before-extra' // 追加页取消
-  | 'paid-300' // 确认过追加模拟垫付
+export type RiskTag = string
 
 /** 单条操作历史。 */
 export interface HistoryEntry {
@@ -71,6 +42,8 @@ export interface HistoryEntry {
 export interface GameState {
   /** 存档结构版本。 */
   version: number
+  /** 本状态属于哪个关卡（每关各自独立存档）。 */
+  levelId: LevelId
   /** 当前剧情节点。 */
   node: NodeId
   /** 真实可支配的**游戏模拟余额**。 */
@@ -122,15 +95,15 @@ export interface OptionEffect {
   reset?: boolean
 }
 
-/** 剧情选项定义。 */
-export interface StoryOption {
-  id: OptionId
+/** 剧情选项定义。泛型参数让各关文件保留自己的字面量 id。 */
+export interface StoryOption<TNode extends string = string, TOption extends string = string> {
+  id: TOption
   /** 按钮/操作文案。 */
   label: string
   /** 所属节点。 */
-  from: NodeId
+  from: TNode
   /** 跳转目标节点。 */
-  to: NodeId
+  to: TNode
   effect?: OptionEffect
   /** 无障碍说明，供 aria-label 使用。 */
   hint?: string
@@ -154,6 +127,19 @@ export interface DebriefItem {
   /** 风险点解释。 */
   risk: string
   /** 正确做法。 */
+  advice: string
+}
+
+/**
+ * 复盘规则：命中任一触发标记即展示该条。
+ * 定义在 `types.ts` 而不是 `debrief.ts`，因为关卡数据要携带它。
+ */
+export interface DebriefRule {
+  id: string
+  triggers: RiskTag[]
+  title: string
+  observation: string
+  risk: string
   advice: string
 }
 

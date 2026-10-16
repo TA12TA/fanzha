@@ -2,19 +2,23 @@
 import { computed } from 'vue'
 import AppHeader from '@/components/AppHeader.vue'
 import SimulationBadge from '@/components/SimulationBadge.vue'
-import { BRAND, INITIAL_BALANCE } from '@/data/level01'
+import { BRAND } from '@/data/levels/shared'
+import { pendingRequestOf } from '@/app/navigation'
+import type { PlayableLevel } from '@/game/level'
 import type { GameState, OptionId } from '@/game/types'
 
 /**
- * S4/S7 安心钱包：同一组件按待确认金额参数化。
+ * S4/S7 安心钱包：同一组件按当前节点的待确认请求参数化。
  *
  * 金额扣减只来自剧情引擎：本组件仅 emit 选项 ID，绝不自行改余额。
- * 非待确认节点只展示余额与记录，不能绕过群聊发起付款。
+ * 非待确认节点只展示余额与记录，不能绕过剧情发起付款。
+ *
+ * 金额、按钮文案、收支记录、平台数字说明全部由关卡提供，
+ * 因此新增关卡不用改本组件。
  */
 const props = defineProps<{
   state: GameState
-  /** 待确认的模拟垫付金额；null 表示当前没有待处理请求。 */
-  pendingAmount: number | null
+  level: PlayableLevel
   /** 提交后立即禁用按钮，防止连点二次扣款。 */
   submitting: boolean
 }>()
@@ -24,28 +28,19 @@ const emit = defineEmits<{
   (e: 'back'): void
 }>()
 
-const confirmId = computed<OptionId | null>(() => {
-  if (props.pendingAmount === 100) return 'confirm-100'
-  if (props.pendingAmount === 300) return 'confirm-300'
-  return null
-})
+/** 当前节点的待确认请求（金额 + 确认/取消选项），没有则为 null。 */
+const request = computed(() => pendingRequestOf(props.level, props.state.node))
 
-const cancelId = computed<OptionId | null>(() => {
-  if (props.pendingAmount === 100) return 'cancel-100'
-  if (props.pendingAmount === 300) return 'cancel-300'
-  return null
-})
+/** 确认/取消按钮文案直接取选项的 label，保证与引擎声明永远一致。 */
+const confirmLabel = computed(() =>
+  request.value ? props.level.options[request.value.confirm]?.label : undefined,
+)
+const cancelLabel = computed(() =>
+  request.value ? props.level.options[request.value.cancel]?.label : undefined,
+)
 
-/** 模拟收支记录：完全由状态推导，不单独存储。 */
-const records = computed(() => {
-  const list: { label: string; amount: number }[] = [
-    // 与青讯里妈妈的转账卡片对应：800 元有明确来源，不是凭空出现的数字。
-    { label: '妈妈转来的生活费', amount: INITIAL_BALANCE },
-  ]
-  if (props.state.paidTotal >= 100) list.push({ label: '垫付 · 第一单', amount: -100 })
-  if (props.state.paidTotal >= 400) list.push({ label: '垫付 · 解冻费', amount: -300 })
-  return list
-})
+/** 模拟收支记录：完全由关卡 + 状态推导，不单独存储。 */
+const records = computed(() => props.level.walletRecords(props.state))
 </script>
 
 <template>
@@ -58,40 +53,38 @@ const records = computed(() => {
         <p class="balance__amount" aria-live="polite">
           {{ state.balance }} <span>元</span>
         </p>
-        <p class="balance__note">已垫付 {{ state.paidTotal }} 元，共 {{ state.paidCount }} 笔</p>
-      </div>
-
-      <div v-if="state.platformDisplayed > 0" class="platform">
-        <p class="platform__label">平台内显示</p>
-        <p class="platform__amount">{{ state.platformDisplayed }} <span>元</span></p>
-        <p class="platform__note">
-          这笔显示在平台里，取不出来，也不在上面那笔余额里。
+        <p class="balance__note">
+          {{ level.copy.spentLabel }} {{ state.paidTotal }} 元，共 {{ state.paidCount }} 笔
         </p>
       </div>
 
-      <section v-if="pendingAmount !== null" class="request" aria-label="待确认的垫付">
-        <p class="request__title">有一笔待确认</p>
-        <p class="request__amount">{{ pendingAmount }} <span>元</span></p>
+      <div v-if="state.platformDisplayed > 0" class="platform">
+        <p class="platform__label">{{ level.copy.platformLabel }}</p>
+        <p class="platform__amount">{{ state.platformDisplayed }} <span>元</span></p>
+        <p class="platform__note">{{ level.copy.platformWalletNote }}</p>
+      </div>
+
+      <section v-if="request" class="request" aria-label="待确认的付款">
+        <p class="request__title">{{ request.title }}</p>
+        <p class="request__amount">{{ request.amount }} <span>元</span></p>
         <p class="request__hint">离开只是先放着，不会扣款或取消。</p>
         <SimulationBadge strong text="游戏内模拟，不会动你的真钱" />
         <div class="request__actions">
           <button
-            v-if="confirmId"
             type="button"
             class="btn btn--primary request__confirm"
             :disabled="submitting"
-            @click="emit('choose', confirmId)"
+            @click="emit('choose', request.confirm)"
           >
-            确认垫付 {{ pendingAmount }} 元
+            {{ confirmLabel }}
           </button>
           <button
-            v-if="cancelId"
             type="button"
             class="btn btn--secondary"
             :disabled="submitting"
-            @click="emit('choose', cancelId)"
+            @click="emit('choose', request.cancel)"
           >
-            取消，不参与
+            {{ cancelLabel }}
           </button>
         </div>
         <p class="request__note">不用输卡号、验证码或密码。</p>

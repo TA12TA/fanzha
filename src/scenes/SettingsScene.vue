@@ -2,19 +2,31 @@
 import AppHeader from '@/components/AppHeader.vue'
 import { playSound } from '@/app/sound'
 import { useSettings, THEME_MODES, type ThemeMode } from '@/app/settings'
+import { getLevel } from '@/data/levels'
+import type { LevelId } from '@/game/types'
 
 /**
- * 设置：真实可用的开关（音效、顶部提醒、壁纸主题）+ 本局操作。
+ * 设置：真实可用的开关（音效、顶部提醒、壁纸主题）+ 关卡与本局操作。
  *
  * 列表统一使用全项目共用的 `.rows` / `.row` 样式，
  * 不再让每个页面各写一套行样式（真机上同一个系统里的列表长得一样）。
  */
+const props = defineProps<{
+  /** 当前在玩的关卡（用于显示关名与「重新开始本关」）。 */
+  levelId: LevelId
+}>()
+
 const emit = defineEmits<{
   (e: 'back'): void
   (e: 'request-restart'): void
+  (e: 'open-levels'): void
+  (e: 'request-clear-all'): void
 }>()
 
 const { settings, setSound, setBanner, setTheme } = useSettings()
+
+/** 当前关卡的显示名（找不到时退回 id，不显示空白）。 */
+const currentLevelTitle = getLevel(props.levelId)?.meta.title ?? props.levelId
 
 /** 主题三档的中文名（分段控件用）。 */
 const THEME_LABELS: Record<ThemeMode, string> = {
@@ -42,10 +54,22 @@ function chooseTheme(mode: ThemeMode): void {
   playSound('toggle')
 }
 
-/** 重新开始：这里只发请求，二次确认与清档由 AppShell 统一处理。 */
+/** 重新开始本关：这里只发请求，二次确认与清档由 AppShell 统一处理。 */
 function requestRestart(): void {
   playSound('tap')
   emit('request-restart')
+}
+
+/** 打开关卡大厅（不改变任何进度）。 */
+function openLevels(): void {
+  playSound('tap')
+  emit('open-levels')
+}
+
+/** 清空全部关卡进度：同样先走二次确认。 */
+function requestClearAll(): void {
+  playSound('tap')
+  emit('request-clear-all')
 }
 </script>
 
@@ -139,14 +163,33 @@ function requestRestart(): void {
         <p class="settings__note">自动按北京时间切换：7:00–19:00 为白天，其余为夜间</p>
       </section>
 
-      <section aria-label="本局">
-        <h2 class="groupcard__title">本局</h2>
+      <section aria-label="关卡">
+        <h2 class="groupcard__title">关卡</h2>
         <ul class="rows">
+          <li>
+            <button type="button" class="row row--action" @click="openLevels">
+              <span class="row__main">
+                <span class="row__label">关卡大厅</span>
+                <span class="row__hint">换一关挑战；每关的进度各自保留</span>
+              </span>
+              <span class="row__value">{{ currentLevelTitle }}</span>
+              <span class="row__chev" aria-hidden="true"></span>
+            </button>
+          </li>
           <li>
             <button type="button" class="row row--action" @click="requestRestart">
               <span class="row__main">
                 <span class="row__label row__label--danger">重新开始本局</span>
-                <span class="row__hint">清掉进度和余额，回到开场（会先问一句）</span>
+                <span class="row__hint">只清掉「{{ currentLevelTitle }}」的进度和余额（会先问一句）</span>
+              </span>
+              <span class="row__chev" aria-hidden="true"></span>
+            </button>
+          </li>
+          <li>
+            <button type="button" class="row row--action" @click="requestClearAll">
+              <span class="row__main">
+                <span class="row__label row__label--danger">清空全部关卡进度</span>
+                <span class="row__hint">所有关卡都回到没玩过的状态（会先问一句）</span>
               </span>
               <span class="row__chev" aria-hidden="true"></span>
             </button>

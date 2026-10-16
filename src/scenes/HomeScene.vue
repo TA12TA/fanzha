@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import AppIcon from '@/components/AppIcon.vue'
-import { BRAND, INITIAL_BALANCE } from '@/data/level01'
+import { BRAND } from '@/data/levels/shared'
 import { resumeLabel } from '@/game/engine'
 import { hasOutcome, isPendingPayment, pendingAmount } from '@/app/navigation'
 import { useBeijingClock } from '@/app/clock'
+import type { PlayableLevel } from '@/game/level'
 import type { GameState } from '@/game/types'
 
 /**
@@ -21,6 +22,8 @@ import type { GameState } from '@/game/types'
  */
 const props = defineProps<{
   state: GameState
+  /** 当前关卡（文案与余额口径都从它读取）。 */
+  level: PlayableLevel
   /** 是否有一条待处理的邀请（用于图标角标与入口文案）。 */
   showInviteNotice: boolean
   /** 是否有未读通知（用于图标角标）。 */
@@ -38,6 +41,7 @@ const emit = defineEmits<{
   (e: 'open-chat'): void
   (e: 'open-wallet'): void
   (e: 'open-manual'): void
+  (e: 'open-levels'): void
   (e: 'open-app', app: 'photos' | 'notifications'): void
   (e: 'open-settings'): void
   (e: 'resume'): void
@@ -47,7 +51,7 @@ const emit = defineEmits<{
 /**
  * 图标分两处摆放（模仿真实手机的程序坞）：
  * Dock 放剧情推进最常用的三个，网格区放其余。
- * `id` 集合必须仍然覆盖全部六个应用（测试与剧情入口都依赖这一点）。
+ * `id` 集合必须仍然覆盖全部应用（测试与剧情入口都依赖这一点）。
  */
 const dockApps = [
   { id: 'chat', label: BRAND.chat, hint: '打开消息应用' },
@@ -56,6 +60,7 @@ const dockApps = [
 ] as const
 
 const gridApps = [
+  { id: 'levels', label: BRAND.levels, hint: '打开关卡大厅' },
   { id: 'photos', label: '相册', hint: '打开相册' },
   { id: 'notifications', label: '通知', hint: '打开通知' },
   { id: 'settings', label: '设置', hint: '打开设置' },
@@ -63,17 +68,18 @@ const gridApps = [
 
 const allApps = [...dockApps, ...gridApps] as const
 
-/** 图标点击：桌面/钱包/手册有专属事件，其余走通用入口。 */
+/** 图标点击：有专属事件的应用走专属事件，其余走通用入口。 */
 function onAppClick(id: (typeof allApps)[number]['id']): void {
   if (id === 'chat') emit('open-chat')
   else if (id === 'wallet') emit('open-wallet')
   else if (id === 'manual') emit('open-manual')
+  else if (id === 'levels') emit('open-levels')
   else if (id === 'settings') emit('open-settings')
   else emit('open-app', id)
 }
 
 /** 桌面「继续当前事项」文案；仅导航，不自动选择剧情。 */
-const resumeText = computed(() => resumeLabel(props.state.node))
+const resumeText = computed(() => resumeLabel(props.level, props.state.node))
 
 /**
  * 桌面时钟组件用的北京时间（与状态栏同一套时区规则）。
@@ -81,11 +87,11 @@ const resumeText = computed(() => resumeLabel(props.state.node))
  */
 const { time: clockTime, date: clockDate } = useBeijingClock()
 
-const showResume = computed(() => props.state.node !== 'intro')
+const showResume = computed(() => props.state.node !== props.level.startNode)
 
-const pending = computed(() => pendingAmount(props.state.node))
+const pending = computed(() => pendingAmount(props.level, props.state.node))
 
-const outcome = computed(() => hasOutcome(props.state.node))
+const outcome = computed(() => hasOutcome(props.level, props.state.node))
 
 /**
  * 图标角标：**统一使用数字徽标**（不再混用纯圆点）。
@@ -96,7 +102,7 @@ const outcome = computed(() => hasOutcome(props.state.node))
  */
 const chatBadge = computed(() => {
   if (props.showInviteNotice && props.noticeShown) return '1'
-  if (isPendingPayment(props.state.node) || outcome.value) return '!'
+  if (isPendingPayment(props.level, props.state.node) || outcome.value) return '!'
   return ''
 })
 
@@ -140,7 +146,7 @@ function badgeAria(id: string, badge: string): string {
           <p class="walletcard__label">{{ BRAND.wallet }}</p>
           <p class="walletcard__amount">{{ state.balance }} <span>元</span></p>
           <p class="walletcard__note">
-            生活费 {{ INITIAL_BALANCE }} 元<span v-if="state.paidTotal > 0"> · 已垫付 {{ state.paidTotal }} 元</span>
+            {{ level.copy.balanceLabel }} {{ level.initialBalance }} 元<span v-if="state.paidTotal > 0"> · {{ level.copy.spentLabel }} {{ state.paidTotal }} 元</span>
           </p>
         </div>
       </div>

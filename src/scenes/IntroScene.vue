@@ -3,14 +3,19 @@ import { computed, ref } from 'vue'
 import { useBeijingClock } from '@/app/clock'
 import { playSound } from '@/app/sound'
 import { UNLOCK_THRESHOLD_PX, dragOffset, shouldUnlock } from '@/app/unlock'
+import type { LevelEntry } from '@/game/level'
 
 /**
  * S0 锁屏：显示真实北京时间，上滑解锁。
+ *
+ * 副标题跟随**当前关卡**（第一关时文案与原来逐字一致）。
  *
  * 无障碍约束（AGENTS.md / DEVELOPMENT.md）：功能不得只依赖滑动，
  * 因此同时提供可点击的「上滑解锁」按钮与 Enter / 空格 / 方向键触发；
  * 尊重 `prefers-reduced-motion`，解锁动画可跳过。
  */
+const props = defineProps<{ level: LevelEntry }>()
+
 const emit = defineEmits<{ (e: 'start'): void }>()
 
 const { time: clock, date: today } = useBeijingClock()
@@ -85,6 +90,11 @@ const hintText = computed(() => {
   if (dragging.value) return '继续上滑'
   return '上滑解锁'
 })
+
+/** 副标题跟随当前关卡：第一关时与原来逐字一致。 */
+const subtitle = computed(
+  () => `大学生反诈互动 · ${props.level.meta.ordinal}「${props.level.meta.title}」`,
+)
 </script>
 
 <template>
@@ -122,7 +132,7 @@ const hintText = computed(() => {
 
         <span class="lock__brand">
           <span id="lock-title" class="lock__title">反诈局中局：你的手机</span>
-          <span class="lock__subtitle">大学生反诈互动 · 第一关「刷单返利」</span>
+          <span class="lock__subtitle">{{ subtitle }}</span>
         </span>
 
         <!--
