@@ -332,7 +332,7 @@ watch(activeIndex, () => {
 .hall__head {
   position: relative;
   flex: none;
-  padding: var(--space-3) var(--space-4) var(--space-2);
+  padding: var(--space-5) var(--space-4) var(--space-3);
 }
 
 .hall__title {
@@ -352,11 +352,15 @@ watch(activeIndex, () => {
  * `padding-inline` 用「(100% - 卡片宽)/2」把第一张与最后一张也推到正中间，
  * 否则首尾卡片永远贴边、没法居中。
  * 轨道本身 `overflow-x: auto`，整页不产生横向溢出（verify 会按 320/375/390 实测）。
+ *
+ * `align-items: center` 是必须的：默认的 `stretch` 会把卡片拉满轨道高度，
+ * 于是卡片底部留出一大片空白、按钮浮在半空（实拍截图发现的）。
+ * 卡片应当按内容自然高度居中摆放。
  */
 .hall__track {
   position: relative;
   display: flex;
-  align-items: stretch;
+  align-items: center;
   gap: var(--space-4);
   flex: 1;
   min-height: 0;

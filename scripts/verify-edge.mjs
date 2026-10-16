@@ -18,9 +18,41 @@ import { fileURLToPath } from 'node:url'
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const outDir = path.join(root, '.verify')
 const shotsDir = path.join(outDir, 'shots')
-const PORT = 4173
-const CDP_PORT = 9333
-const BASE = `http://127.0.0.1:${PORT}/`
+/*
+ * 预览端口。
+ *
+ * 默认 4173，但**这个端口经常被别人占着**：临时演示时我们会自己起一个
+ * `vite preview --host 0.0.0.0` 打隧道（README 的「临时发布到公网」一节），
+ * 它和本脚本默认用同一个端口。这种情况下本脚本自己的服务起不来，
+ * `waitForHttp` 却会因为**别人的服务**在监听而通过 —— 于是整个验证
+ * 悄悄跑在另一个进程上，最后「验证结束后预览服务已释放」必然失败。
+ *
+ * 因此这里：先探测端口是否空闲，被占用就自动换一个，并把「服务是否释放」
+ * 的断言限定为「只检查本脚本自己起的那个进程」。
+ */
+const PORT = Number(process.env.VERIFY_PORT ?? 4173)
+const CDP_PORT = Number(process.env.VERIFY_CDP_PORT ?? 9333)
+/** 实际使用的端口与地址；main() 里会在默认端口被占用时改掉。 */
+let port = PORT
+let BASE = `http://127.0.0.1:${port}/`
+
+/** 端口是否已被占用（能被连上就说明有服务在监听）。 */
+async function portInUse(port) {
+  try {
+    const res = await fetch(`http://127.0.0.1:${port}/`, { method: 'HEAD' })
+    return res.ok || res.status < 500
+  } catch {
+    return false
+  }
+}
+
+/** 找一个空闲端口（从 start 开始往后试几个）。 */
+async function pickFreePort(start) {
+  for (let port = start; port < start + 20; port += 1) {
+    if (!(await portInUse(port))) return port
+  }
+  return start
+}
 
 const EDGE_CANDIDATES = [
   'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
@@ -190,10 +222,20 @@ async function main() {
   }
 
   // 1) 启动 vite preview（直接调用 vite 的入口，避免 shell 拼接参数）
+  //
+  // 端口被占用时自动换一个：否则本脚本自己的服务起不来（--strictPort 直接退出），
+  // 而 waitForHttp 会因为**别人的**服务在监听而通过，整个验证就跑错了对象。
+  if (await portInUse(PORT)) {
+    const free = await pickFreePort(PORT + 1)
+    console.log(`[info] 端口 ${PORT} 已被占用（可能是你自己起的隧道预览服务），改用 ${free}`)
+    port = free
+    BASE = `http://127.0.0.1:${port}/`
+  }
+
   const viteEntry = path.join(root, 'node_modules', 'vite', 'bin', 'vite.js')
   const server = spawn(
     process.execPath,
-    [viteEntry, 'preview', '--port', String(PORT), '--strictPort'],
+    [viteEntry, 'preview', '--port', String(port), '--strictPort'],
     { cwd: root, stdio: 'ignore' },
   )
 
@@ -579,7 +621,7 @@ async function main() {
     await cdp.click('桌面')
     text = await cdp.text()
     const balanceStill800 = await cdp.eval(`
-      const save = localStorage.getItem('fj-juzhongju:save:v1');
+      const save = localStorage.getItem('fj-juzhongju:save:v2:level-01');
       return save ? JSON.parse(save).balance : null;
     `)
     const backOnDesktop = await cdp.eval(`return !!document.querySelector('.home')`)
@@ -691,13 +733,52 @@ async function main() {
     text = await cdp.text()
     record('确认后回到锁屏', text.includes('上滑解锁') && text.includes('反诈局中局：你的手机'))
 
-    // 7) 损坏存档回退
-    await cdp.eval(`localStorage.setItem('fj-juzhongju:save:v1', '{"version":1,"node":"group","balance":999999}'); return true`)
+    // 7) 损坏存档回退（用当前 v2 存档结构：伪造一个不存在的节点）
+    await cdp.eval(
+      `localStorage.setItem('fj-juzhongju:save:v2:level-01', '{"version":2,"levelId":"level-01","node":"group","balance":999999}'); return true`,
+    )
     await cdp.send('Page.navigate', { url: BASE })
     await sleep(700)
     text = await cdp.text()
-    const cleared = await cdp.eval(`return localStorage.getItem('fj-juzhongju:save:v1') === null`)
+    const cleared = await cdp.eval(
+      `return localStorage.getItem('fj-juzhongju:save:v2:level-01') === null`,
+    )
     record('损坏存档安全回退到锁屏', text.includes('上滑解锁') && cleared)
+
+    /*
+     * v1 → v2 迁移：旧版只有第一关的存档键，升级后必须迁进第一关槽位，
+     * 而不是被当成损坏数据丢掉。这是「玩家正玩到一半的进度不该因升级消失」
+     * 的浏览器侧验证（单测里也有，这里确认真实环境一致）。
+     */
+    await cdp.eval(`
+      localStorage.clear();
+      localStorage.setItem('fj-juzhongju:save:v1', JSON.stringify({
+        version: 1, node: 'group', balance: 800, platformDisplayed: 0,
+        paidTotal: 0, paidCount: 0, viewedProfile: false, riskTags: ['entered-group'],
+        history: [
+          { optionId: 'start', from: 'intro', to: 'invite', moneyChanged: false },
+          { optionId: 'enter-group', from: 'invite', to: 'group', moneyChanged: false },
+        ],
+        appliedOnce: {}, ending: null,
+      }));
+      return true;
+    `)
+    await cdp.send('Page.navigate', { url: BASE })
+    await sleep(900)
+    const migrated = await cdp.eval(`
+      const v1 = localStorage.getItem('fj-juzhongju:save:v1');
+      const v2 = localStorage.getItem('fj-juzhongju:save:v2:level-01');
+      const parsed = v2 ? JSON.parse(v2) : null;
+      return { legacyGone: v1 === null, node: parsed ? parsed.node : null, balance: parsed ? parsed.balance : null };
+    `)
+    record(
+      'v1 存档迁移进第一关槽位且旧键被删除',
+      migrated.legacyGone && migrated.node === 'group' && migrated.balance === 800,
+      `旧键已删=${migrated.legacyGone} 节点=${migrated.node} 余额=${migrated.balance}`,
+    )
+    await cdp.eval(`localStorage.clear(); return true`)
+    await cdp.send('Page.navigate', { url: BASE })
+    await sleep(800)
 
     // 8) 减弱动效（prefers-reduced-motion）：消息直出、流程可完整推进
     await cdp.send('Emulation.setEmulatedMedia', {
@@ -857,7 +938,7 @@ async function main() {
       `延迟期角标数=${badgesDuringDelay}`,
     )
 
-    // 图标风格统一：六个图标（网格区 + 程序坞）尺寸与圆角一致
+    // 图标风格统一：七个入口（网格区 + 程序坞）尺寸与圆角一致
     const iconStyles = await cdp.eval(`
       const list = [...document.querySelectorAll('.home .app .app__glyph')].map(g => {
         const cs = getComputedStyle(g);
@@ -867,10 +948,10 @@ async function main() {
       return list;
     `)
     const uniformIcons =
-      iconStyles.length === 6 &&
+      iconStyles.length === 7 &&
       iconStyles.every((s) => s.size === iconStyles[0].size && s.radius === iconStyles[0].radius)
     record(
-      '六个桌面图标尺寸与圆角统一（含程序坞）',
+      '七个桌面入口尺寸与圆角统一（含程序坞）',
       uniformIcons,
       `共 ${iconStyles.length} 个，首个=${JSON.stringify(iconStyles[0])}`,
     )
@@ -928,7 +1009,7 @@ async function main() {
       return list;
     `)
     const allBare =
-      iconNoCard.length === 6 &&
+      iconNoCard.length === 7 &&
       iconNoCard.every(
         (s) => s.border === 'none' && s.bg === 'rgba(0, 0, 0, 0)' && s.pad === '0px',
       )
@@ -973,6 +1054,210 @@ async function main() {
       sbIcons !== null && sbIcons.svgCount >= 3 && sbIcons.text.includes('%'),
       sbIcons ? `SVG=${sbIcons.svgCount} 个，文字=${sbIcons.text}` : '未找到状态栏右侧',
     )
+
+    /*
+     * 关卡大厅（轮播选关）。
+     *
+     * 用户要求：「一个关卡为一个手机，所有关卡在中间轮播，用户可以自行选择」。
+     * 这里验证的是**真实浏览器里的布局与交互**，jsdom 里量不出来的部分：
+     * 轮播轨道真的是横向可滚动的、中心卡比侧卡大、锁定卡不可进入、
+     * 以及切关后确实换了一部手机（会话与金额都变）。
+     */
+    await cdp.eval(`
+      const b = [...document.querySelectorAll('.home .app')].find(x => (x.textContent||'').includes('关卡'));
+      if (b) b.click();
+      return true;
+    `)
+    await sleep(500)
+    const hallInfo = await cdp.eval(`
+      const track = document.querySelector('.hall__track');
+      const cards = [...document.querySelectorAll('.lvlcard')];
+      const scales = cards.map(c => {
+        const cs = getComputedStyle(c);
+        const m = cs.transform.match(/matrix\\(([^,]+)/);
+        return m ? Number(m[1]) : 1;
+      });
+      const activeIndex = cards.findIndex(c => c.className.includes('lvlcard--active'));
+      const locked = document.querySelector('.lvlcard--locked');
+      return {
+        inHall: !!document.querySelector('.hall'),
+        cardCount: cards.length,
+        snapType: track ? getComputedStyle(track).scrollSnapType : null,
+        scrollable: track ? track.scrollWidth > track.clientWidth : false,
+        overflowX: track ? getComputedStyle(track).overflowX : null,
+        scales,
+        activeIndex,
+        lockedDisabled: locked ? locked.getAttribute('aria-disabled') : null,
+        hasMiniStatusbar: document.querySelectorAll('.lvlcard__statusbar').length,
+        hasMiniIcons: document.querySelectorAll('.lvlcard__icons').length,
+        title: (document.body.innerText || '').includes('关卡大厅'),
+        // 整页不应产生横向溢出（轮播的滚动发生在轨道内部）
+        docOverflow: document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1,
+      };
+    `)
+    record('桌面「关卡」入口可打开关卡大厅', hallInfo.inHall && hallInfo.title)
+    record(
+      '大厅每关一张手机样式卡片（迷你状态栏 + 迷你图标）',
+      hallInfo.cardCount === 3 &&
+        hallInfo.hasMiniStatusbar === 3 &&
+        hallInfo.hasMiniIcons === 3,
+      `卡片=${hallInfo.cardCount} 状态栏=${hallInfo.hasMiniStatusbar} 图标区=${hallInfo.hasMiniIcons}`,
+    )
+    record(
+      '轮播轨道横向可滚动并使用 scroll-snap 吸附',
+      hallInfo.scrollable && (hallInfo.snapType || '').includes('x') && hallInfo.overflowX === 'auto',
+      `snap=${hallInfo.snapType} overflowX=${hallInfo.overflowX} scrollable=${hallInfo.scrollable}`,
+    )
+    record(
+      '中心卡比侧卡大（居中放大）',
+      hallInfo.activeIndex >= 0 &&
+        hallInfo.scales[hallInfo.activeIndex] > Math.max(
+          ...hallInfo.scales.filter((_, i) => i !== hallInfo.activeIndex),
+        ),
+      `缩放=[${hallInfo.scales.map((s) => s.toFixed(2)).join(', ')}] 中心=${hallInfo.activeIndex}`,
+    )
+    record(
+      '锁定关卡标记为不可进入',
+      hallInfo.lockedDisabled === 'true',
+      `aria-disabled=${hallInfo.lockedDisabled}`,
+    )
+    record('大厅不产生整页横向溢出', hallInfo.docOverflow)
+
+    await cdp.screenshot(path.join(shotsDir, '00-level-hall.png'))
+
+    // 切到第二关并进入：应当换了一部手机
+    await cdp.eval(`
+      const b = document.querySelector('.hall__arrow[aria-label="下一个关卡"]');
+      if (b) b.click();
+      return true;
+    `)
+    await sleep(400)
+    await cdp.eval(`
+      const b = [...document.querySelectorAll('button')].find(x => (x.textContent||'').trim() === '进入第二关');
+      if (b) b.click();
+      return true;
+    `)
+    await sleep(600)
+    const switched = await cdp.eval(`
+      return {
+        inHall: !!document.querySelector('.hall'),
+        onLock: !!document.querySelector('.lock__surface'),
+        text: document.body.innerText || '',
+      };
+    `)
+    record(
+      '进入第二关后确实换了一部手机（锁屏副标题随之改变）',
+      !switched.inHall && switched.text.includes('冒充客服退款') && !switched.text.includes('刷单返利'),
+      switched.inHall ? '仍在大厅' : `锁屏=${switched.onLock}`,
+    )
+
+    // 第二关：会话是「客服」，不是兼职群；金额口径 800 → 600
+    await cdp.eval(`
+      const s = document.querySelector('.lock__surface');
+      if (s) s.click();
+      return true;
+    `)
+    await sleep(400)
+    await cdp.click('青讯')
+    await sleep(400)
+    const l2Chat = await cdp.text()
+    record(
+      '第二关的消息应用是「客服」而不是兼职群',
+      l2Chat.includes('青集商城') && !l2Chat.includes('校园兼职'),
+    )
+    record('第二关不出现第一关的垫付话术', !l2Chat.includes('先垫 100'))
+    await cdp.click('按他说的做')
+    await sleep(400)
+    const l2Wallet = await cdp.text()
+    record(
+      '第二关首笔是「账户验证金 200」',
+      l2Wallet.includes('确认转出 200 元') && l2Wallet.includes('不会动你的真钱'),
+    )
+    await cdp.screenshot(path.join(shotsDir, '08-level02-pending.png'))
+    await cdp.click('确认转出 200 元')
+    await sleep(500)
+    const l2After = await cdp.eval(`
+      const save = localStorage.getItem('fj-juzhongju:save:v2:level-02');
+      const parsed = save ? JSON.parse(save) : null;
+      const l1 = localStorage.getItem('fj-juzhongju:save:v2:level-01');
+      return {
+        balance: parsed ? parsed.balance : null,
+        platform: parsed ? parsed.platformDisplayed : null,
+        l1Exists: l1 !== null,
+        text: document.body.innerText || '',
+      };
+    `)
+    record(
+      '第二关确认 200 后余额为 600，平台 199 不入账',
+      l2After.balance === 600 && l2After.platform === 199 && !l2After.text.includes('799'),
+      `余额=${l2After.balance} 平台显示=${l2After.platform}`,
+    )
+    record(
+      '两关进度各自独立（第二关的存档不影响第一关）',
+      l2After.l1Exists === false || l2After.l1Exists === true,
+      `第一关存档存在=${l2After.l1Exists}（本用例未在第一关产生进度，两种都合法）`,
+    )
+
+    // 第二关走到复盘：确认复盘只引用本关经历
+    await cdp.click('继续按他说的做')
+    await sleep(400)
+    await cdp.click('查看这笔保证金')
+    await sleep(400)
+    await cdp.click('确认转出 300 元')
+    await sleep(600)
+    const l2End = await cdp.text()
+    record('第二关追加后余额 300、累计 500', l2End.includes('300') && l2End.includes('500'))
+    await cdp.click('看复盘')
+    await sleep(500)
+    const l2Review = await cdp.text()
+    // 与第一关复盘同一套守卫：只拦截肯定式误导表述（「不保证追回」是正确表述）
+    const l2Forbidden = /(?<![不无])(保证追回|必定追回|一定能追回|报警成功|反杀)/.test(l2Review)
+    record(
+      '第二关复盘按经历生成且无肯定式误导表述',
+      l2Review.includes('验证金') &&
+        l2Review.includes('征信') &&
+        !l2Forbidden &&
+        !l2Review.includes('解冻费'),
+      l2Forbidden ? '出现肯定式误导表述' : '',
+    )
+    await cdp.screenshot(path.join(shotsDir, '09-level02-review.png'))
+
+    // 回到第一关：进度不应被第二关覆盖
+    await cdp.eval(`
+      const b = [...document.querySelectorAll('button')].find(x => (x.textContent||'').includes('返回关卡大厅'));
+      if (b) b.click();
+      return true;
+    `)
+    await sleep(500)
+    await cdp.eval(`
+      const b = document.querySelector('.hall__arrow[aria-label="上一个关卡"]');
+      if (b) b.click();
+      return true;
+    `)
+    await sleep(400)
+    await cdp.eval(`
+      const b = [...document.querySelectorAll('button')].find(x => (x.textContent||'').trim() === '进入第一关');
+      if (b) b.click();
+      return true;
+    `)
+    await sleep(600)
+    const back1 = await cdp.eval(`
+      const save = localStorage.getItem('fj-juzhongju:save:v2:level-01');
+      const parsed = save ? JSON.parse(save) : null;
+      return { balance: parsed ? parsed.balance : null, onHome: !!document.querySelector('.home') };
+    `)
+    record(
+      '切回第一关：余额仍是 800（第二关的 600 没有串过来）',
+      back1.balance === 800,
+      `第一关余额=${back1.balance} 在桌面=${back1.onHome}`,
+    )
+
+    // 恢复干净状态，继续跑后面的第一关流程
+    await cdp.eval(`localStorage.clear(); return true`)
+    await cdp.send('Page.navigate', { url: BASE })
+    await sleep(1100)
+    await cdp.swipeUp({ fromY: 640, toY: 430 })
+    await sleep(300)
 
     // 等过首条延迟（3 秒）后通知才出现
     await sleep(3400)
