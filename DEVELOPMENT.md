@@ -1,10 +1,23 @@
 # 开发规范：手机即网页
 
-> 本文件定义第一关开发模型的工程实现规则；`SCENES.md` 定义玩家看到和操作的具体画面，`LEVEL-01.md` 定义剧情与数值，`ACCEPTANCE.md` 定义验收。目标不是“手机图案包住一个网页”，而是**整个 H5 看起来和用起来都像一部可操作的虚构手机**。
+> 本文件定义工程实现规则；`LEVELS.md` 是关卡清单与新增关卡指南，`LEVEL-01.md` / `LEVEL-02.md` 定义各关剧情与数值，`SCENES.md` 定义玩家看到和操作的具体画面，`ACCEPTANCE.md` 定义验收。目标不是“手机图案包住一个网页”，而是**整个 H5 看起来和用起来都像一部可操作的虚构手机**。
+
+## 0. 多关卡结构（一关 = 一部手机）
+
+- 每关自带节点表、转移表、会话与话术、金额口径、复盘规则、提醒与界面文案，
+  统一用 `defineLevel` 声明（`src/game/level.ts`），在 `src/data/levels/index.ts` 登记。
+- **引擎、存档、复盘、导航与全部场景组件不得 import 任何具体关卡文件**，只从注册表取数据。
+  新增关卡只应新增一个数据文件 + 注册表一行，不需要改动上述任何文件。
+- 存档每关一个槽位（`fj-juzhongju:save:v2:<levelId>`）+ 一个「当前关卡」键；
+  单关数据损坏只清那一关，不影响其他关。
+- 关卡大厅（`src/app/LevelHall.vue`）与一部手机（`src/app/PhoneShell.vue`）是根壳
+  `src/app/AppShell.vue` 的两种形态。切关 = 用 `:key` 重挂载整部手机，
+  因此通知队列、最近任务、当前会话都会自然回到该关的初始状态。
+- `tests/levels.spec.ts` 对**所有**可玩关卡自动跑结构、可达性、金额与文案守卫。
 
 ## 1. 范围和完成标准
 
-- 第一关交付单页可玩游戏。`/` 加载后是手机开场/锁屏；进入后始终处于手机系统或其中的虚构应用内，包括结局与复盘。不得切到普通文章页、PC 网站导航栏或网页表单。
+- 第一关交付单页可玩游戏。`/` 加载后是手机开场/锁屏；进入后始终处于手机系统或其中的虚构应用内，包括结局与复盘。不得切到普通文章页、PC 网站导航栏或网页表单。**关卡大厅也在手机壳内**（同一状态栏 + 同一壁纸 + 同一底部动作条），不得做成「网页里摆一排缩小手机外框」。
 - 核心交互是「看到通知 → 点通知 → 在聊天中打开任务 → 切到模拟钱包确认/取消 → 回到聊天查看结果 → 在手机内复盘」，但**这只是可选主线，不是必须依次停留的锁定流程**。开场后玩家可随时回桌面、切换应用、查看手机内其他可点区域，回来后从原节点继续；剧情只由明确的剧情选择推进。
 - 必须有手机桌面、顶层模拟状态栏、应用界面层、底部导航/返回方式。移动端网页直接占满可见视口；桌面预览时只在中央展示手机尺寸的内容（可有外侧背景），**移动端不能出现套娃式第二个手机外框**。
 - 不声称控制真手机系统。状态栏时间/电量/信号为游戏 UI，不访问系统通知/短信/通话权限，退出/返回仅导航游戏内部。虚构品牌、持续可见模拟标识及无真实交易声明遵循 `AGENTS.md`。
@@ -16,15 +29,20 @@
 
 ```text
 src/
-  app/AppShell.vue             # 全屏手机底座、状态栏、底部导航、层级
-  app/navigation.ts            # 应用/页面视图栈，不负责剧情金额
-  game/engine.ts               # choose(state, optionId) 统一剧情事务
+  app/AppShell.vue             # 根壳：关卡大厅 / 一部手机 两态，共用手机外框尺寸
+  app/LevelHall.vue            # 关卡大厅（轮播选关）
+  app/LevelCard.vue            # 单张关卡卡（手机样式预览）
+  app/PhoneShell.vue           # 一部手机：状态栏、视口、底部导航、弹层
+  app/navigation.ts            # 视图栈与「节点 → 场景」的通用映射，不负责剧情金额
+  game/level.ts                # 关卡契约：defineLevel / validateLevel / collectLevelText
+  game/engine.ts               # choose(state, optionId) 统一剧情事务（按 state.levelId 解析）
   game/types.ts                # 剧情状态、动作、节点与效果类型
-  game/storage.ts              # 可选，版本化本地进度，损坏回退
-  data/level01.ts              # 节点、消息、选项、话术标注
+  game/storage.ts              # 每关一个存档槽 + v1 迁移，损坏回退
+  game/debrief.ts              # 按 state.levelId 生成复盘
+  data/levels/                 # 关卡数据：shared + level01 + level02 + level03 + index(注册表)
   scenes/HomeScene.vue         # 桌面/通知
-  scenes/ChatScene.vue         # 群聊/资料查看
-  scenes/WalletScene.vue       # 模拟余额和剧情触发的转账/取消
+  scenes/ChatScene.vue         # 会话列表 / 群聊与私聊 / 资料 / 订单详情
+  scenes/WalletScene.vue       # 模拟余额与剧情触发的待确认付款
   scenes/EndingScene.vue       # 手机内结局
   scenes/ReviewScene.vue       # 手机内复盘
   styles/tokens.css            # 颜色、字号、间距、安全区变量

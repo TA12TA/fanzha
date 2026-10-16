@@ -1596,6 +1596,49 @@ describe('W. 会话逐条出现只播一次', () => {
     await click(wrapper, '显示全部')
     expect(wrapper.findAll('.chat__list .row').length, '跳过动画后应看到全部').toBe(total)
   })
+
+  it('W03 两关的同名会话不共享已读进度（切关后仍从头逐条出现）', async () => {
+    /*
+     * 「逐条出现」的进度按会话 id 记在模块级（app/chatReveal.ts）。
+     * 两关都有 `mom` 会话 —— 如果键只用 sessionId，第二关的妈妈会话会继承
+     * 第一关的已读条数，表现为「刚进第二关，妈妈的消息就全都直接显示了」。
+     * 所以键必须带关卡命名空间（`${levelId}:${sessionId}`）。
+     *
+     * 这条用例就是那个命名空间的回归：把键改回纯 sessionId 时它会变红。
+     */
+    const wrapper = mountApp()
+    await swipeUnlock(wrapper)
+
+    // 第一关：把妈妈会话看完（写入 level-01:mom 的进度）
+    await clickDesktopApp(wrapper, '青讯')
+    await click(wrapper, '返回上一层')
+    await click(wrapper, '私聊：妈妈')
+    await click(wrapper, '显示全部')
+    const l1Count = wrapper.findAll('.chat__list .row').length
+    expect(l1Count, '第一关妈妈会话应有消息').toBeGreaterThan(0)
+
+    // 切到第二关（同名 mom 会话，但还没有任何已读进度）
+    await click(wrapper, '回到桌面')
+    await clickDesktopApp(wrapper, '关卡')
+    await flush()
+    await wrapper.find('.hall__arrow[aria-label="下一个关卡"]').trigger('click')
+    await flush()
+    await click(wrapper, '进入第二关')
+    await flush()
+    await swipeUnlock(wrapper)
+    await clickDesktopApp(wrapper, '青讯')
+    await click(wrapper, '返回上一层')
+    await click(wrapper, '私聊：妈妈')
+
+    expect(
+      wrapper.findAll('.chat__list .row').length,
+      '第二关的妈妈会话应从头逐条出现，而不是继承第一关的已读进度',
+    ).toBeLessThan(l1Count)
+    expect(
+      wrapper.find('.chat__skiprow').exists(),
+      '第二关的妈妈会话应当还能「显示全部」',
+    ).toBe(true)
+  })
 })
 
 /**
