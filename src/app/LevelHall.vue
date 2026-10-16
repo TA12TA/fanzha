@@ -27,6 +27,17 @@ const props = defineProps<{
   currentLevelId: LevelId
   /** 各关存档摘要（key = 关卡 id）。 */
   slots: Record<string, LevelSlotSummary>
+  /**
+   * 是否显示「返回当前关卡」。
+   * 首屏大厅还没进过任何关，没有「当前关卡」可返回，此时不显示；
+   * 从手机内打开大厅时才显示（可一键回到那部手机）。
+   */
+  showReturn: boolean
+  /**
+   * 壁纸主题（白天/夜间）。大厅也压在壁纸上，状态栏的深浅要跟着它走 ——
+   * 否则白天壁纸（浅色）上会压一条深色状态栏。
+   */
+  theme: 'day' | 'night'
 }>()
 
 const emit = defineEmits<{
@@ -208,8 +219,11 @@ onBeforeUnmount(() => {
 /** 当前关卡的显示名（用于「返回当前关卡」按钮）。 */
 const currentTitle = computed(() => getPlayableLevel(props.currentLevelId)?.meta.title ?? '')
 
-/** 有可玩关卡时才显示「返回当前关卡」。 */
-const canReturn = computed(() => currentTitle.value !== '')
+/** 只有「从手机内打开大厅」且当前关卡可玩时，才提供「返回当前关卡」。 */
+const canReturn = computed(() => props.showReturn && currentTitle.value !== '')
+
+/** 状态栏深浅跟随壁纸主题（与手机内同一套规则）。 */
+const chromeTone = computed<'dark' | 'light'>(() => (props.theme === 'day' ? 'light' : 'dark'))
 
 watch(activeIndex, () => {
   // 切卡时清掉锁定提示，避免提示与当前卡对不上
@@ -219,7 +233,7 @@ watch(activeIndex, () => {
 
 <template>
   <div class="hall" aria-label="关卡大厅">
-    <PhoneStatusBar tone="dark" :clickable="false" />
+    <PhoneStatusBar :tone="chromeTone" :clickable="false" />
 
     <!-- 与锁屏/桌面共用同一份壁纸：大厅也是同一部手机 -->
     <div class="wall" aria-hidden="true">
@@ -333,6 +347,19 @@ watch(activeIndex, () => {
   position: relative;
   flex: none;
   padding: var(--space-5) var(--space-4) var(--space-3);
+}
+
+/*
+ * 状态栏必须压在壁纸之上。
+ *
+ * `.wall` 是 `position: absolute; inset: 0`，覆盖整个大厅（含顶部状态栏那一条）。
+ * 按 CSS 绘制顺序，绝对定位元素画在**普通流**内容之上，而状态栏默认没有定位，
+ * 于是壁纸把状态栏整条盖住了 —— 实测该区域的像素就是壁纸色，而不是状态栏底色。
+ * （手机上没这个问题：桌面里的壁纸在 `.home` 内部，与状态栏在纵向不重叠。）
+ */
+.hall :deep(.statusbar) {
+  position: relative;
+  z-index: 1;
 }
 
 .hall__title {

@@ -290,35 +290,133 @@ async function main() {
     await cdp.send('Page.enable')
     await cdp.send('Runtime.enable')
 
+    /*
+     * 首屏是关卡大厅：进入第一关，停在锁屏。
+     * 后续各段流程沿用原有的「锁屏 → 上滑解锁 → 桌面」路径，
+     * 因此凡是「清档后重新导航」的地方都要先调用它，否则会停在首屏大厅。
+     */
+    async function enterFirstLevel() {
+      const clicked = await cdp.eval(`
+        const b = [...document.querySelectorAll('button')].find(x => (x.textContent||'').includes('进入第'));
+        if (b) b.click();
+        return !!b;
+      `)
+      await sleep(700)
+      return clicked
+    }
+
     // 2) 视口适配检查：320 / 375 / 390 无横向溢出
+    //    大厅是首屏、桌面是信息最密的一屏，两屏都要量。
     for (const width of [320, 375, 390]) {
       await cdp.setWidth(width)
       await cdp.send('Page.navigate', { url: BASE })
       await sleep(700)
-      const metrics = await cdp.eval(`
+      const measureOverflow = `
         return {
           scrollWidth: document.documentElement.scrollWidth,
           clientWidth: document.documentElement.clientWidth,
           innerWidth: window.innerWidth,
           bodyScrollWidth: document.body.scrollWidth,
         }
-      `)
-      const noOverflow =
-        metrics.scrollWidth <= metrics.clientWidth + 1 && metrics.bodyScrollWidth <= metrics.innerWidth + 1
+      `
+      const hallMetrics = await cdp.eval(measureOverflow)
       record(
-        `无横向溢出 @${width}px`,
-        noOverflow,
-        `scrollWidth=${metrics.scrollWidth} clientWidth=${metrics.clientWidth} bodyScrollWidth=${metrics.bodyScrollWidth}`,
+        `大厅无横向溢出 @${width}px`,
+        hallMetrics.scrollWidth <= hallMetrics.clientWidth + 1 &&
+          hallMetrics.bodyScrollWidth <= hallMetrics.innerWidth + 1,
+        `scrollWidth=${hallMetrics.scrollWidth} clientWidth=${hallMetrics.clientWidth}`,
+      )
+
+      // 进第一关并解锁到桌面，再量一次
+      await enterFirstLevel()
+      await cdp.swipeUp({ fromY: 640, toY: 430 })
+      await sleep(300)
+      const homeMetrics = await cdp.eval(measureOverflow)
+      record(
+        `桌面无横向溢出 @${width}px`,
+        homeMetrics.scrollWidth <= homeMetrics.clientWidth + 1 &&
+          homeMetrics.bodyScrollWidth <= homeMetrics.innerWidth + 1,
+        `scrollWidth=${homeMetrics.scrollWidth} clientWidth=${homeMetrics.clientWidth}`,
       )
     }
 
-    // 3) 主线路径：拒绝邀请 → 早识别结局 → 复盘
+    // 3) 主线路径：先选关（一级菜单）→ 该关锁屏 → 解锁 → 拒绝邀请 → 早识别结局 → 复盘
     await cdp.setWidth(390)
     await cdp.send('Page.navigate', { url: BASE })
     await sleep(700)
     await cdp.eval(`localStorage.clear(); return true`)
     await cdp.send('Page.navigate', { url: BASE })
     await sleep(700)
+
+    /*
+     * 两级菜单：首屏必须是**关卡大厅**（先选关），而不是直接进某一关的锁屏。
+     * 选定关卡之后才出现这一关的锁屏，再上滑解锁进桌面。
+     */
+    const firstScreen = await cdp.eval(`
+      const cards = document.querySelectorAll('.lvlcard');
+      const ret = [...document.querySelectorAll('button')].find(b => (b.textContent||'').includes('返回当前关卡'));
+      return {
+        inHall: !!document.querySelector('.hall'),
+        hasLock: !!document.querySelector('.lock__surface'),
+        cards: cards.length,
+        hasReturn: !!ret,
+        text: (document.body.innerText || '').slice(0, 80),
+      };
+    `)
+    record(
+      '首屏是关卡大厅（先选关，不直接进锁屏）',
+      firstScreen.inHall && !firstScreen.hasLock && firstScreen.cards === 3,
+      `大厅=${firstScreen.inHall} 锁屏=${firstScreen.hasLock} 卡片=${firstScreen.cards}`,
+    )
+    record(
+      '首屏大厅没有「返回当前关卡」（还没进过任何关）',
+      firstScreen.hasReturn === false,
+    )
+    await cdp.screenshot(path.join(shotsDir, '00-hall-first.png'))
+
+    /*
+     * 大厅顶部的状态栏必须真的看得见。
+     *
+     * `.wall` 是 `position: absolute; inset: 0`，会盖住顶部那一条；用
+     * `elementFromPoint` 做命中检测最直接 —— 如果壁纸压在上面，命中的就是
+     * 壁纸而不是状态栏。只看 DOM 里有没有 `.statusbar` 是查不出这个问题的。
+     */
+    const statusbarHit = await cdp.eval(`
+      const sb = document.querySelector('.statusbar');
+      if (!sb) return { exists: false };
+      const r = sb.getBoundingClientRect();
+      const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+      return {
+        exists: true,
+        covered: !(hit && sb.contains(hit)),
+        hitClass: hit ? (hit.className || '').toString().slice(0, 40) : null,
+        rect: { top: Math.round(r.top), h: Math.round(r.height) },
+      };
+    `)
+    record(
+      '大厅顶部状态栏没有被壁纸盖住',
+      statusbarHit.exists && statusbarHit.covered === false,
+      statusbarHit.covered ? `被「${statusbarHit.hitClass}」盖住` : `命中状态栏本身`,
+    )
+
+    // 选定第一关：这时才应该出现这一关的锁屏
+    await cdp.eval(`
+      const b = [...document.querySelectorAll('button')].find(x => (x.textContent||'').includes('进入第一关'));
+      if (b) b.click();
+      return !!b;
+    `)
+    await sleep(700)
+    const afterEnter = await cdp.eval(`
+      return {
+        inHall: !!document.querySelector('.hall'),
+        hasLock: !!document.querySelector('.lock__surface'),
+      };
+    `)
+    record(
+      '选定关卡后才进入锁屏解锁界面',
+      afterEnter.hasLock && !afterEnter.inHall,
+      `锁屏=${afterEnter.hasLock} 大厅=${afterEnter.inHall}`,
+    )
 
     await cdp.screenshot(path.join(shotsDir, '01-intro.png'))
     let text = await cdp.text()
@@ -419,6 +517,8 @@ async function main() {
       `)
       await cdp.send('Page.navigate', { url: BASE })
       await sleep(1100)
+      // 首屏是大厅：先进入第一关，才量得到锁屏上的文字
+      await enterFirstLevel()
       const rows = await cdp.eval(measureOnWallText)
       // day：浅壁纸 → 文字偏深（lum < 0.25）；night：深壁纸 → 文字偏浅（lum > 0.3）
       const bad = rows.filter((r) => (mode === 'day' ? r.lum >= 0.25 : r.lum <= 0.3))
@@ -431,7 +531,7 @@ async function main() {
       )
     }
 
-    // 恢复干净状态（清设置与存档），回到锁屏继续后面的流程
+    // 恢复干净状态（清设置与存档），进第一关回到锁屏，继续后面的流程
     await cdp.eval(`localStorage.clear(); return true`)
     await cdp.send('Page.navigate', { url: BASE })
     await sleep(1100)
@@ -439,6 +539,7 @@ async function main() {
       '恢复默认设置后回到锁屏（auto 模式）',
       (await cdp.eval(`return document.documentElement.getAttribute('data-theme-mode')`)) === 'auto',
     )
+    await enterFirstLevel()
 
     // 上滑解锁（真实触摸事件）
     await cdp.swipeUp({ fromY: 640, toY: 430 })
@@ -692,6 +793,7 @@ async function main() {
     await cdp.eval(`localStorage.clear(); return true`)
     await cdp.send('Page.navigate', { url: BASE })
     await sleep(700)
+    await enterFirstLevel()
     await cdp.swipeUp({ fromY: 640, toY: 430 })
     await cdp.click('青讯')
     await cdp.click('进群看看')
@@ -709,6 +811,7 @@ async function main() {
     await cdp.eval(`localStorage.clear(); return true`)
     await cdp.send('Page.navigate', { url: BASE })
     await sleep(700)
+    await enterFirstLevel()
     await cdp.swipeUp({ fromY: 640, toY: 430 })
     await cdp.click('青讯')
     await cdp.click('拒绝并举报')
@@ -739,6 +842,8 @@ async function main() {
     )
     await cdp.send('Page.navigate', { url: BASE })
     await sleep(700)
+    // 首屏是大厅：损坏存档回退后，进入第一关才会看到锁屏
+    await enterFirstLevel()
     text = await cdp.text()
     const cleared = await cdp.eval(
       `return localStorage.getItem('fj-juzhongju:save:v2:level-01') === null`,
@@ -792,6 +897,7 @@ async function main() {
     await cdp.eval(`localStorage.clear(); return true`)
     await cdp.send('Page.navigate', { url: BASE })
     await sleep(700)
+    await enterFirstLevel()
     // 减弱动效下仍可用上滑解锁
     await cdp.swipeUp({ fromY: 640, toY: 430 })
     await cdp.click('青讯')
@@ -835,6 +941,8 @@ async function main() {
     await cdp.eval(`localStorage.clear(); return true`)
     await cdp.send('Page.navigate', { url: BASE })
     await sleep(700)
+    // 锁屏时钟要进关才看得到（首屏是大厅）
+    await enterFirstLevel()
 
     // 把浏览器时区设成纽约，验证仍显示北京时间（而非设备本地时间）
     await cdp.send('Emulation.setTimezoneOverride', { timezoneId: 'America/New_York' })
@@ -919,6 +1027,7 @@ async function main() {
     await cdp.eval(`localStorage.clear(); return true`)
     await cdp.send('Page.navigate', { url: BASE })
     await sleep(700)
+    await enterFirstLevel()
     await cdp.swipeUp({ fromY: 640, toY: 430 })
 
     // 刚解锁：应先看到桌面，延迟期间不弹通知
@@ -1256,6 +1365,7 @@ async function main() {
     await cdp.eval(`localStorage.clear(); return true`)
     await cdp.send('Page.navigate', { url: BASE })
     await sleep(1100)
+    await enterFirstLevel()
     await cdp.swipeUp({ fromY: 640, toY: 430 })
     await sleep(300)
 
@@ -1616,9 +1726,11 @@ async function main() {
     })
 
     // 必须先清存档再加载：否则会恢复上次进度直接进桌面，锁屏不存在、也就测不到解锁音。
+    // 首屏是大厅，还要先选定第一关才会出现这一关的锁屏。
     await cdp.eval(`localStorage.clear(); return true`)
     await cdp.send('Page.navigate', { url: BASE })
     await sleep(700)
+    await enterFirstLevel()
     const audioOk = await cdp.eval(`return !window.__noAudio`)
 
     if (audioOk) {

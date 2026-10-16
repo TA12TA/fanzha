@@ -27,7 +27,6 @@ import {
 import { useNotifications } from '@/app/notifications'
 import { useSettings } from '@/app/settings'
 import { resetChatReveal } from '@/app/chatReveal'
-import { useTheme } from '@/app/theme'
 import { playSound, setSoundEnabled } from '@/app/sound'
 import { useGame } from '@/app/useGame'
 import { REMINDER_TITLE, reminderFor } from '@/data/antifraud'
@@ -50,6 +49,15 @@ import type { OptionId } from '@/game/types'
 const props = defineProps<{
   /** 当前关卡（可玩）。 */
   level: PlayableLevel
+  /**
+   * 壁纸主题（白天/夜间）。
+   *
+   * 由根壳解析后传进来，而不是在这里再调一次 `useTheme()`：
+   * - 首屏是大厅，主题属性必须由根壳负责设置（否则大厅读不到主题）；
+   * - `useTheme()` 卸载时会摘掉 `<html>` 上的属性，重复持有会在
+   *   「从手机退回大厅」时把根壳需要的属性一并摘掉。
+   */
+  theme: 'day' | 'night'
 }>()
 
 const emit = defineEmits<{
@@ -76,8 +84,6 @@ const game = useGame(props.level.meta.id)
 const { state } = game
 const { settings } = useSettings()
 const notices = useNotifications()
-// 壁纸主题（白天/夜间）：默认按北京时间自动切换，可在设置里锁定。
-const { theme } = useTheme()
 
 /** 音效总开关跟随设置。 */
 watch(
@@ -271,7 +277,7 @@ const isIntro = computed(() => view.value === 'intro')
 const chromeTone = computed<'dark' | 'light'>(() => {
   const onWallpaper = view.value === 'home' || view.value === 'intro'
   if (!onWallpaper) return 'light'
-  return theme.value === 'day' ? 'light' : 'dark'
+  return props.theme === 'day' ? 'light' : 'dark'
 })
 /** 当前已打开的应用（用于最近任务里标出「正在使用」）；结局/复盘/桌面不是应用。 */
 const currentAppId = computed<AppId | null>(() => asAppId(view.value))
@@ -722,6 +728,7 @@ onBeforeUnmount(() => {
           :level="level"
           @choose="reviewOption ? submit(reviewOption) : undefined"
           @back="goBack"
+          @open-levels="openLevels"
         />
 
         <ReviewScene

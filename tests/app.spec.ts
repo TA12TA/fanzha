@@ -21,8 +21,17 @@ import type { GameState, LevelId, OptionId } from '@/game/types'
 
 const mounted: VueWrapper[] = []
 
-/** 挂载一部新的手机；默认先清空存档（模拟全新开局）。 */
-function mountApp(options: { keepSave?: boolean } = {}): VueWrapper {
+/**
+ * 挂载一部新的手机；默认先清空存档（模拟全新开局）。
+ *
+ * 首屏现在是**关卡大厅**（一级菜单），选定关卡后才进那一关的锁屏。
+ * 为了让既有用例继续从「第一关的锁屏」开始，这里默认进入第一关；
+ * 需要停在大厅本身（例如断言首屏顺序）的用例传 `{ atHall: true }`。
+ *
+ * **必须 await**：点关卡卡之后 Vue 的 DOM 更新是微任务，不等一拍的话
+ * 调用方紧接着断言读到的还是大厅（`.lvlcard` 还在、锁屏还没出现）。
+ */
+async function mountApp(options: { keepSave?: boolean; atHall?: boolean } = {}): Promise<VueWrapper> {
   if (!options.keepSave) globalThis.localStorage.clear()
   /*
    * 会话「逐条出现」的进度记在模块级（app/chatReveal.ts），这样离开消息应用
@@ -33,6 +42,10 @@ function mountApp(options: { keepSave?: boolean } = {}): VueWrapper {
   resetChatReveal()
   const wrapper = mount(AppShell)
   mounted.push(wrapper)
+
+  if (!options.atHall) {
+    await wrapper.findAll('.lvlcard')[0]?.trigger('click')
+  }
   return wrapper
 }
 
@@ -165,7 +178,7 @@ beforeEach(() => {
 
 describe('E. 整部手机的交互（B01–B14）', () => {
   it('B01/B08 锁屏上滑解锁 → 桌面：先看到独立桌面，不是答题页', async () => {
-    const wrapper = mountApp()
+    const wrapper = await mountApp()
     expect(wrapper.text()).toContain('反诈局中局：你的手机')
     expect(wrapper.text()).toContain('上滑解锁')
 
@@ -181,7 +194,7 @@ describe('E. 整部手机的交互（B01–B14）', () => {
   })
 
   it('B01 角标与横幅时序一致：横幅未弹时角标不亮，弹出后才亮', async () => {
-    const wrapper = mountApp()
+    const wrapper = await mountApp()
     await swipeUnlock(wrapper)
 
     // 延迟期间：横幅未弹，角标也不应亮（避免时序倒置）
@@ -195,7 +208,7 @@ describe('E. 整部手机的交互（B01–B14）', () => {
   })
 
   it('B01 角标风格统一：青讯与通知都用数字徽标，不存在圆点样式', async () => {
-    const wrapper = mountApp()
+    const wrapper = await mountApp()
     await swipeUnlockAndWaitNotices(wrapper)
 
     // 所有角标都走同一个 .app__badge 类
@@ -209,7 +222,7 @@ describe('E. 整部手机的交互（B01–B14）', () => {
 
   it('G 解锁方式的等效性：轻微上滑不解锁，点击与键盘也能解锁', async () => {
     // 轻微上滑（未达阈值）应回弹，仍停在锁屏
-    const shortSwipe = mountApp()
+    const shortSwipe = await mountApp()
     const surface = shortSwipe.find('.lock__surface')
     const el = surface.element
     el.dispatchEvent(pointerEvent('pointerdown', 600))
@@ -220,31 +233,31 @@ describe('E. 整部手机的交互（B01–B14）', () => {
     expect(shortSwipe.find('.home').exists()).toBe(false)
 
     // 点击解锁面即可进入（不依赖滑动）
-    const byClick = mountApp()
+    const byClick = await mountApp()
     await clickUnlock(byClick)
     expect(byClick.find('.home').exists()).toBe(true)
 
     // 键盘 Enter 同样可解锁
-    const byKey = mountApp()
+    const byKey = await mountApp()
     await byKey.find('.lock__surface').trigger('keydown', { key: 'Enter' })
     await flush()
     expect(byKey.find('.home').exists()).toBe(true)
   })
 
   it('B01/B09 「青讯」图标与「继续当前事项」都能到达邀请', async () => {
-    const viaIcon = mountApp()
+    const viaIcon = await mountApp()
     await swipeUnlock(viaIcon)
     await clickDesktopApp(viaIcon, '青讯')
     expect(viaIcon.text()).toContain('拒绝并举报')
 
-    const viaResume = mountApp()
+    const viaResume = await mountApp()
     await swipeUnlock(viaResume)
     await click(viaResume, '继续当前事项')
     expect(viaResume.text()).toContain('拒绝并举报')
   })
 
   it('B11 邀请可忽略：先看钱包/反诈应用再回来，邀请仍在且未扣款', async () => {
-    const wrapper = mountApp()
+    const wrapper = await mountApp()
     await swipeUnlockAndWaitNotices(wrapper)
 
     await click(wrapper, '安心钱包')
@@ -264,7 +277,7 @@ describe('E. 整部手机的交互（B01–B14）', () => {
   })
 
   it('B03 资料可点击、可返回，且不改变余额', async () => {
-    const wrapper = mountApp()
+    const wrapper = await mountApp()
     await startAndEnterGroup(wrapper)
 
     await click(wrapper, '群主资料')
@@ -285,7 +298,7 @@ describe('E. 整部手机的交互（B01–B14）', () => {
   })
 
   it('B12 群聊待付款：切走再回来，请求仍待确认、金额不变；确认后才扣款一次', async () => {
-    const wrapper = mountApp()
+    const wrapper = await mountApp()
     await startAndReachPayment(wrapper)
     expect(wrapper.text()).toContain('有一笔待确认')
 
@@ -308,7 +321,7 @@ describe('E. 整部手机的交互（B01–B14）', () => {
   })
 
   it('B10 离开待付款页 ≠ 取消：切走后仍可回来取消并进入止损结局', async () => {
-    const wrapper = mountApp()
+    const wrapper = await mountApp()
     await startAndReachPayment(wrapper)
 
     await click(wrapper, '桌面')
@@ -323,7 +336,7 @@ describe('E. 整部手机的交互（B01–B14）', () => {
   })
 
   it('B12/B14 钱包平时不能绕过剧情付款', async () => {
-    const wrapper = mountApp()
+    const wrapper = await mountApp()
     await swipeUnlock(wrapper)
     await click(wrapper, '安心钱包')
     expect(wrapper.text()).toContain('没有待处理的钱')
@@ -331,7 +344,7 @@ describe('E. 整部手机的交互（B01–B14）', () => {
   })
 
   it('A08 连点确认只扣一次款', async () => {
-    const wrapper = mountApp()
+    const wrapper = await mountApp()
     await startAndReachPayment(wrapper)
 
     const confirm = findButton(wrapper, '确认垫付 100 元')
@@ -347,7 +360,7 @@ describe('E. 整部手机的交互（B01–B14）', () => {
   })
 
   it('J 进入系统后先看清桌面，延迟若干秒才弹通知', async () => {
-    const wrapper = mountApp()
+    const wrapper = await mountApp()
     await swipeUnlock(wrapper)
 
     // 刚解锁时不应立刻有横幅（玩家要先看到桌面）
@@ -360,7 +373,7 @@ describe('E. 整部手机的交互（B01–B14）', () => {
   })
 
   it('J 延迟后先弹反诈预警，学姐邀请排在它之后等待', async () => {
-    const wrapper = mountApp()
+    const wrapper = await mountApp()
     await swipeUnlockAndWaitNotices(wrapper)
 
     // 横幅先弹反诈预警
@@ -380,7 +393,7 @@ describe('E. 整部手机的交互（B01–B14）', () => {
   it('J 邀请改为通知留存：横幅消失后仍能从通知中心找回并进入会话', async () => {
     vi.useFakeTimers()
     try {
-      const wrapper = mountApp()
+      const wrapper = await mountApp()
       await wrapper.find('.lock__surface').trigger('click')
       // 跨过首条延迟 + 两条通知都播完（预警 + 邀请）
       await vi.advanceTimersByTimeAsync(
@@ -408,7 +421,7 @@ describe('E. 整部手机的交互（B01–B14）', () => {
   it('K 通知自动关闭后，排在后面的学姐邀请自动接上', async () => {
     vi.useFakeTimers()
     try {
-      const wrapper = mountApp()
+      const wrapper = await mountApp()
       // 用假定时器时，锁屏解锁流程需手动推进
       await wrapper.find('.lock__surface').trigger('click')
       await vi.advanceTimersByTimeAsync(50)
@@ -440,7 +453,7 @@ describe('E. 整部手机的交互（B01–B14）', () => {
   it('K 手动关闭不会连带跳过下一条通知（关闭与自动关闭不竞态）', async () => {
     vi.useFakeTimers()
     try {
-      const wrapper = mountApp()
+      const wrapper = await mountApp()
       await wrapper.find('.lock__surface').trigger('click')
       // 跨过首条延迟
       await vi.advanceTimersByTimeAsync(FIRST_NOTICE_DELAY_MS + 50)
@@ -474,7 +487,7 @@ describe('E. 整部手机的交互（B01–B14）', () => {
   })
 
   it('K 通知中心按类型分组，两类都能回看', async () => {
-    const wrapper = mountApp()
+    const wrapper = await mountApp()
     await swipeUnlock(wrapper)
     await new Promise((r) => setTimeout(r, 50))
 
@@ -490,7 +503,7 @@ describe('E. 整部手机的交互（B01–B14）', () => {
   })
 
   it('J 关闭「顶部弹出通知」后两类横幅都不再弹，但仍进通知中心', async () => {
-    const wrapper = mountApp()
+    const wrapper = await mountApp()
     await swipeUnlock(wrapper)
     await clickDesktopApp(wrapper, '设置')
 
@@ -515,7 +528,7 @@ describe('E. 整部手机的交互（B01–B14）', () => {
     expect(wrapper.text()).toContain('国家反诈中心提醒您')
   })
   it('B13 结局与复盘都可离开并从桌面/手册再次进入', async () => {
-    const wrapper = mountApp()
+    const wrapper = await mountApp()
     await startAndOpenInvite(wrapper)
     await click(wrapper, '拒绝并举报')
     await flush()
@@ -546,7 +559,7 @@ describe('E. 整部手机的交互（B01–B14）', () => {
   })
 
   it('B13/A09 重开必须二次确认；取消则进度不变', async () => {
-    const wrapper = mountApp()
+    const wrapper = await mountApp()
     await startAndReachPayment(wrapper)
     await click(wrapper, '确认垫付 100 元')
     await flush()
@@ -567,7 +580,7 @@ describe('E. 整部手机的交互（B01–B14）', () => {
   })
 
   it('B04 复盘只引用亲历环节：早拒绝者不会看到解冻费与追加', async () => {
-    const wrapper = mountApp()
+    const wrapper = await mountApp()
     await startAndOpenInvite(wrapper)
     await click(wrapper, '拒绝并举报')
     await flush()
@@ -582,7 +595,7 @@ describe('E. 整部手机的交互（B01–B14）', () => {
   })
 
   it('B04 追加后损失：复盘显示 400，且无「保证追回」表述', async () => {
-    const wrapper = mountApp()
+    const wrapper = await mountApp()
     await startAndReachPayment(wrapper)
     await click(wrapper, '确认垫付 100 元')
     await flush()
@@ -604,12 +617,12 @@ describe('E. 整部手机的交互（B01–B14）', () => {
     expect(text).toContain('不保证')
   })
 
-  it('C04 损坏存档启动时安全回退到锁屏，页面仍可用', () => {
+  it('C04 损坏存档启动时安全回退到锁屏，页面仍可用', async () => {
     globalThis.localStorage.setItem(
       saveKey('level-01'),
       '{"version":2,"levelId":"level-01","node":"group","balance":999999}',
     )
-    const wrapper = mountApp({ keepSave: true })
+    const wrapper = await mountApp({ keepSave: true })
     expect(wrapper.text()).toContain('上滑解锁')
     expect(readSave()).toBeNull()
   })
@@ -617,7 +630,7 @@ describe('E. 整部手机的交互（B01–B14）', () => {
   it('C04 有效存档恢复进度，且不能重复扣款', async () => {
     const paid = play(['start', 'enter-group', 'accept-task', 'confirm-100', 'continue-task'])
     saveGame(paid)
-    const wrapper = mountApp({ keepSave: true })
+    const wrapper = await mountApp({ keepSave: true })
 
     expect(wrapper.text()).toContain('提现出了点问题')
     await click(wrapper, '继续当前事项')
@@ -628,7 +641,7 @@ describe('E. 整部手机的交互（B01–B14）', () => {
   })
 
   it('B02 转账页有明确的模拟声明，且不要求敏感信息', async () => {
-    const wrapper = mountApp()
+    const wrapper = await mountApp()
     await startAndReachPayment(wrapper)
     const text = wrapper.text()
     expect(text).toContain('不会动你的真钱')
@@ -638,7 +651,7 @@ describe('E. 整部手机的交互（B01–B14）', () => {
   })
 
   it('B14 状态栏与只读应用都有响应；状态栏与桌面图标共用同一个通知中心', async () => {
-    const wrapper = mountApp()
+    const wrapper = await mountApp()
     await swipeUnlock(wrapper)
 
     // 状态栏点击 → 真正的通知中心（不再有第二个只读面板）
@@ -663,7 +676,7 @@ describe('E. 整部手机的交互（B01–B14）', () => {
   })
 
   it('K 通知中心打开时不再有横幅遮挡内容', async () => {
-    const wrapper = mountApp()
+    const wrapper = await mountApp()
     await swipeUnlockAndWaitNotices(wrapper)
     // 延迟过后应正在显示横幅
     expect(wrapper.find('.banner').exists(), '延迟后应有横幅').toBe(true)
@@ -675,7 +688,7 @@ describe('E. 整部手机的交互（B01–B14）', () => {
   })
 
   it('H 设置里的开关是真实可用按钮，且状态持久化', async () => {
-    const wrapper = mountApp()
+    const wrapper = await mountApp()
     await swipeUnlock(wrapper)
     await clickDesktopApp(wrapper, '设置')
 
@@ -694,7 +707,7 @@ describe('E. 整部手机的交互（B01–B14）', () => {
     expect(saved.sound).toBe(false)
 
     // 重新挂载后设置被读回（有存档时直接进桌面，不回锁屏）
-    const reopened = mountApp({ keepSave: true })
+    const reopened = await mountApp({ keepSave: true })
     expect(reopened.find('.lock__surface').exists()).toBe(false)
     await clickDesktopApp(reopened, '设置')
     const soundAgain = reopened
@@ -704,7 +717,7 @@ describe('E. 整部手机的交互（B01–B14）', () => {
   })
 
   it('B06 动效与音频都不是必要交互：键盘可完成关键选择', async () => {
-    const wrapper = mountApp()
+    const wrapper = await mountApp()
     await swipeUnlock(wrapper)
     // 跳过消息动画后立即可看到选项
     await click(wrapper, '青讯')
@@ -718,7 +731,7 @@ describe('E. 整部手机的交互（B01–B14）', () => {
   })
 
   it('A08 浏览器返回：回到桌面而不离开游戏，且不重复提交选项', async () => {
-    const wrapper = mountApp()
+    const wrapper = await mountApp()
     await startAndReachPayment(wrapper)
     const before = readSave()
     expect(before?.node).toBe('transfer-100')
@@ -742,7 +755,7 @@ describe('E. 整部手机的交互（B01–B14）', () => {
   })
 
   it('A08 已确认付款后，返回键不能让旧按钮重新可点', async () => {
-    const wrapper = mountApp()
+    const wrapper = await mountApp()
     await startAndReachPayment(wrapper)
     await click(wrapper, '确认垫付 100 元')
     await flush()
@@ -826,7 +839,7 @@ describe('L. 音效覆盖（桌面大图标 / 底部导航）', () => {
   })
 
   it('L01 点击桌面「国家反诈中心」图标播放点击音效', async () => {
-    const wrapper = mountApp()
+    const wrapper = await mountApp()
     await swipeUnlock(wrapper)
 
     const before = audio.count()
@@ -838,7 +851,7 @@ describe('L. 音效覆盖（桌面大图标 / 底部导航）', () => {
   })
 
   it('L02 点击底部「最近任务」键播放点击音效', async () => {
-    const wrapper = mountApp()
+    const wrapper = await mountApp()
     await swipeUnlock(wrapper)
 
     const key = wrapper
@@ -862,7 +875,7 @@ describe('L. 音效覆盖（桌面大图标 / 底部导航）', () => {
  */
 describe('P. 底部导航键与最近任务', () => {
   it('P01 底部是三大金刚键，且不再有重复的「反诈」按钮', async () => {
-    const wrapper = mountApp()
+    const wrapper = await mountApp()
     await swipeUnlock(wrapper)
 
     const keys = wrapper.findAll('.nav__btn')
@@ -886,7 +899,7 @@ describe('P. 底部导航键与最近任务', () => {
   })
 
   it('P02 最近任务列出打开过的应用，可再次打开，且空态明确', async () => {
-    const wrapper = mountApp()
+    const wrapper = await mountApp()
     await swipeUnlock(wrapper)
 
     // 还没打开过任何应用：面板给出空态，而不是空白
@@ -953,7 +966,7 @@ describe('M. 音效覆盖：没有静音按钮', () => {
   }
 
   it('M01 锁屏上滑解锁有音效', async () => {
-    const wrapper = mountApp()
+    const wrapper = await mountApp()
     const before = audio.count()
     await swipeUnlock(wrapper)
     expect(audio.count(), '解锁应出声').toBeGreaterThan(before)
@@ -962,7 +975,7 @@ describe('M. 音效覆盖：没有静音按钮', () => {
   it('M02 桌面七个入口每一个都有音效', async () => {
     // 七个入口点击后都会切视图，因此每个都用全新挂载，避免互相影响
     for (const label of ['青讯', '安心钱包', '国家反诈中心', '关卡', '相册', '通知', '设置']) {
-      const wrapper = mountApp()
+      const wrapper = await mountApp()
       await swipeUnlock(wrapper)
       const before = audio.count()
       await clickDesktopApp(wrapper, label)
@@ -972,7 +985,7 @@ describe('M. 音效覆盖：没有静音按钮', () => {
   })
 
   it('M03 桌面「继续当前事项」有音效', async () => {
-    const wrapper = mountApp()
+    const wrapper = await mountApp()
     await swipeUnlock(wrapper)
 
     // 有存档时桌面才出现这个入口
@@ -986,7 +999,7 @@ describe('M. 音效覆盖：没有静音按钮', () => {
   })
 
   it('M04 顶部横幅手动「×」关闭有音效', async () => {
-    const wrapper = mountApp()
+    const wrapper = await mountApp()
     await swipeUnlockAndWaitNotices(wrapper)
     expect(wrapper.find('.banner').exists(), '延迟后应有横幅').toBe(true)
     // before 在横幅已弹出之后取值，已包含弹出时那声预警音，只测手动关闭这一声
@@ -994,7 +1007,7 @@ describe('M. 音效覆盖：没有静音按钮', () => {
   })
 
   it('M05 通知中心「清空通知」有音效', async () => {
-    const wrapper = mountApp()
+    const wrapper = await mountApp()
     await swipeUnlockAndWaitNotices(wrapper)
     await clickDesktopApp(wrapper, '通知')
 
@@ -1003,7 +1016,7 @@ describe('M. 音效覆盖：没有静音按钮', () => {
 
   it('M06 「清掉，重来」与「算了，接着玩」都有音效', async () => {
     // 取消分支
-    const a = mountApp()
+    const a = await mountApp()
     await swipeUnlock(a)
     await click(a, '重新开始本局')
     expect(await soundDelta(a, '.overlay__close', '遮罩关闭'), '关闭确认框应出声').toBeGreaterThan(0)
@@ -1026,7 +1039,7 @@ describe('M. 音效覆盖：没有静音按钮', () => {
   })
 
   it('M07 青讯「显示全部」与关闭资料弹层都有音效', async () => {
-    const wrapper = mountApp()
+    const wrapper = await mountApp()
     await swipeUnlock(wrapper)
     await clickDesktopApp(wrapper, '青讯')
     // 必须进群：邀请会话消息条数少，不会出现「显示全部」
@@ -1044,7 +1057,7 @@ describe('M. 音效覆盖：没有静音按钮', () => {
   })
 
   it('M08 结局与复盘页的按钮都有音效', async () => {
-    const wrapper = mountApp()
+    const wrapper = await mountApp()
     await startAndOpenInvite(wrapper)
     await click(wrapper, '拒绝并举报')
     await flush()
@@ -1070,7 +1083,7 @@ describe('N. 桌面外观（真实手机样式）', () => {
   const gridLabels = ['关卡', '相册', '通知', '设置']
 
   it('N01 图标分布在程序坞与网格区，七个入口一个不少', async () => {
-    const wrapper = mountApp()
+    const wrapper = await mountApp()
     await swipeUnlock(wrapper)
 
     const dock = wrapper.findAll('.dock .app')
@@ -1086,7 +1099,7 @@ describe('N. 桌面外观（真实手机样式）', () => {
   })
 
   it('N02 图标本体不含卡片容器（真实手机桌面图标是裸浮的）', async () => {
-    const wrapper = mountApp()
+    const wrapper = await mountApp()
     await swipeUnlock(wrapper)
 
     const buttons = wrapper.findAll('.home .app')
@@ -1103,7 +1116,7 @@ describe('N. 桌面外观（真实手机样式）', () => {
   })
 
   it('N03 桌面有时钟组件，显示北京时间 HH:mm', async () => {
-    const wrapper = mountApp()
+    const wrapper = await mountApp()
     await swipeUnlock(wrapper)
 
     const time = wrapper.find('.clock__time')
@@ -1116,7 +1129,7 @@ describe('N. 桌面外观（真实手机样式）', () => {
   })
 
   it('N04 钱包与继续当前事项以组件形式呈现，且仍可点击进入', async () => {
-    const wrapper = mountApp()
+    const wrapper = await mountApp()
     await swipeUnlock(wrapper)
 
     // 钱包组件展示余额
@@ -1145,7 +1158,7 @@ describe('N. 桌面外观（真实手机样式）', () => {
  */
 describe('Q. 青讯：会话列表 / 群聊与私聊 / 妈妈转账', () => {
   it('Q01 会话列表区分群聊与私聊，群聊带成员数，未处理的邀请有角标', async () => {
-    const wrapper = mountApp()
+    const wrapper = await mountApp()
     await swipeUnlock(wrapper)
     await clickDesktopApp(wrapper, '青讯')
 
@@ -1173,7 +1186,7 @@ describe('Q. 青讯：会话列表 / 群聊与私聊 / 妈妈转账', () => {
   })
 
   it('Q02 生活费 800 元来自妈妈转账，以转账卡片呈现', async () => {
-    const wrapper = mountApp()
+    const wrapper = await mountApp()
     await swipeUnlock(wrapper)
     await clickDesktopApp(wrapper, '青讯')
     await click(wrapper, '返回上一层') // 回到会话列表
@@ -1194,7 +1207,7 @@ describe('Q. 青讯：会话列表 / 群聊与私聊 / 妈妈转账', () => {
   })
 
   it('Q03 群聊显示发言人昵称，私聊不显示（真机消息应用的做法）', async () => {
-    const wrapper = mountApp()
+    const wrapper = await mountApp()
     await swipeUnlock(wrapper)
     await clickDesktopApp(wrapper, '青讯')
     await click(wrapper, '进群看看')
@@ -1226,7 +1239,7 @@ describe('Q. 青讯：会话列表 / 群聊与私聊 / 妈妈转账', () => {
  */
 describe('R. 相册（自绘风景照片 + 全屏查看器）', () => {
   it('R01 相册里有照片，按日期分组显示', async () => {
-    const wrapper = mountApp()
+    const wrapper = await mountApp()
     await swipeUnlock(wrapper)
     await clickDesktopApp(wrapper, '相册')
 
@@ -1245,7 +1258,7 @@ describe('R. 相册（自绘风景照片 + 全屏查看器）', () => {
   })
 
   it('R02 点击照片可全屏查看，可翻页、可关闭', async () => {
-    const wrapper = mountApp()
+    const wrapper = await mountApp()
     await swipeUnlock(wrapper)
     await clickDesktopApp(wrapper, '相册')
 
@@ -1277,7 +1290,7 @@ describe('R. 相册（自绘风景照片 + 全屏查看器）', () => {
  */
 describe('S. 沉浸感（去说明文字 / 解锁过渡 / 设置页重开）', () => {
   it('S01 锁屏只留一行必要标记，不再有大段解释', async () => {
-    const wrapper = mountApp()
+    const wrapper = await mountApp()
 
     // 必要的模拟标记仍在（合规要求：持续可见）
     expect(wrapper.text()).toContain('剧情演示')
@@ -1290,7 +1303,7 @@ describe('S. 沉浸感（去说明文字 / 解锁过渡 / 设置页重开）', (
   })
 
   it('S02 解锁后桌面用解锁过渡进入（类名可断言）', async () => {
-    const wrapper = mountApp()
+    const wrapper = await mountApp()
     await swipeUnlock(wrapper)
 
     const page = wrapper.find('.viewport__page')
@@ -1300,7 +1313,7 @@ describe('S. 沉浸感（去说明文字 / 解锁过渡 / 设置页重开）', (
   })
 
   it('S03 通知中心与结局/复盘不再有元叙述提示', async () => {
-    const wrapper = mountApp()
+    const wrapper = await mountApp()
     await swipeUnlockAndWaitNotices(wrapper)
 
     // 通知中心：可点的通知行右侧改为箭头，不再写「点击查看」
@@ -1322,7 +1335,7 @@ describe('S. 沉浸感（去说明文字 / 解锁过渡 / 设置页重开）', (
   })
 
   it('S04 设置页也提供「重新开始本局」，且仍需二次确认', async () => {
-    const wrapper = mountApp()
+    const wrapper = await mountApp()
     // startAndReachPayment 内部已包含「解锁 → 进群 → 接下任务」
     await startAndReachPayment(wrapper)
     await click(wrapper, '确认垫付 100 元')
@@ -1349,7 +1362,7 @@ describe('S. 沉浸感（去说明文字 / 解锁过渡 / 设置页重开）', (
  */
 describe('T. 壁纸主题与应用打开逻辑', () => {
   it('T01 主题默认自动，写在 html 上供样式与断言读取', async () => {
-    mountApp()
+    await mountApp()
     await flush()
 
     const html = globalThis.document.documentElement
@@ -1359,7 +1372,7 @@ describe('T. 壁纸主题与应用打开逻辑', () => {
   })
 
   it('T02 设置里可切换白天/夜间，且写入本地设置', async () => {
-    const wrapper = mountApp()
+    const wrapper = await mountApp()
     await swipeUnlock(wrapper)
     await clickDesktopApp(wrapper, '设置')
 
@@ -1384,7 +1397,7 @@ describe('T. 壁纸主题与应用打开逻辑', () => {
    * 所以这里两种情形都覆盖，避免测试结果随运行时段变化。
    */
   it('T02b 切到与当前自动结果相同的模式，模式标记也要立刻更新', async () => {
-    const wrapper = mountApp()
+    const wrapper = await mountApp()
     await swipeUnlock(wrapper)
     await clickDesktopApp(wrapper, '设置')
 
@@ -1413,7 +1426,7 @@ describe('T. 壁纸主题与应用打开逻辑', () => {
   })
 
   it('T03 打开相册总是回到网格第一屏，不停在上次翻到的那张', async () => {
-    const wrapper = mountApp()
+    const wrapper = await mountApp()
     await swipeUnlock(wrapper)
 
     await clickDesktopApp(wrapper, '相册')
@@ -1428,7 +1441,7 @@ describe('T. 壁纸主题与应用打开逻辑', () => {
   })
 
   it('T04 结局/复盘之后再点青讯，给的是会话列表而不是某个会话', async () => {
-    const wrapper = mountApp()
+    const wrapper = await mountApp()
     await startAndOpenInvite(wrapper)
     await click(wrapper, '拒绝并举报')
     await flush()
@@ -1441,7 +1454,7 @@ describe('T. 壁纸主题与应用打开逻辑', () => {
   })
 
   it('T05 跳过消息动画的入口在消息末尾，不在顶部挤压第一条消息', async () => {
-    const wrapper = mountApp()
+    const wrapper = await mountApp()
     await swipeUnlock(wrapper)
     await clickDesktopApp(wrapper, '青讯')
 
@@ -1468,7 +1481,7 @@ describe('T. 壁纸主题与应用打开逻辑', () => {
  */
 describe('U. 文案不重复', () => {
   it('U01 钱包组件没垫付时不写「已垫付 0 元」，垫付后才显示', async () => {
-    const wrapper = mountApp()
+    const wrapper = await mountApp()
     // startAndReachPayment 内部已包含「解锁 → 进群 → 接下任务」，
     // 这里不要再单独解锁一次（会因为没有锁屏而失败）。
     await startAndReachPayment(wrapper)
@@ -1488,7 +1501,7 @@ describe('U. 文案不重复', () => {
   })
 
   it('U02 「他自己说的」只标一次，不逐条重复', async () => {
-    const wrapper = mountApp()
+    const wrapper = await mountApp()
     await swipeUnlock(wrapper)
     await clickDesktopApp(wrapper, '青讯')
     await click(wrapper, '进群看看')
@@ -1502,7 +1515,7 @@ describe('U. 文案不重复', () => {
   })
 
   it('U03 设置页壁纸不再重复写「当前：X」（分段控件已表示选中）', async () => {
-    const wrapper = mountApp()
+    const wrapper = await mountApp()
     await swipeUnlock(wrapper)
     await clickDesktopApp(wrapper, '设置')
 
@@ -1540,7 +1553,7 @@ describe('W. 会话逐条出现只播一次', () => {
   }
 
   it('W01 第二次进同一个会话，消息直接全部出现，不再逐条播放', async () => {
-    const wrapper = mountApp()
+    const wrapper = await mountApp()
     await swipeUnlock(wrapper)
 
     // 第一次进入群聊（打开青讯会直接落到剧情相关会话）：先看到一部分
@@ -1569,7 +1582,7 @@ describe('W. 会话逐条出现只播一次', () => {
   })
 
   it('W02 剧情推进带来的新消息仍然逐条出现（看过的部分不重播）', async () => {
-    const wrapper = mountApp()
+    const wrapper = await mountApp()
     await startAndEnterGroup(wrapper)
     // 先看完群聊，已看过的记为 GROUP_MESSAGES.length
     await click(wrapper, '显示全部')
@@ -1606,7 +1619,7 @@ describe('W. 会话逐条出现只播一次', () => {
      *
      * 这条用例就是那个命名空间的回归：把键改回纯 sessionId 时它会变红。
      */
-    const wrapper = mountApp()
+    const wrapper = await mountApp()
     await swipeUnlock(wrapper)
 
     // 第一关：把妈妈会话看完（写入 level-01:mom 的进度）
@@ -1659,7 +1672,7 @@ describe('Y. 关卡大厅（轮播选关）', () => {
   }
 
   it('Y01 桌面「关卡」入口能打开大厅，展示每关一张手机样式卡片', async () => {
-    const wrapper = mountApp()
+    const wrapper = await mountApp()
     await swipeUnlock(wrapper)
     await openHall(wrapper)
 
@@ -1686,7 +1699,7 @@ describe('Y. 关卡大厅（轮播选关）', () => {
   })
 
   it('Y02 轮播可切换：箭头与键盘等效，且箭头在两端禁用', async () => {
-    const wrapper = mountApp()
+    const wrapper = await mountApp()
     await swipeUnlock(wrapper)
     await openHall(wrapper)
 
@@ -1716,7 +1729,7 @@ describe('Y. 关卡大厅（轮播选关）', () => {
   })
 
   it('Y03 点非中心卡先居中，再点一次才进入（触屏与键盘一致）', async () => {
-    const wrapper = mountApp()
+    const wrapper = await mountApp()
     await swipeUnlock(wrapper)
     await openHall(wrapper)
 
@@ -1735,7 +1748,7 @@ describe('Y. 关卡大厅（轮播选关）', () => {
   })
 
   it('Y04 锁定关卡点了有明确提示且不进入，不写任何存档', async () => {
-    const wrapper = mountApp()
+    const wrapper = await mountApp()
     await swipeUnlock(wrapper)
     await openHall(wrapper)
 
@@ -1759,7 +1772,7 @@ describe('Y. 关卡大厅（轮播选关）', () => {
   })
 
   it('Y05 进入第二关：换了一部手机（会话、文案、余额都变）', async () => {
-    const wrapper = mountApp()
+    const wrapper = await mountApp()
     await swipeUnlock(wrapper)
     await openHall(wrapper)
 
@@ -1789,7 +1802,7 @@ describe('Y. 关卡大厅（轮播选关）', () => {
   })
 
   it('Y06 第二关金额口径：800 → 600 → 300，平台 199 不入账', async () => {
-    const wrapper = mountApp()
+    const wrapper = await mountApp()
     await swipeUnlock(wrapper)
     await openHall(wrapper)
     await wrapper.find('.hall__arrow[aria-label="下一个关卡"]').trigger('click')
@@ -1822,7 +1835,7 @@ describe('Y. 关卡大厅（轮播选关）', () => {
   })
 
   it('Y07 两关进度各自保留：切关回来仍是原来的余额与节点', async () => {
-    const wrapper = mountApp()
+    const wrapper = await mountApp()
     await swipeUnlock(wrapper)
 
     // 第一关：付掉 100
@@ -1868,7 +1881,7 @@ describe('Y. 关卡大厅（轮播选关）', () => {
   })
 
   it('Y08 大厅卡片显示各关状态（未开始 / 进行中 / 已完成）', async () => {
-    const wrapper = mountApp()
+    const wrapper = await mountApp()
     await swipeUnlock(wrapper)
 
     // 第一关走到结局
@@ -1888,7 +1901,7 @@ describe('Y. 关卡大厅（轮播选关）', () => {
   })
 
   it('Y09 复盘页可返回关卡大厅', async () => {
-    const wrapper = mountApp()
+    const wrapper = await mountApp()
     await swipeUnlock(wrapper)
     await clickDesktopApp(wrapper, '青讯')
     await click(wrapper, '拒绝并举报')
@@ -1908,7 +1921,7 @@ describe('Y. 关卡大厅（轮播选关）', () => {
   })
 
   it('Y10 设置页可进大厅、可重新开始本局，且清空全部关卡需二次确认', async () => {
-    const wrapper = mountApp()
+    const wrapper = await mountApp()
     await swipeUnlock(wrapper)
     await clickDesktopApp(wrapper, '设置')
 
@@ -1928,7 +1941,7 @@ describe('Y. 关卡大厅（轮播选关）', () => {
   })
 
   it('Y11 清空全部关卡：所有存档清掉并回到大厅', async () => {
-    const wrapper = mountApp()
+    const wrapper = await mountApp()
     await swipeUnlock(wrapper)
 
     // 两关都留点进度
@@ -1961,7 +1974,7 @@ describe('Y. 关卡大厅（轮播选关）', () => {
   })
 
   it('Y12 切关后不会残留上一关的通知与已读进度', async () => {
-    const wrapper = mountApp()
+    const wrapper = await mountApp()
     await swipeUnlockAndWaitNotices(wrapper)
     // 第一关的通知已经弹出过
     expect(wrapper.find('.banner').exists()).toBe(true)
@@ -1974,5 +1987,102 @@ describe('Y. 关卡大厅（轮播选关）', () => {
 
     // 换了一部手机：大厅/新手机里不该还压着第一关的横幅
     expect(wrapper.find('.banner').exists(), '切关后不应残留上一关的横幅').toBe(false)
+  })
+})
+
+/**
+ * Z. 两级菜单：先选关，再进锁屏。
+ *
+ * 用户要求：「应该是先选择关卡，选了之后才进入锁屏解锁界面，然后结束后可以返回，
+ * 相当于做出一二级菜单那种」。
+ *
+ * 因此顺序是：**首屏 = 关卡大厅** → 选定关卡 → 该关**锁屏** → 上滑解锁 → 桌面；
+ * 结局页与复盘页都能回到大厅重新选关。
+ */
+describe('Z. 两级菜单：先选关再进锁屏', () => {
+  it('Z01 首屏是关卡大厅，不是锁屏', async () => {
+    const wrapper = await mountApp({ atHall: true })
+
+    expect(wrapper.find('.hall').exists(), '首屏应是关卡大厅').toBe(true)
+    expect(wrapper.find('.lock__surface').exists(), '首屏不该直接是某一关的锁屏').toBe(false)
+    expect(wrapper.text()).toContain('关卡大厅')
+    expect(wrapper.findAll('.lvlcard').length, '大厅应列出全部关卡').toBe(3)
+  })
+
+  it('Z02 大厅选定关卡后才进锁屏，上滑解锁进桌面', async () => {
+    const wrapper = await mountApp({ atHall: true })
+
+    await click(wrapper, '进入第一关')
+    await flush()
+
+    expect(wrapper.find('.hall').exists(), '进入后应离开大厅').toBe(false)
+    expect(wrapper.find('.lock__surface').exists(), '应先落在这一关的锁屏').toBe(true)
+    expect(wrapper.text()).toContain('上滑解锁')
+
+    await swipeUnlock(wrapper)
+    expect(wrapper.find('.home').exists(), '解锁后进入桌面').toBe(true)
+  })
+
+  it('Z03 首屏大厅没有「返回当前关卡」（还没进过任何关）', async () => {
+    const wrapper = await mountApp({ atHall: true })
+    expect(
+      wrapper.findAll('button').some((b) => b.text().includes('返回当前关卡')),
+      '首屏还没选过关，不该有「返回当前关卡」',
+    ).toBe(false)
+
+    // 进关之后从桌面打开大厅，这时才应该有
+    await click(wrapper, '进入第一关')
+    await flush()
+    await swipeUnlock(wrapper)
+    await clickDesktopApp(wrapper, '关卡')
+    await flush()
+    expect(wrapper.find('.hall').exists(), '手机内应能打开大厅').toBe(true)
+    expect(
+      wrapper.findAll('button').some((b) => b.text().includes('返回当前关卡')),
+      '从手机内打开大厅时应能返回当前关卡',
+    ).toBe(true)
+  })
+
+  it('Z04 结局页可直接返回关卡大厅（一级菜单）', async () => {
+    const wrapper = await mountApp()
+    await startAndOpenInvite(wrapper)
+    await click(wrapper, '拒绝并举报')
+    await flush()
+
+    expect(wrapper.text(), '应已到结局页').toContain('本局结果')
+    await click(wrapper, '返回关卡大厅')
+    await flush()
+    expect(wrapper.find('.hall').exists(), '结局页应能一步回到大厅').toBe(true)
+  })
+
+  it('Z05 复盘页也能返回关卡大厅', async () => {
+    const wrapper = await mountApp()
+    await startAndOpenInvite(wrapper)
+    await click(wrapper, '拒绝并举报')
+    await flush()
+    await click(wrapper, '看复盘')
+    await flush()
+
+    await click(wrapper, '返回关卡大厅')
+    await flush()
+    expect(wrapper.find('.hall').exists(), '复盘页应能回到大厅').toBe(true)
+  })
+
+  it('Z06 玩到一半重新挂载（模拟刷新）回大厅，进度仍在', async () => {
+    const wrapper = await mountApp()
+    await startAndReachPayment(wrapper)
+    await click(wrapper, '确认垫付 100 元')
+    await flush()
+    expect(readSave()?.balance).toBe(700)
+
+    // 刷新：重新挂载，存档保留 → 首屏回大厅，卡片显示「进行中」
+    const reopened = await mountApp({ keepSave: true, atHall: true })
+    expect(reopened.find('.hall').exists(), '刷新后应先回到大厅').toBe(true)
+    expect(reopened.text(), '大厅卡片应显示这一关进行中').toContain('进行中')
+
+    // 再进这一关：进度没丢
+    await click(reopened, '进入第一关')
+    await flush()
+    expect(readSave()?.balance, '进度不该因刷新丢失').toBe(700)
   })
 })

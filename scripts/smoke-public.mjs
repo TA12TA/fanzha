@@ -178,17 +178,44 @@ try {
   await sleep(4500)
   const loadMs = Date.now() - t0
 
-  const intro = await cdp.eval(`
+  const first = await cdp.eval(`
     return {
       text: document.body.innerText || '',
       title: document.title,
+      inHall: !!document.querySelector('.hall'),
+      cards: document.querySelectorAll('.lvlcard').length,
       hasLock: !!document.querySelector('.lock__surface'),
       url: location.href,
     }
   `)
-  record('公网页面加载出锁屏', intro.hasLock && intro.text.includes('上滑解锁'), loadMs < 20000 ? `首次可见≈${loadMs}ms` : `慢：≈${loadMs}ms`)
+  record(
+    '公网页面加载出关卡大厅（先选关）',
+    first.inHall && !first.hasLock && first.cards >= 2,
+    `大厅=${first.inHall} 卡片=${first.cards} 锁屏=${first.hasLock}${loadMs < 20000 ? ` 首次可见≈${loadMs}ms` : ` 慢：≈${loadMs}ms`}`,
+  )
+  record('页面标题正确', first.title.length > 0, first.title)
+
+  // 选定第一关：这时才应该出现这一关的锁屏
+  await cdp.eval(`
+    const b = [...document.querySelectorAll('button')].find(x => (x.textContent||'').includes('进入第'));
+    if (b) b.click();
+    return !!b;
+  `)
+  await sleep(1200)
+
+  const intro = await cdp.eval(`
+    return {
+      text: document.body.innerText || '',
+      inHall: !!document.querySelector('.hall'),
+      hasLock: !!document.querySelector('.lock__surface'),
+    }
+  `)
+  record(
+    '选定关卡后才进入锁屏解锁界面',
+    intro.hasLock && !intro.inHall,
+    `锁屏=${intro.hasLock} 大厅=${intro.inHall}`,
+  )
   record('开场文案正确', intro.text.includes('反诈局中局：你的手机'))
-  record('页面标题正确', intro.title.length > 0, intro.title)
 
   // 点击解锁 → 桌面（必须先处于锁屏，否则这个断言没有意义）
   const lockedBefore = intro.hasLock

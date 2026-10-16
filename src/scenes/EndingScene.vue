@@ -18,6 +18,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'choose', optionId: 'review'): void
   (e: 'back'): void
+  /** 直接回到关卡大厅（一级菜单）重新选关。 */
+  (e: 'open-levels'): void
 }>()
 
 const info = computed(() => {
@@ -69,6 +71,15 @@ const lossText = computed(() =>
 
       <button type="button" class="btn btn--primary ending__review" @click="emit('choose', 'review')">
         看复盘
+      </button>
+
+      <!--
+        结束后直接回一级菜单（关卡大厅）重新选关。
+        此前要回大厅得先点「看复盘」再点「返回关卡大厅」，两跳；
+        用户在结局页想「换个关玩」时这两跳没有意义。
+      -->
+      <button type="button" class="btn btn--secondary" @click="emit('open-levels')">
+        返回关卡大厅
       </button>
     </div>
   </section>
