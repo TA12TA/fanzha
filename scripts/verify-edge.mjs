@@ -803,8 +803,35 @@ async function main() {
       `存档余额=${balanceStill800}`,
     )
 
+    /*
+     * 「国家反诈中心」警告弹窗：第一关的三个掏钱时刻也会弹（`popupReminders`）。
+     * 它是模态的 —— 不点掉，下面被盖住的付款按钮真人点不到。
+     */
+    const dismissAntifraud = async () => {
+      const clicked = await cdp.eval(`
+        const b = [...document.querySelectorAll('button')]
+          .find(x => (x.textContent || '').trim() === '我知道了');
+        if (b) { b.click(); return true; }
+        return false;
+      `)
+      if (clicked) await sleep(300)
+      return clicked
+    }
+
     await cdp.click('继续当前事项')
     await cdp.click('接下任务')
+    const payWarn = await cdp.eval(`
+      const el = document.querySelector('.af');
+      const norm = (s) => (s || '').replace(/\\s+/g, ' ').trim();
+      return { open: !!el, text: el ? norm(el.textContent) : '' };
+    `)
+    record(
+      '首次垫付前弹出反诈警告（说明原因）',
+      payWarn.open && payWarn.text.includes('检测到你疑似'),
+      payWarn.open ? payWarn.text.slice(0, 40) : '没有弹窗',
+    )
+    if (payWarn.open) await cdp.screenshot(path.join(shotsDir, '14-level1-antifraud.png'))
+    record('关掉警告弹窗后能继续操作付款页', await dismissAntifraud())
     await cdp.screenshot(path.join(shotsDir, '04-wallet-pending.png'))
     text = await cdp.text()
     record(
@@ -843,11 +870,13 @@ async function main() {
     await cdp.click('桌面')
     await cdp.click('继续当前事项')
     await cdp.click('继续查看任务')
+    await dismissAntifraud() // 要求交解冻费也是掏钱时刻，同样弹警告
     await cdp.click('显示全部')
     text = await cdp.text()
     record('提现异常显示解冻费话术', text.includes('解冻费') && text.includes('提现失败'))
 
     await cdp.click('查看追加垫付')
+    await dismissAntifraud() // 追加垫付前再弹一次
     text = await cdp.text()
     record('追加页金额为 300 且显示当前余额 700', text.includes('确认垫付 300 元') && text.includes('700'))
 
@@ -873,6 +902,7 @@ async function main() {
     await cdp.click('青讯')
     await cdp.click('进群看看')
     await cdp.click('接下任务')
+    await dismissAntifraud()
     await cdp.click('取消，不参与')
     await sleep(200)
     await cdp.screenshot(path.join(shotsDir, '07-ending-stop.png'))
@@ -986,6 +1016,7 @@ async function main() {
     )
 
     await cdp.click('接下任务')
+    await dismissAntifraud() // 垫付前会弹反诈警告（减弱动效下也照样弹）
     await cdp.click('确认垫付 100 元')
     await sleep(200)
     text = await cdp.text()

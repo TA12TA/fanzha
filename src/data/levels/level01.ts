@@ -606,6 +606,16 @@ export const level01 = defineLevel<L1Node, L1Option>({
       '如果已经转账，请立即停止一切付款，保存聊天与转账记录，通过官方渠道举报并及时报警求助。',
   },
 
+  /*
+   * 用弹窗而不是横幅的节点：**三个真的要掏钱的时刻**。
+   *
+   * `transfer-100`（首次垫付）、`freeze`（被要求交解冻费）、`transfer-300`（追加垫付）
+   * —— 这三个节点上玩家正要把钱转出去；横幅只停留几秒、还可能被下一条通知顶掉，
+   * 拦不住人。其余节点（邀请、进群、返利展示、结局）仍是横幅：
+   * 弹窗多了玩家就开始无脑点「知道了」，等于没弹。
+   */
+  popupReminders: ['transfer-100', 'freeze', 'transfer-300'],
+
   copy: {
     balanceLabel: '生活费',
     spentLabel: '已垫付',

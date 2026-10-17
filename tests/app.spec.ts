@@ -187,10 +187,16 @@ async function startAndEnterGroup(wrapper: VueWrapper): Promise<void> {
   await click(wrapper, '进群看看')
 }
 
-/** 开场 → 进群 → 接下任务（到达首次待付款页）。 */
+/**
+ * 开场 → 进群 → 接下任务（到达首次待付款页）。
+ *
+ * 到达 `transfer-100` 时会弹出「国家反诈中心」警告（该节点在 `popupReminders` 里），
+ * 这里顺手关掉 —— 真人也得先点「我知道了」才能操作付款页。
+ */
 async function startAndReachPayment(wrapper: VueWrapper): Promise<void> {
   await startAndEnterGroup(wrapper)
   await click(wrapper, '接下任务')
+  await dismissAntifraud(wrapper)
 }
 
 /**
@@ -323,7 +329,6 @@ describe('E. 整部手机的交互（B01–B14）', () => {
   it('B03 资料可点击、可返回，且不改变余额', async () => {
     const wrapper = await mountApp()
     await startAndEnterGroup(wrapper)
-
     await click(wrapper, '群主资料')
     expect(wrapper.text()).toContain('最近 7 天内')
     expect(wrapper.text()).toContain('用别的渠道')
@@ -644,7 +649,9 @@ describe('E. 整部手机的交互（B01–B14）', () => {
     await click(wrapper, '确认垫付 100 元')
     await flush()
     await click(wrapper, '继续查看任务')
+    await dismissAntifraud(wrapper)
     await click(wrapper, '查看追加垫付')
+    await dismissAntifraud(wrapper)
     await click(wrapper, '确认垫付 300 元')
     await flush()
 
@@ -704,6 +711,45 @@ describe('E. 整部手机的交互（B01–B14）', () => {
      */
     expect(wrapper.findAll('input')).toHaveLength(0)
     expect(wrapper.findAll('a')).toHaveLength(0)
+  })
+
+  /**
+   * 第一关「刷单返利」的三个掏钱时刻也要弹窗警告（用户要求）。
+   *
+   * 与第二关「索要验证码」同一套机制，由关卡数据的 `popupReminders` 声明：
+   * 首次垫付 / 被要求交解冻费 / 追加垫付 —— 都是正要把钱转出去的那一步。
+   */
+  it('B02b 刷单返利的掏钱时刻弹「国家反诈中心」警告', async () => {
+    const wrapper = await mountApp()
+    await startAndEnterGroup(wrapper)
+
+    // ① 接下任务 → 首次待付款：弹窗，第一行说明原因
+    await click(wrapper, '接下任务')
+    const payDialog = wrapper.find('.af')
+    expect(payDialog.exists(), '首次垫付前应弹反诈警告').toBe(true)
+    expect(payDialog.text()).toContain('检测到你疑似')
+    expect(payDialog.text(), '要说明为什么提醒').toContain('垫付')
+    expect(wrapper.find('.gate__input').exists(), '第一关不该有验证码输入').toBe(false)
+    // 没点掉之前付款按钮就在弹窗下面，真人点不到 → 必须真的点掉
+    expect(await dismissAntifraud(wrapper)).toBe(true)
+    expect(wrapper.find('.af').exists()).toBe(false)
+
+    // ② 付完 100 → 返利 → 提现异常：又要交钱，再弹一次
+    await click(wrapper, '确认垫付 100 元')
+    await flush()
+    await click(wrapper, '继续查看任务')
+    const freezeDialog = wrapper.find('.af')
+    expect(freezeDialog.exists(), '要求交解冻费时应再弹一次警告').toBe(true)
+    expect(freezeDialog.text()).toContain('解冻费')
+    await dismissAntifraud(wrapper)
+
+    // ③ 查看追加垫付：第三次掏钱，再弹
+    await click(wrapper, '查看追加垫付')
+    expect(wrapper.find('.af').exists(), '追加垫付前应再弹一次警告').toBe(true)
+    await dismissAntifraud(wrapper)
+
+    // 弹窗只警告、不改账本
+    expect(readSave('level-01')?.balance, '关掉弹窗不该动钱').toBe(700)
   })
 
   it('B14 状态栏与只读应用都有响应；状态栏与桌面图标共用同一个通知中心', async () => {
@@ -1695,6 +1741,7 @@ describe('W. 会话逐条出现只播一次', () => {
 
     // 推进到返利节点：群里会多出返利卡片
     await click(wrapper, '接下任务')
+    await dismissAntifraud(wrapper)
     await flush()
     await click(wrapper, '回到桌面')
     await click(wrapper, '继续当前事项')
@@ -1947,6 +1994,7 @@ describe('Y. 关卡大厅（轮播选关）', () => {
     await clickDesktopApp(wrapper, '青讯')
     await click(wrapper, '进群看看')
     await click(wrapper, '接下任务')
+    await dismissAntifraud(wrapper)
     await click(wrapper, '确认垫付 100 元')
     await flush()
     expect(readSave('level-01')?.balance, '第一关应为 700').toBe(700)
