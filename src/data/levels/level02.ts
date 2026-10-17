@@ -378,6 +378,28 @@ export const level02 = defineLevel<L2Node, L2Option>({
   validPlatformDisplays: [0, ORDER_AMOUNT],
   platformRequiresPaid: [{ display: ORDER_AMOUNT, minPaid: VERIFY_AMOUNT }],
 
+  /*
+   * 模拟验证码环节：落在 `l2-refund-claim`（「把短信验证码发我」那一步）。
+   *
+   * 设计说明：
+   * - 短信由**本游戏自己的通知**弹出（发送方用虚构品牌「安心钱包」），
+   *   每次索要都是新的 6 位数字，输错会再发一条新的 —— 真实骗局里也是这样
+   *   （对方要你"再念一遍刚刚那条"，因为过期了）。
+   * - 短信正文里那句「请勿转发给他人」是真实短信的原文，**故意保留**：
+   *   玩家正是在这一句之后把码发出去的，这正是本关要教的点。
+   * - 输错时对方的语气必须平和。现实中的骗子在这一步通常很有"耐心"，
+   *   不会一上来就恐吓 —— 恐吓留到后面要钱的时候。
+   */
+  codeGate: {
+    'l2-refund-claim': {
+      sender: '安心钱包',
+      smsTemplate: '【安心钱包】校验码 {code}，正在解冻账户风控。请勿转发给他人。',
+      prompt: '收到没？念给我就行，我这边帮你打开通道。',
+      onCorrect: 'l2-continue',
+      retryLine: '好像不太对哦，你再看一下刚刚那条短信？我这边再发一条新的给你。',
+    },
+  },
+
   pendingRequests: {
     'l2-verify-1': {
       amount: VERIFY_AMOUNT,

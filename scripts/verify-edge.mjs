@@ -1317,9 +1317,129 @@ async function main() {
       `第一关存档存在=${l2After.l1Exists}（本用例未在第一关产生进度，两种都合法）`,
     )
 
+    /*
+     * 模拟验证码（真实浏览器里的一条独立断言）。
+     *
+     * 与真人完全一样的路径：从屏幕上那条短信里读出 6 位码，填进输入框提交。
+     * 先故意填错一次，确认对方会平和地要求重输、并且**换了一个新码**；
+     * 再填对，确认剧情继续。
+     */
+    const gateInfo = await cdp.eval(`
+      const input = document.querySelector('.gate__input');
+      const submit = document.querySelector('.gate__submit');
+      const continueBtn = [...document.querySelectorAll('button')]
+        .find(b => (b.textContent || '').trim() === '继续按他说的做');
+      const stopBtn = [...document.querySelectorAll('button')]
+        .find(b => (b.textContent || '').includes('停下来，自己查订单'));
+      return {
+        hasInput: !!input,
+        submitDisabled: submit ? submit.disabled : null,
+        continueGone: !continueBtn,
+        hasStop: !!stopBtn,
+      };
+    `)
+    record(
+      '索要验证码时出现输入框，且「继续」按钮被替换掉（必须真的填码）',
+      gateInfo.hasInput && gateInfo.continueGone && gateInfo.hasStop,
+      `输入框=${gateInfo.hasInput} 无「继续」=${gateInfo.continueGone} 仍有中止=${gateInfo.hasStop}`,
+    )
+    record(
+      '没填满 6 位时「发给他」是禁用的',
+      gateInfo.submitDisabled === true,
+      `submit.disabled=${gateInfo.submitDisabled}`,
+    )
+
+    /** 从当前屏幕读出短信里的 6 位验证码（同时带回诊断信息，失败时好定位）。 */
+    const readCode = async () => {
+      return await cdp.eval(`
+        const text = document.body.innerText || '';
+        const banner = document.querySelector('.banner');
+        const m = text.match(/校验码\\s*(\\d{6})/);
+        return {
+          code: m ? m[1] : null,
+          hasBanner: !!banner,
+          bannerText: banner ? (banner.textContent || '').slice(0, 60) : null,
+          gateText: (document.querySelector('.gate')?.textContent || '').slice(0, 80),
+        };
+      `)
+    }
+
+    /**
+     * 等短信真正弹出来再读码。
+     *
+     * 不能只 sleep 固定时间：进入系统后的**第一条**通知有一段
+     * 「先让玩家看清桌面」的延迟（`FIRST_NOTICE_DELAY_MS = 3000`），
+     * 而验证脚本在这一段里跑得比真人快得多，固定等待会踩在延迟窗口中间、
+     * 读到一条还没出现的横幅。轮询到 8 秒，超时才算失败。
+     */
+    const waitCode = async (timeoutMs = 8000) => {
+      const deadline = Date.now() + timeoutMs
+      let last = await readCode()
+      while (!last.code && Date.now() < deadline) {
+        await sleep(200)
+        last = await readCode()
+      }
+      return last
+    }
+
+    /** 把验证码敲进输入框（逐位输入，模拟真人打字，而不是直接 setValue）。 */
+    const typeCode = async (code) => {
+      await cdp.eval(`
+        const input = document.querySelector('.gate__input');
+        if (!input) return false;
+        input.focus();
+        input.value = ${JSON.stringify(code)};
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        return true;
+      `)
+      await sleep(150)
+      await cdp.eval(`
+        const btn = document.querySelector('.gate__submit');
+        if (btn && !btn.disabled) btn.click();
+        return true;
+      `)
+      await sleep(500)
+    }
+
+    const firstRead = await waitCode()
+    const firstCode = firstRead.code
+    await cdp.screenshot(path.join(shotsDir, '11-level02-codegate.png'))
+    record(
+      '进入该节点后收到了模拟短信（含 6 位验证码）',
+      /^\d{6}$/.test(firstCode ?? ''),
+      `验证码=${firstCode} 横幅=${firstRead.hasBanner} 横幅文本=${firstRead.bannerText ?? '（无）'} 输入区=${firstRead.gateText}`,
+    )
+
+    // 故意填错
+    await typeCode('000000')
+    const afterWrongRead = await waitCode()
+    const afterWrong = {
+      ...afterWrongRead,
+      retry: await cdp.eval(`return (document.body.innerText || '').includes('好像不太对')`),
+      stillGate: await cdp.eval(`return !!document.querySelector('.gate__input')`),
+    }
+    record(
+      '验证码填错：对方平和地要求重输，并换了一条新码',
+      afterWrong.retry && afterWrong.stillGate && afterWrong.code && afterWrong.code !== firstCode,
+      `重输提示=${afterWrong.retry} 新码=${afterWrong.code}（旧码 ${firstCode}）`,
+    )
+
+    // 填对
+    await typeCode(afterWrong.code ?? firstCode)
+    await sleep(500)
+    const afterRight = await cdp.eval(`
+      return {
+        text: document.body.innerText || '',
+        stillGate: !!document.querySelector('.gate__input'),
+      };
+    `)
+    record(
+      '验证码填对后继续剧情（离开输入区，进入要保证金那一步）',
+      !afterRight.stillGate && afterRight.text.includes('保证金'),
+      `输入区已消失=${!afterRight.stillGate}`,
+    )
+
     // 第二关走到复盘：确认复盘只引用本关经历
-    await cdp.click('继续按他说的做')
-    await sleep(400)
     await cdp.click('查看这笔保证金')
     await sleep(400)
     await cdp.click('确认转出 300 元')

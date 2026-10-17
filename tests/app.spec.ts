@@ -89,6 +89,35 @@ async function flush(): Promise<void> {
 }
 
 /**
+ * 等模拟短信**真正弹出来**，再读出 6 位验证码。
+ *
+ * 为什么要等：进入系统后的第一条通知有一段「先让玩家看清桌面」的延迟
+ * （`FIRST_NOTICE_DELAY_MS = 3000`）。测试不推进真实时间就永远读不到横幅，
+ * 而读不到就说明不了任何事。这里轮询到 5 秒，超时才报错。
+ *
+ * 验证码是**本地随机生成**的，不能写死；正确做法与真人一样：从短信里读出来再填回去。
+ */
+async function waitForSmsCode(wrapper: VueWrapper): Promise<string> {
+  for (let i = 0; i < 50; i += 1) {
+    const matched = wrapper.text().match(/校验码\s*(\d{6})/)
+    if (matched) return matched[1]
+    await new Promise((resolve) => setTimeout(resolve, 100))
+  }
+  throw new Error(
+    `等不到模拟验证码短信。当前文本前 200 字：${wrapper.text().slice(0, 200)}`,
+  )
+}
+
+/** 在验证码输入区填入并提交（模拟玩家「把码发给他」）。 */
+async function enterCode(wrapper: VueWrapper, code: string): Promise<void> {
+  const input = wrapper.find('.gate__input')
+  if (!input.exists()) throw new Error('验证码输入框不存在（是否已进入需要验证码的节点？）')
+  await input.setValue(code)
+  await wrapper.find('.gate__submit').trigger('click')
+  await flush()
+}
+
+/**
  * 构造指针事件。
  * jsdom 的 `clientY` 是只读 getter，无法通过 test-utils 的 trigger 选项赋值，
  * 因此手动创建事件并用 defineProperty 注入坐标。
@@ -1839,9 +1868,8 @@ describe('Y. 关卡大厅（轮播选关）', () => {
     expect(wrapper.text(), '退款 199 只是平台数字').toContain('199')
     expect(readSave('level-02')?.balance, '199 不得计入余额').not.toBe(799)
 
-    // 第二笔：保证金 300
-    await click(wrapper, '继续按他说的做')
-    await flush()
+    // 第二笔：保证金 300（这一步要在聊天里把收到的验证码填回去）
+    await enterCode(wrapper, await waitForSmsCode(wrapper))
     await click(wrapper, '查看这笔保证金')
     await flush()
     await click(wrapper, '确认转出 300 元')
@@ -2003,6 +2031,66 @@ describe('Y. 关卡大厅（轮播选关）', () => {
 
     // 换了一部手机：大厅/新手机里不该还压着第一关的横幅
     expect(wrapper.find('.banner').exists(), '切关后不应残留上一关的横幅').toBe(false)
+  })
+
+  /**
+   * 模拟验证码（第二关「把短信验证码发我」那一步）。
+   *
+   * 用户要求：有验证码的地方要真的能填，验证码像通知一样弹出来、每次都不一样，
+   * 输错了对方会要求重新输入，但**语气不能突兀**。
+   */
+  it('Y19 验证码：短信弹出、输错会换新码并要求重输、输对才继续', async () => {
+    const wrapper = await mountApp({ atDesk: true })
+    await tapPhone(wrapper, 1)
+    await swipeUnlock(wrapper)
+    await clickDesktopApp(wrapper, '青讯')
+    await click(wrapper, '按他说的做')
+    await flush()
+    await click(wrapper, '确认转出 200 元')
+    await flush()
+
+    // 到了索要验证码这一步：出现输入框，且「继续按他说的做」不再渲染成按钮
+    expect(wrapper.find('.gate__input').exists(), '应出现验证码输入框').toBe(true)
+    expect(
+      findButton(wrapper, '继续按他说的做'),
+      '这一步不能再用一个「继续」按钮糊过去，必须真的填码',
+    ).toBeUndefined()
+    // 中止的退路还在（不能只剩填码这一条路）
+    expect(findButton(wrapper, '停下来，自己查订单'), '必须仍能中止').toBeTruthy()
+
+    const first = await waitForSmsCode(wrapper)
+    expect(first, '验证码应是 6 位数字').toMatch(/^\d{6}$/)
+
+    // 填错：对方平和地要求重看短信，并换一条新的验证码
+    await enterCode(wrapper, '000000')
+    expect(wrapper.text(), '输错时对方应平和地要求重输').toContain('好像不太对')
+    expect(wrapper.text(), '语气不能施压').not.toContain('你骗我')
+    const second = await waitForSmsCode(wrapper)
+    expect(second, '输错后应换一个新的验证码').not.toBe(first)
+    expect(wrapper.find('.gate__input').exists(), '输错后仍停留在输入区').toBe(true)
+
+    // 填对：继续剧情（走到要 300 保证金那一步）
+    await enterCode(wrapper, second)
+    expect(wrapper.text(), '填对之后应继续剧情').toContain('保证金')
+    expect(wrapper.find('.gate__input').exists(), '离开该节点后输入区应消失').toBe(false)
+  })
+
+  it('Y20 验证码：可以要求重新发一条（换新码），且不改变剧情与余额', async () => {
+    const wrapper = await mountApp({ atDesk: true })
+    await tapPhone(wrapper, 1)
+    await swipeUnlock(wrapper)
+    await clickDesktopApp(wrapper, '青讯')
+    await click(wrapper, '按他说的做')
+    await flush()
+    await click(wrapper, '确认转出 200 元')
+    await flush()
+
+    const before = await waitForSmsCode(wrapper)
+    await click(wrapper, '重新发一条')
+    await flush()
+    const after = await waitForSmsCode(wrapper)
+    expect(after, '重发应换一个新验证码').not.toBe(before)
+    expect(readSave('level-02')?.balance, '重发短信不该动钱').toBe(600)
   })
 })
 

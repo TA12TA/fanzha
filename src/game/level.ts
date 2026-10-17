@@ -202,6 +202,29 @@ export interface LevelCopy {
 
 /* ============================ 关卡定义 ============================ */
 
+/**
+ * 「模拟验证码」环节（2026-10-17 新增）。
+ *
+ * 某个节点上，对方索要一条短信验证码；玩家必须把**刚刚收到的那一条**填回去。
+ * 验证码由本地随机生成（`app/smsCode.ts`），以通知的形式弹出，每次都不一样。
+ *
+ * 为什么把它做成关卡数据而不是组件里的硬编码：骗局的这一环是"要验证码"，
+ * 后续关卡（甚至同一关的多个位置）都可能出现，界面与判定必须复用，
+ * 文案与"输对之后走哪个选项"则属于关卡自己的剧情。
+ */
+export interface CodeGate<TOption extends string = string> {
+  /** 短信发送方 —— 必须是虚构品牌，不要用真实机构名。 */
+  sender: string
+  /** 短信正文模板，**必须含 `{code}`**（校验函数会拦住写错的模板）。 */
+  smsTemplate: string
+  /** 输入框上方那行催促语（对方的原话）。 */
+  prompt?: string
+  /** 输对之后执行的选项 ID：必须是该节点上的正常选项，仍然走 `choose()`。 */
+  onCorrect: TOption
+  /** 输错时对方回的那句话。语气不能施压 —— 骗子这时通常很"有耐心"。 */
+  retryLine: string
+}
+
 /** 可玩关卡。 */
 export interface PlayableLevel<TNode extends string = string, TOption extends string = string> {
   kind: 'playable'
@@ -212,6 +235,8 @@ export interface PlayableLevel<TNode extends string = string, TOption extends st
   options: Record<TOption, StoryOption<TNode, TOption>>
   /** 每个节点可用的选项 ID（顺序即界面展示顺序）。 */
   nodeOptions: Record<TNode, TOption[]>
+  /** 需要玩家填回模拟验证码的节点（没有就不是验证码环节）。 */
+  codeGate?: Partial<Record<TNode, CodeGate<TOption>>>
   /** 开场节点（锁屏）。 */
   startNode: TNode
   /** 复盘节点。 */
@@ -554,6 +579,46 @@ export function validateLevel(level: PlayableLevel): string[] {
     }
   }
 
+  /*
+   * 14) 模拟验证码环节（`codeGate`）。
+   *
+   * 这一段是最容易把玩家卡死的地方，所以校验得很死：短信里没有码、
+   * 输对之后没有出口、出口不在这个节点上，任何一条都会让玩家拿着一个
+   * 6 位数字却无处可填 / 填对了也走不下去。
+   */
+  for (const [node, gate] of Object.entries(level.codeGate ?? {})) {
+    if (!gate) continue
+    if (!nodeIds.includes(node)) {
+      problems.push(`codeGate 里有未知节点「${node}」`)
+      continue
+    }
+    if (!gate.smsTemplate.includes('{code}')) {
+      problems.push(`codeGate[${node}] 的短信模板必须包含 {code}，否则玩家永远拿不到验证码`)
+    }
+    if (!gate.smsTemplate.includes(gate.sender)) {
+      problems.push(`codeGate[${node}] 的短信模板应带上发送方「${gate.sender}」`)
+    }
+    if (!gate.retryLine.trim()) {
+      problems.push(`codeGate[${node}] 缺少输错时的回话（retryLine）`)
+    }
+    const option = level.options[gate.onCorrect]
+    if (!option) {
+      problems.push(`codeGate[${node}] 的 onCorrect 指向不存在的选项「${gate.onCorrect}」`)
+    } else {
+      if (!(level.nodeOptions[node] ?? []).includes(gate.onCorrect)) {
+        problems.push(`codeGate[${node}] 的 onCorrect「${gate.onCorrect}」不在该节点的可选项里`)
+      }
+      if (option.to === node) {
+        problems.push(`codeGate[${node}] 的 onCorrect 不能留在原节点（会立刻再次索要验证码）`)
+      }
+    }
+    // 输对之后必须还有别的出口（至少留一条退路，不能只剩验证码输入）
+    const others = (level.nodeOptions[node] ?? []).filter((id) => id !== gate.onCorrect)
+    if (others.length === 0) {
+      problems.push(`codeGate[${node}] 的节点只剩一个选项，玩家输了就没法中止`)
+    }
+  }
+
   return problems
 }
 
@@ -615,8 +680,28 @@ export function collectLevelText(level: PlayableLevel): string {
     parts.push(sheet.title, sheet.notice)
     for (const field of sheet.fields) parts.push(field.label, field.value)
   }
+  // 验证码环节的短信模板、催促语与输错回话同样是玩家看得见的文案
+  for (const gate of Object.values(level.codeGate ?? {})) {
+    if (!gate) continue
+    parts.push(gate.sender, gate.smsTemplate, gate.retryLine)
+    if (gate.prompt) parts.push(gate.prompt)
+  }
 
   return parts.filter(Boolean).join('\n')
+}
+
+/**
+ * 取某节点上的模拟验证码环节；没有则返回 null。
+ *
+ * 单独导出而不是让组件自己 `level.codeGate?.[node]`：这样「验证码环节」
+ * 的判定只有一处，将来加别的关卡也不会有人各写一遍。
+ */
+export function codeGateFor<TNode extends string, TOption extends string>(
+  level: PlayableLevel<TNode, TOption>,
+  node: NodeId,
+): CodeGate<TOption> | null {
+  const gate = level.codeGate?.[node as TNode]
+  return gate ?? null
 }
 
 /** 由状态取当前关卡要用的界面文案（找不到时回退到兜底文案）。 */

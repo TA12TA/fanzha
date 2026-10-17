@@ -34,14 +34,37 @@ src/data/levels/
   level03.ts                # 第三关元数据（锁定）
   index.ts                  # 注册表：LEVELS / getLevel / getPlayableLevel / playableLevels
 src/app/navigation.ts       # 节点 → 场景的通用映射（不含任何具体关卡 id）
-src/app/LevelHall.vue       # 关卡大厅（轮播）
-src/app/LevelCard.vue       # 单张关卡卡
+src/app/smsCode.ts          # 模拟验证码：生成（可注入随机源）/ 清洗 / 比对 / 模板替换
+src/app/LevelHall.vue       # 关卡大厅（轮播版，main 分支；hall-desk 上是 LevelDesk.vue）
+src/app/LevelCard.vue       # 单张关卡卡（轮播版）
 src/app/AppShell.vue        # 根壳：大厅 / 手机 两态
 src/app/PhoneShell.vue      # 一部手机（= 一个关卡）
 ```
 
 **边界**：引擎、存档、复盘、导航、以及全部场景组件都**不 import 任何具体关卡文件**，
 只通过注册表取数据。新增关卡不需要改这些文件。
+
+## 2.1 需要「模拟验证码」的关卡怎么写
+
+骗局里「把短信验证码发我」这一步可以用关卡数据声明，不需要改界面：
+
+```ts
+codeGate: {
+  'l2-refund-claim': {
+    sender: '安心钱包',                      // 短信发送方：必须是虚构品牌
+    smsTemplate: '【安心钱包】校验码 {code}，请勿转发。', // 必须含 {code}
+    prompt: '收到没？念给我就行。',            // 输入框上方的催促语
+    onCorrect: 'l2-continue',                // 填对之后执行的选项（仍走 choose）
+    retryLine: '好像不太对，你再看一下短信？我再发一条。', // 填错时对方的回话，语气别施压
+  },
+},
+```
+
+- 短信由本游戏的通知弹出，验证码**本地随机生成、每次不同**，不读真实短信也不上传；
+- 声明了 `codeGate` 的节点，`onCorrect` 那个选项**不再渲染成按钮**（否则玩家点一下就绕过验证码），
+  其余选项照旧保留 —— 必须留一条中止退路；
+- `validateLevel` 会检查：模板含 `{code}`、`onCorrect` 存在且在该节点、不会自环、节点还有别的出口。
+
 
 ## 3. 新增一关的步骤
 

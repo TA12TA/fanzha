@@ -27,10 +27,12 @@ import {
 import { useNotifications } from '@/app/notifications'
 import { useSettings } from '@/app/settings'
 import { resetChatReveal } from '@/app/chatReveal'
+import { codeMatches, generateCode, renderSms } from '@/app/smsCode'
 import { playSound, setSoundEnabled } from '@/app/sound'
 import { useGame } from '@/app/useGame'
 import { REMINDER_TITLE, reminderFor } from '@/data/antifraud'
 import { BRAND } from '@/data/levels/shared'
+import { codeGateFor } from '@/game/level'
 import type { PlayableLevel } from '@/game/level'
 import type { OptionId } from '@/game/types'
 
@@ -190,6 +192,92 @@ function pushMessage(title: string, body: string): void {
     return
   }
   notices.push({ kind: 'message', title, body })
+}
+
+/* ============================================================
+ * 模拟验证码
+ * ============================================================
+ * 骗局里最要命的一步是「把短信验证码念给我」。只让玩家读一句
+ * "验证码不能给" 是学不会的，所以这一步真的做出来：
+ * 短信以通知的形式弹出（本地随机生成，不读真实短信、不上传），
+ * 玩家必须把它填回去；填错了对方会再发一条新的。
+ */
+
+/** 当前节点是否需要玩家填验证码（来自关卡数据 `codeGate`）。 */
+const activeCodeGate = computed(() => codeGateFor(props.level, state.value.node))
+
+/** 当前有效的那条验证码。 */
+const currentCode = ref('')
+
+/** 最近一条短信的正文（横幅关闭时改为就地显示，见下面的说明）。 */
+const codeSmsText = ref('')
+
+/** 已经被判错的次数：>0 时聊天里会出现对方那句「再看一下短信」。 */
+const codeAttempts = ref(0)
+
+/**
+ * 发出（或重发）一条模拟短信 —— 每次都是**新的**验证码。
+ *
+ * 三个必须这么做的地方：
+ * 1. **先清掉当前展示队列再弹**：验证码是这一步能否继续的前提，如果排在一条
+ *    6 秒的反诈横幅后面，玩家会以为"我没收到短信"而卡在这里。被清掉的预警
+ *    早已进过通知中心，仍可回看。
+ * 2. **不受「顶部弹出通知」开关影响**（组件层面也会兜底，见 `codeSmsText`）：
+ *    关掉那个开关只是不想被打扰；这里不给看就没法继续玩了。
+ * 3. 正文同时存一份到 `codeSmsText`：万一横幅被系统/开关挡住，
+ *    输入区上方会就地显示这条短信，保证游戏永远走得下去。
+ */
+function issueCode(): void {
+  const gate = activeCodeGate.value
+  if (!gate) return
+  currentCode.value = generateCode()
+  codeSmsText.value = renderSms(gate.smsTemplate, currentCode.value)
+  notices.dropCurrent()
+  notices.push({ kind: 'message', title: gate.sender, body: codeSmsText.value })
+}
+
+/**
+ * 进入（或刷新后落到）需要验证码的节点时发第一条短信。
+ * `immediate` 是给「存档已经在这个节点」的情况准备的：不带它的话，
+ * 刷新后玩家会看到一个输入框，却从没收到过短信。
+ */
+watch(
+  () => state.value.node,
+  () => {
+    codeAttempts.value = 0
+    currentCode.value = ''
+    codeSmsText.value = ''
+    if (activeCodeGate.value) issueCode()
+  },
+  { immediate: true },
+)
+
+/** 玩家提交验证码。 */
+function submitCode(raw: string): void {
+  const gate = activeCodeGate.value
+  if (!gate || submitting.value) return
+
+  if (codeMatches(raw, currentCode.value)) {
+    // 填对了 = 把码给了对方。仍然走正常的选项转移，引擎与账本完全不知情。
+    submit(gate.onCorrect)
+    return
+  }
+
+  /*
+   * 填错：对方**再说一句**，然后发一条新的。
+   * 语气必须平和 —— 现实中的骗子在这一步很有"耐心"（恐吓是后面要钱时才用的），
+   * 这里如果骂人或催命，反而不像真的。
+   */
+  codeAttempts.value += 1
+  playSound('cancel')
+  issueCode()
+}
+
+/** 「重新发一条」：换一个新验证码（真实短信会过期，玩家也可能把通知划掉了）。 */
+function resendCode(): void {
+  if (!activeCodeGate.value) return
+  playSound('tap')
+  issueCode()
 }
 
 /**
@@ -703,7 +791,12 @@ onBeforeUnmount(() => {
           :session="chatView === 'list' ? null : chatView"
           :profile-open="profileOpen"
           :detail-open="detailOpen"
+          :code-gate="activeCodeGate"
+          :code-attempts="codeAttempts"
+          :code-sms="settings.banner ? '' : codeSmsText"
           @choose="submit"
+          @submit-code="submitCode"
+          @resend-code="resendCode"
           @open-session="openSession"
           @open-profile="openProfile"
           @close-profile="closeProfile"

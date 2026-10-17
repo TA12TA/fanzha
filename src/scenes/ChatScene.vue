@@ -2,13 +2,14 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import AppHeader from '@/components/AppHeader.vue'
 import ChatAvatar from '@/components/ChatAvatar.vue'
+import CodeGate from '@/components/CodeGate.vue'
 import MessageBubble from '@/components/MessageBubble.vue'
 import OverlaySheet from '@/components/OverlaySheet.vue'
 import { playSound } from '@/app/sound'
 import { markRevealed, revealedCountFor } from '@/app/chatReveal'
 import { avatarFor } from '@/data/levels/shared'
 import { pendingRequestOf } from '@/app/navigation'
-import type { ChatMessage, PlayableLevel } from '@/game/level'
+import type { ChatMessage, CodeGate as CodeGateSpec, PlayableLevel } from '@/game/level'
 import type { GameState, OptionId } from '@/game/types'
 
 /**
@@ -31,6 +32,15 @@ const props = defineProps<{
   profileOpen: boolean
   /** 是否显示详情弹层（订单等）。 */
   detailOpen: boolean
+  /** 当前节点的模拟验证码环节；null 表示这一步不需要验证码。 */
+  codeGate: CodeGateSpec | null
+  /** 已经被判错了几次（>0 时界面会显示对方那句"再看一下短信"）。 */
+  codeAttempts: number
+  /**
+   * 短信正文的就地兜底显示（仅在「顶部弹出通知」被关闭时非空）。
+   * 没有它的话，关掉通知开关会让验证码这一步永远走不下去。
+   */
+  codeSms: string
 }>()
 
 const emit = defineEmits<{
@@ -42,6 +52,10 @@ const emit = defineEmits<{
   (e: 'close-detail'): void
   (e: 'back'): void
   (e: 'open-wallet'): void
+  /** 玩家提交了一次模拟验证码。 */
+  (e: 'submit-code', code: string): void
+  /** 玩家要求重新发一条短信（换一个新验证码）。 */
+  (e: 'resend-code'): void
 }>()
 
 const spec = computed(() => props.level.chat)
@@ -211,13 +225,29 @@ const options = computed<{ id: OptionId; label: string; kind: 'primary' | 'secon
   const owner = spec.value.optionSession[props.state.node]
   if (!owner || owner !== props.session) return []
   const hidden = spec.value.hiddenOptions ?? []
+  /*
+   * 验证码环节：那个「继续按他说的做」不再渲染成按钮 ——
+   * 玩家必须真的把验证码填回去，否则这一步就只是"点一下继续"，
+   * 教学上完全失去意义。其余选项（比如「停下来，自己查订单」）照旧保留。
+   */
+  const viaGate = props.codeGate?.onCorrect ?? null
   return (props.level.nodeOptions[props.state.node] ?? [])
     .filter((id) => !hidden.includes(id))
+    .filter((id) => id !== viaGate)
     .map((id) => ({
       id,
       label: props.level.options[id]?.label ?? id,
       kind: spec.value.secondaryOptions.includes(id) ? 'secondary' : 'primary',
     }))
+})
+
+/**
+ * 当前是否在「要填验证码」的那一步。
+ * 与选项同一套归属判断：只有拥有该节点选项的那个会话才显示输入区。
+ */
+const gateActive = computed(() => {
+  if (!props.codeGate) return false
+  return spec.value.optionSession[props.state.node] === props.session
 })
 
 /** 待确认付款节点：消息应用给出跳转钱包的入口（不自动付款）。 */
@@ -373,6 +403,21 @@ const detail = computed(() => {
           去安心钱包处理
         </button>
       </div>
+
+      <!--
+        模拟验证码输入区：取代「继续按他说的做」那个按钮。
+        放在剧情选项**之前**，因为对方刚说完「念给我就行」，
+        输入框紧跟着出现才像真在聊天。
+      -->
+      <CodeGate
+        v-if="gateActive && codeGate"
+        :prompt="codeGate.prompt"
+        :retry-line="codeGate.retryLine"
+        :attempts="codeAttempts"
+        :sms="codeSms"
+        @submit="(code: string) => emit('submit-code', code)"
+        @resend="emit('resend-code')"
+      />
 
       <!-- 剧情选项：全部为真实 button，键盘可操作 -->
       <div v-if="options.length" class="chat__actions">
