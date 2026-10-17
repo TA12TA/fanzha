@@ -20,9 +20,11 @@ export type AppId =
   | 'shop'
   | 'music'
   | 'video'
+  | 'phone'
+  | 'sms'
 
 /** 只读/轻交互应用：从桌面的通用入口打开。 */
-export type PlainAppId = 'photos' | 'notifications' | 'shop' | 'music' | 'video'
+export type PlainAppId = 'photos' | 'notifications' | 'shop' | 'music' | 'video' | 'phone' | 'sms'
 
 /**
  * 消息应用内部的子视图。

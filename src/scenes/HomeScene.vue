@@ -53,10 +53,15 @@ const emit = defineEmits<{
  * Dock 放剧情推进最常用的三个，网格区放其余。
  * 关卡进行中没有「关卡」入口：大厅只在首屏与结局/复盘页出现。
  */
+/*
+ * 程序坞放每天都会用的通讯/支付入口，和真机一样；
+ * 反诈应用与生活应用一起留在桌面网格。
+ */
 const dockApps = [
+  { id: 'phone', label: BRAND.phone, hint: '打开电话' },
+  { id: 'sms', label: BRAND.sms, hint: '打开短信' },
   { id: 'chat', label: BRAND.chat, hint: '打开消息应用' },
   { id: 'wallet', label: BRAND.wallet, hint: '查看余额' },
-  { id: 'manual', label: BRAND.manual, hint: '打开国家反诈中心' },
 ] as const
 
 /*
@@ -70,6 +75,7 @@ const gridApps = [
   { id: 'photos', label: '相册', hint: '打开相册' },
   { id: 'notifications', label: '通知', hint: '打开通知' },
   { id: 'settings', label: '设置', hint: '打开设置' },
+  { id: 'manual', label: BRAND.manual, hint: '打开国家反诈中心' },
 ] as const
 
 const allApps = [...dockApps, ...gridApps] as const
@@ -370,8 +376,8 @@ function badgeAria(id: string, badge: string): string {
 
 .apps {
   display: grid;
-  /* 去掉「关卡」入口后只剩三个：三等分比四列留一个空位更稳 */
-  grid-template-columns: repeat(3, 1fr);
+  /* 七个网格入口：四列两行（商城/音乐/视频/相册 + 通知/设置/反诈） */
+  grid-template-columns: repeat(4, 1fr);
   gap: var(--space-4) var(--space-2);
   margin: 0;
   padding: 0;
@@ -454,6 +460,7 @@ function badgeAria(id: string, badge: string): string {
 .home__foot {
   display: flex;
   justify-content: center;
+  margin-top: auto;
   padding: var(--space-3) 0 var(--space-2);
 }
 

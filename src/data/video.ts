@@ -1,11 +1,16 @@
-/**
- * 虚构视频应用「青影」的内容数据。
- *
- * 视频标题、作者、播放量与封面全部为虚构；不包含真实视频文件、
- * 外链或第三方平台素材。
- */
+import cityImage from '@/assets/videos/city.jpg'
+import seaImage from '@/assets/videos/sea.jpg'
+import foodImage from '@/assets/videos/food.jpg'
+import musicImage from '@/assets/videos/music.jpg'
+import roadImage from '@/assets/videos/road.jpg'
+import campusImage from '@/assets/videos/campus.jpg'
 
-export type VideoArt = 'city' | 'sea' | 'food' | 'music' | 'road' | 'campus'
+/**
+ * 虚构短视频应用「青影」的内容数据。
+ *
+ * 视频标题、作者、播放量与评论全部虚构；封面是下载到 `src/assets/videos/`
+ * 的真实照片，由 Vite 本地打包，运行时不请求外部视频或图库服务。
+ */
 
 export interface VideoItem {
   id: string
@@ -16,8 +21,16 @@ export interface VideoItem {
   duration: string
   category: string
   blurb: string
-  art: VideoArt
+  /** 本地封面照片。 */
+  image: string
+  /** 封面遮罩的渐变色。 */
   colors: [string, string]
+  /** 展示用点赞数。 */
+  likes: number
+  /** 虚构评论（打开评论面板时展示）。 */
+  comments: string[]
+  /** 底部音乐条文案。 */
+  music: string
 }
 
 export const VIDEO_CATEGORIES = ['推荐', '生活', '旅行', '音乐', '校园'] as const
@@ -31,8 +44,11 @@ export const VIDEOS: VideoItem[] = [
     duration: '04:32',
     category: '生活',
     blurb: '从终点站走回学校的那段路，藏着很多人的一天。',
-    art: 'city',
+    image: cityImage,
     colors: ['#344a7a', '#101a2e'],
+    likes: 23800,
+    comments: ['这个点地铁里真的全是故事。', '拍得好安静，像把城市调成了静音。'],
+    music: '原声 · 路灯下的小周',
   },
   {
     id: 'seaside-sunset',
@@ -42,8 +58,11 @@ export const VIDEOS: VideoItem[] = [
     duration: '02:18',
     category: '旅行',
     blurb: '没有旁白，只有浪声和一整片慢慢暗下来的天空。',
-    art: 'sea',
+    image: seaImage,
     colors: ['#f08a6a', '#734a9e'],
+    likes: 15600,
+    comments: ['看到最后那一下，突然想去海边了。', '这个颜色不用滤镜都好看。'],
+    music: '原声 · 海盐汽水',
   },
   {
     id: 'late-noodle',
@@ -53,8 +72,11 @@ export const VIDEOS: VideoItem[] = [
     duration: '06:05',
     category: '生活',
     blurb: '宿舍也能做的简单夜宵，步骤少、锅也好洗。',
-    art: 'food',
+    image: foodImage,
     colors: ['#c98a4b', '#6f3f25'],
+    likes: 9200,
+    comments: ['收藏了，明晚就试。', '看起来比外卖香。'],
+    music: '轻食厨房 · 原声',
   },
   {
     id: 'band-rehearsal',
@@ -64,8 +86,11 @@ export const VIDEOS: VideoItem[] = [
     duration: '07:44',
     category: '音乐',
     blurb: '为了迎新晚会排练的第三周，主唱终于没有忘词。',
-    art: 'music',
+    image: musicImage,
     colors: ['#7b5bd6', '#33206f'],
+    likes: 7600,
+    comments: ['主唱最后那个笑太真实了。', '求完整版！'],
+    music: '地下二层 · 排练室原声',
   },
   {
     id: 'west-sichuan-road',
@@ -75,8 +100,11 @@ export const VIDEOS: VideoItem[] = [
     duration: '10:12',
     category: '旅行',
     blurb: '山路、云海和一间没有信号的民宿。',
-    art: 'road',
+    image: roadImage,
     colors: ['#4b8f9c', '#1c3f57'],
+    likes: 32400,
+    comments: ['这路看着就晕，但好想开一次。', '没有信号的那段最治愈。'],
+    music: '一路向西 · 原声',
   },
   {
     id: 'campus-evening',
@@ -86,7 +114,10 @@ export const VIDEOS: VideoItem[] = [
     duration: '03:10',
     category: '校园',
     blurb: '下课铃、篮球场和食堂飘出来的第一阵饭香。',
-    art: 'campus',
+    image: campusImage,
     colors: ['#e7a45c', '#7c4a54'],
+    likes: 4300,
+    comments: ['我们学校也是这个点最好看。', '食堂那阵香味隔着屏幕都闻到了。'],
+    music: '校园傍晚 · 原声',
   },
 ]

@@ -82,6 +82,31 @@ const style = computed(() => ({
     </svg>
 
     <svg
+      v-else-if="id === 'phone'"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.7"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <path d="M7.2 3.8 10 4.6l1.3 4.2-2.1 1.6a13 13 0 0 0 4.4 4.4l1.6-2.1 4.2 1.3.8 2.8c.1.5-.3 1-.8 1-9 0-16-7-16-16 0-.5.5-.9.9-.8Z" />
+    </svg>
+
+    <svg
+      v-else-if="id === 'sms'"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.7"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <path d="M4.2 5h15.6v9.6H9.4L4.2 18.8Z" />
+      <path d="M8.4 9.8h.01M12 9.8h.01M15.6 9.8h.01" stroke-width="2.4" />
+    </svg>
+
+    <svg
       v-else-if="id === 'shop'"
       viewBox="0 0 24 24"
       fill="none"
@@ -201,6 +226,14 @@ const style = computed(() => ({
 
 .app__glyph--photos {
   background: linear-gradient(150deg, #f0885a, #d15f36);
+}
+
+.app__glyph--phone {
+  background: linear-gradient(150deg, #4bcb8d, #1f9f68);
+}
+
+.app__glyph--sms {
+  background: linear-gradient(150deg, #4fb6d8, #2b76b8);
 }
 
 .app__glyph--shop {

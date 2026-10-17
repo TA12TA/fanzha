@@ -1307,7 +1307,7 @@ async function main() {
       `延迟期角标数=${badgesDuringDelay}`,
     )
 
-    // 图标风格统一：九个入口（网格区 + 程序坞）尺寸与圆角一致
+    // 图标风格统一：十一个入口（网格区 + 程序坞）尺寸与圆角一致
     const iconStyles = await cdp.eval(`
       const list = [...document.querySelectorAll('.home .app .app__glyph')].map(g => {
         const cs = getComputedStyle(g);
@@ -1317,10 +1317,10 @@ async function main() {
       return list;
     `)
     const uniformIcons =
-      iconStyles.length === 9 &&
+      iconStyles.length === 11 &&
       iconStyles.every((s) => s.size === iconStyles[0].size && s.radius === iconStyles[0].radius)
     record(
-      '九个桌面入口尺寸与圆角统一（含程序坞）',
+      '十一个桌面入口尺寸与圆角统一（含程序坞）',
       uniformIcons,
       `共 ${iconStyles.length} 个，首个=${JSON.stringify(iconStyles[0])}`,
     )
@@ -1378,7 +1378,7 @@ async function main() {
       return list;
     `)
     const allBare =
-      iconNoCard.length === 9 &&
+      iconNoCard.length === 11 &&
       iconNoCard.every(
         (s) => s.border === 'none' && s.bg === 'rgba(0, 0, 0, 0)' && s.pad === '0px',
       )
@@ -1388,7 +1388,7 @@ async function main() {
       allBare ? '' : JSON.stringify(iconNoCard.slice(0, 2)),
     )
 
-    // 程序坞：磨砂玻璃 Dock 存在且含三个常用应用
+    // 程序坞：磨砂玻璃 Dock 存在且含四个必备应用
     const dockInfo = await cdp.eval(`
       const dock = document.querySelector('.dock');
       if (!dock) return null;
@@ -1400,12 +1400,13 @@ async function main() {
       };
     `)
     record(
-      '程序坞存在且含青讯/安心钱包/国家反诈中心',
+      '程序坞存在且含电话/短信/青讯/安心钱包',
       dockInfo !== null &&
-        dockInfo.labels.length === 3 &&
+        dockInfo.labels.length === 4 &&
+        dockInfo.labels.some((l) => l.includes('电话')) &&
+        dockInfo.labels.some((l) => l.includes('短信')) &&
         dockInfo.labels.some((l) => l.includes('青讯')) &&
-        dockInfo.labels.some((l) => l.includes('安心钱包')) &&
-        dockInfo.labels.some((l) => l.includes('国家反诈中心')),
+        dockInfo.labels.some((l) => l.includes('安心钱包')),
       dockInfo ? `应用=[${dockInfo.labels.join(' / ')}] blur=${dockInfo.blur}` : '无 .dock',
     )
 
@@ -1437,12 +1438,12 @@ async function main() {
     `)
     record(
       '关卡进行中不再显示「关卡」入口',
-      desktopEntries.count === 9 && desktopEntries.hasLevels === false,
+      desktopEntries.count === 11 && desktopEntries.hasLevels === false,
       `入口=${desktopEntries.labels.join(' / ')}`,
     )
     record(
-      '桌面包含购物、听歌、视频三个生活应用',
-      ['青集商城', '青听音乐', '青影'].every((name) =>
+      '桌面包含电话、短信与购物/听歌/视频应用',
+      ['电话', '短信', '青集商城', '青听音乐', '青影'].every((name) =>
         desktopEntries.labels.some((label) => label.includes(name)),
       ),
       desktopEntries.labels.join(' / '),

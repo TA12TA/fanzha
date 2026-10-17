@@ -38,9 +38,13 @@ src/
   app/levelCardText.ts         # 关卡卡片文案推导（纯函数）
   app/PhoneShell.vue           # 一部手机：状态栏、视口、底部导航、弹层
   app/navigation.ts            # 视图栈与「节点 → 场景」的通用映射，不负责剧情金额
+  scenes/PhoneScene.vue        # 电话（拨号盘/最近通话/通话界面）
+  scenes/SmsScene.vue          # 短信（收件箱/会话/本机回复/当前验证码）
   scenes/ShopScene.vue         # 青集商城（首页/搜索/详情/订单/心愿单）
   scenes/MusicScene.vue        # 青听音乐（歌单/切歌/播放/进度）
-  scenes/VideoScene.vue        # 青影（视频列表/应用内播放页/收藏）
+  scenes/VideoScene.vue        # 青影（竖屏短视频 feed/点赞/评论/收藏/分享）
+  data/phone.ts                # 虚构短号与最近通话
+  data/sms.ts                  # 虚构短信会话
   data/shop.ts                 # 商城商品与订单（虚构）
   data/music.ts                # 曲库与歌单（虚构）
   data/video.ts                # 视频列表（虚构）

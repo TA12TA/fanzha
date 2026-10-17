@@ -32,6 +32,8 @@ const LABELS: Record<AppId, string> = {
   shop: BRAND.shop,
   music: BRAND.music,
   video: BRAND.video,
+  phone: BRAND.phone,
+  sms: BRAND.sms,
 }
 </script>
 

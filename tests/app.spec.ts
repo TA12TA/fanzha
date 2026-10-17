@@ -1142,12 +1142,14 @@ describe('M. 音效覆盖：没有静音按钮', () => {
     expect(audio.count(), '解锁应出声').toBeGreaterThan(before)
   })
 
-  it('M02 桌面九个入口每一个都有音效', async () => {
-    // 九个入口点击后都会切视图，因此每个都用全新挂载，避免互相影响
+  it('M02 桌面十一个入口每一个都有音效', async () => {
+    // 十一个入口点击后都会切视图，因此每个都用全新挂载，避免互相影响
     for (const label of [
       '青讯',
       '安心钱包',
       '国家反诈中心',
+      '电话',
+      '短信',
       '青集商城',
       '青听音乐',
       '青影',
@@ -1259,19 +1261,19 @@ describe('M. 音效覆盖：没有静音按钮', () => {
  * （具体的尺寸/圆角/毛玻璃在真实浏览器由 verify-edge.mjs 断言。）
  */
 describe('N. 桌面外观（真实手机样式）', () => {
-  const dockLabels = ['青讯', '安心钱包', '国家反诈中心']
-  const gridLabels = ['青集商城', '青听音乐', '青影', '相册', '通知', '设置']
+  const dockLabels = ['电话', '短信', '青讯', '安心钱包']
+  const gridLabels = ['青集商城', '青听音乐', '青影', '相册', '通知', '设置', '国家反诈中心']
 
-  it('N01 图标分布在程序坞与网格区，九个入口一个不少', async () => {
+  it('N01 图标分布在程序坞与网格区，十一个入口一个不少', async () => {
     const wrapper = await mountApp()
     await swipeUnlock(wrapper)
 
     const dock = wrapper.findAll('.dock .app')
     const grid = wrapper.findAll('.apps .app')
-    expect(dock.length, '程序坞应有 3 个应用').toBe(3)
-    expect(grid.length, '网格区应有 6 个入口').toBe(6)
+    expect(dock.length, '程序坞应有 4 个应用').toBe(4)
+    expect(grid.length, '网格区应有 7 个入口').toBe(7)
 
-    // 九个入口恰好各出现一次，没有重复也没有遗漏
+    // 十一个入口恰好各出现一次，没有重复也没有遗漏
     const labels = [...dock, ...grid].map((b) => b.text().replace(/\s+/g, ''))
     for (const label of [...dockLabels, ...gridLabels]) {
       expect(labels.filter((l) => l.includes(label)), `「${label}」应恰好出现一次`).toHaveLength(1)
@@ -1284,7 +1286,7 @@ describe('N. 桌面外观（真实手机样式）', () => {
     await swipeUnlock(wrapper)
 
     const buttons = wrapper.findAll('.home .app')
-    expect(buttons.length).toBe(9)
+    expect(buttons.length).toBe(11)
     for (const btn of buttons) {
       // 图标容器只包含「图标 + 标签（+ 角标）」，不应再有卡片式的额外结构
       const classes = btn.classes()
@@ -1931,21 +1933,28 @@ describe('P. 常用生活应用', () => {
     expect(wrapper.find('.player__title').text(), '播放器应切到新歌').toContain('山城夜行')
   })
 
-  it('P03 视频：打开播放页、收藏并返回', async () => {
+  it('P03 青影：竖向短视频可点赞、评论与分享', async () => {
     const wrapper = await mountApp()
     await swipeUnlock(wrapper)
     await clickDesktopApp(wrapper, '青影')
 
     expect(wrapper.find('.video').exists(), '应打开青影').toBe(true)
-    const video = wrapper.findAll('.featured, .vcard')[0]
-    expect(video, '应能看到视频卡片').toBeTruthy()
-    await video!.trigger('click')
-    expect(wrapper.find('.player').exists(), '应打开播放页').toBe(true)
+    expect(wrapper.findAll('.clip').length, '应有一屏一条的短视频').toBeGreaterThanOrEqual(6)
+    expect(wrapper.find('.clip__image').exists(), '短视频应使用真实封面图').toBe(true)
 
-    await wrapper.find('.player__like').trigger('click')
-    expect(wrapper.find('.player__like').text(), '收藏后应变成实心').toBe('♥')
-    await wrapper.find('.player__back').trigger('click')
-    expect(wrapper.find('.player').exists(), '关闭后应回到视频列表').toBe(false)
+    const like = wrapper.find('button[aria-label="点赞"]')
+    await like.trigger('click')
+    expect(wrapper.find('button[aria-label="取消点赞"]').exists(), '点赞后应可取消').toBe(true)
+
+    await wrapper.find('button[aria-label="评论"]').trigger('click')
+    expect(wrapper.find('.sheet').exists(), '应打开评论面板').toBe(true)
+    expect(wrapper.text()).toContain('这个点地铁里真的全是故事')
+    await wrapper.find('button[aria-label="关闭评论"]').trigger('click')
+
+    await wrapper.find('button[aria-label="分享"]').trigger('click')
+    expect(wrapper.find('.sheet').exists(), '应打开分享面板').toBe(true)
+    expect(wrapper.text()).toContain('分享给')
+    await wrapper.find('button[aria-label="关闭分享"]').trigger('click')
   })
 
   it('P05 订单核验在购物 App 里完成，并记录一次线索', async () => {
@@ -1990,6 +1999,70 @@ describe('P. 常用生活应用', () => {
     expect(wrapper.text()).toContain('陵水县政府网')
     expect(wrapper.text()).toContain('天津理工大学')
     expect(wrapper.findAll('a').length, '案例卡不应包含可点击外链').toBe(0)
+  })
+
+  it('P08 电话：拨号盘与通话界面可用', async () => {
+    const wrapper = await mountApp()
+    await swipeUnlock(wrapper)
+    await clickDesktopApp(wrapper, '电话')
+
+    expect(wrapper.find('.phone').exists(), '应打开电话应用').toBe(true)
+    for (const digit of ['6', '6', '1']) {
+      const key = wrapper.findAll('.key').find((item) => item.text().includes(digit))
+      expect(key, `应能按 ${digit}`).toBeTruthy()
+      await key!.trigger('click')
+    }
+    expect(wrapper.find('.dial__number').text()).toContain('661')
+
+    await wrapper.find('.dialbtn').trigger('click')
+    expect(wrapper.find('.call').exists(), '应出现通话界面').toBe(true)
+    expect(wrapper.text()).toContain('正在呼叫')
+    await wrapper.find('.call__end').trigger('click')
+    expect(wrapper.find('.call').exists(), '挂断后应关闭通话界面').toBe(false)
+  })
+
+  it('P09 短信：收件箱、会话与本机回复', async () => {
+    const wrapper = await mountApp()
+    await swipeUnlock(wrapper)
+    await clickDesktopApp(wrapper, '短信')
+
+    expect(wrapper.find('.sms').exists(), '应打开短信应用').toBe(true)
+    expect(wrapper.text()).toContain('青集商城')
+    expect(wrapper.text()).toContain('安心钱包')
+    expect(
+      wrapper.findAll('.thread').length,
+      '收件箱里应有很多日常短信，而不是只有剧情相关几条',
+    ).toBeGreaterThanOrEqual(10)
+
+    const wallet = wrapper.findAll('.thread').find((item) => item.text().includes('安心钱包'))
+    expect(wallet, '应能找到安心钱包短信').toBeTruthy()
+    await wallet!.trigger('click')
+    expect(wrapper.text()).toContain('任何客服都不会索要短信验证码')
+
+    const input = wrapper.find('.composer__input')
+    await input.setValue('好的')
+    await wrapper.find('.composer').trigger('submit')
+    expect(wrapper.text(), '本机回复应出现在会话里').toContain('好的')
+  })
+
+  it('P10 短信应用显示当前剧情验证码', async () => {
+    const wrapper = await mountApp({ atDesk: true })
+    await tapPhone(wrapper, 1)
+    await swipeUnlock(wrapper)
+    await clickDesktopApp(wrapper, '青讯')
+    await click(wrapper, '按他说的做')
+    await flush()
+    await click(wrapper, '确认转出 200 元')
+    await flush()
+    await dismissAntifraud(wrapper)
+
+    // 离开聊天去短信应用看：验证码应出现在「安心钱包」会话里
+    await click(wrapper, '桌面')
+    await clickDesktopApp(wrapper, '短信')
+    const wallet = wrapper.findAll('.thread').find((item) => item.text().includes('安心钱包'))
+    expect(wallet, '应能找到安心钱包短信').toBeTruthy()
+    await wallet!.trigger('click')
+    expect(wrapper.text(), '短信里应有 6 位验证码').toMatch(/校验码 \d{6}/)
   })
 
   it('P04 误刷新保护：关卡开始后才拦截 beforeunload', async () => {

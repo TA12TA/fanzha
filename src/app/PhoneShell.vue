@@ -12,10 +12,12 @@ import HomeScene from '@/scenes/HomeScene.vue'
 import IntroScene from '@/scenes/IntroScene.vue'
 import ManualScene from '@/scenes/ManualScene.vue'
 import MusicScene from '@/scenes/MusicScene.vue'
+import PhoneScene from '@/scenes/PhoneScene.vue'
 import PlainAppScene from '@/scenes/PlainAppScene.vue'
 import ReviewScene from '@/scenes/ReviewScene.vue'
 import SettingsScene from '@/scenes/SettingsScene.vue'
 import ShopScene from '@/scenes/ShopScene.vue'
+import SmsScene from '@/scenes/SmsScene.vue'
 import VideoScene from '@/scenes/VideoScene.vue'
 import WalletScene from '@/scenes/WalletScene.vue'
 import {
@@ -90,6 +92,8 @@ type ViewId =
   | 'shop'
   | 'music'
   | 'video'
+  | 'phone'
+  | 'sms'
 
 const game = useGame(props.level.meta.id)
 const { state } = game
@@ -146,6 +150,8 @@ const APP_IDS: AppId[] = [
   'shop',
   'music',
   'video',
+  'phone',
+  'sms',
 ]
 
 /** 把当前视图收敛成「应用 id」；不是应用时返回 null。 */
@@ -968,6 +974,8 @@ onBeforeUnmount(() => {
           </div>
         </section>
 
+        <PhoneScene v-else-if="view === 'phone'" @back="goBack" />
+        <SmsScene v-else-if="view === 'sms'" :code-sms="codeSmsText" @back="goBack" />
         <ShopScene v-else-if="view === 'shop'" :initial-tab="shopTab" @back="goBack" />
         <MusicScene v-else-if="view === 'music'" @back="goBack" />
         <VideoScene v-else-if="view === 'video'" @back="goBack" />

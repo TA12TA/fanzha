@@ -240,10 +240,10 @@ try {
     lockedBefore && !home.hasLock && home.hasHome,
     `解锁前锁屏=${lockedBefore} 解锁后桌面=${home.hasHome}`,
   )
-  record('桌面九个入口齐全（网格 + 程序坞）', home.apps.length === 9, home.apps.join(' / '))
+  record('桌面十一个入口齐全（网格 + 程序坞）', home.apps.length === 11, home.apps.join(' / '))
   record('桌面含国家反诈中心', home.apps.some((a) => a.includes('国家反诈中心')))
   record('桌面不含关卡入口', !home.apps.some((a) => a.includes('关卡')))
-  record('程序坞有三个常用应用', home.dockCount === 3, `dock=${home.dockCount}`)
+  record('程序坞有四个必备应用', home.dockCount === 4, `dock=${home.dockCount}`)
   record(
     '底部为三大金刚键',
     home.navs.join(',') === '返回上一层,回到桌面,最近任务',
