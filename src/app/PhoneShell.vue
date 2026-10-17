@@ -11,9 +11,12 @@ import EndingScene from '@/scenes/EndingScene.vue'
 import HomeScene from '@/scenes/HomeScene.vue'
 import IntroScene from '@/scenes/IntroScene.vue'
 import ManualScene from '@/scenes/ManualScene.vue'
+import MusicScene from '@/scenes/MusicScene.vue'
 import PlainAppScene from '@/scenes/PlainAppScene.vue'
 import ReviewScene from '@/scenes/ReviewScene.vue'
 import SettingsScene from '@/scenes/SettingsScene.vue'
+import ShopScene from '@/scenes/ShopScene.vue'
+import VideoScene from '@/scenes/VideoScene.vue'
 import WalletScene from '@/scenes/WalletScene.vue'
 import {
   chatViewForNode,
@@ -24,6 +27,7 @@ import {
   startOptionOf,
   type AppId,
   type ChatView,
+  type PlainAppId,
 } from '@/app/navigation'
 import { useNotifications } from '@/app/notifications'
 import { useSettings } from '@/app/settings'
@@ -83,6 +87,9 @@ type ViewId =
   | 'photos'
   | 'notifications'
   | 'settings'
+  | 'shop'
+  | 'music'
+  | 'video'
 
 const game = useGame(props.level.meta.id)
 const { state } = game
@@ -98,7 +105,6 @@ watch(
 
 const view = ref<ViewId>(state.value.node === props.level.startNode ? 'intro' : 'home')
 const profileOpen = ref(false)
-const detailOpen = ref(false)
 const confirmRestart = ref(false)
 const confirmClearAll = ref(false)
 /** 最近任务面板是否展开（Android 三大金刚键的第三个键）。 */
@@ -126,8 +132,21 @@ const transitionKind = ref<'unlock' | 'app'>('app')
  */
 const photosKey = ref(0)
 
-/** 六个真正的应用（结局/复盘/桌面/锁屏不算应用）。 */
-const APP_IDS: AppId[] = ['chat', 'wallet', 'manual', 'photos', 'notifications', 'settings']
+/** 商城的初始页：从订单入口进入时直接落到「订单」。 */
+const shopTab = ref<'home' | 'orders'>('home')
+
+/** 九个真正的应用（结局/复盘/桌面/锁屏不算应用）。 */
+const APP_IDS: AppId[] = [
+  'chat',
+  'wallet',
+  'manual',
+  'photos',
+  'notifications',
+  'settings',
+  'shop',
+  'music',
+  'video',
+]
 
 /** 把当前视图收敛成「应用 id」；不是应用时返回 null。 */
 function asAppId(value: ViewId): AppId | null {
@@ -363,12 +382,6 @@ function closeProfile(): void {
   profileOpen.value = false
 }
 
-/** 关闭详情弹层（订单等）。 */
-function closeDetail(): void {
-  playSound('tap')
-  detailOpen.value = false
-}
-
 /** 设置里关掉顶部横幅时，立即收起当前通知。 */
 watch(
   () => settings.value.banner,
@@ -494,7 +507,6 @@ function submit(optionId: OptionId): void {
   const accepted = game.dispatch(optionId)
   if (accepted) {
     profileOpen.value = false
-    detailOpen.value = false
     // 开场解锁：先让玩家看到桌面与开场通知，不直接跳进会话。
     if (optionId === startOptionOf(props.level)) {
       view.value = 'home'
@@ -540,7 +552,6 @@ function goHome(): void {
   playSound('tap')
   view.value = 'home'
   profileOpen.value = false
-  detailOpen.value = false
   recentsOpen.value = false
 }
 
@@ -567,10 +578,6 @@ function goBack(): void {
     closeProfile()
     return
   }
-  if (detailOpen.value) {
-    closeDetail()
-    return
-  }
   if (view.value === 'home' || view.value === 'intro') return
   // 消息应用内逐层退：会话 → 会话列表 → 桌面。
   if (view.value === 'chat') {
@@ -589,12 +596,17 @@ function openProfile(): void {
   if (entry?.option) game.dispatch(entry.option)
 }
 
-/** 打开详情弹层（订单等）：同样只记录一次线索，不影响余额。 */
+/**
+ * 聊天里的「订单详情」：不在聊天里弹一张转述卡，而是切到购物 App 的订单页。
+ * 这是本作的教学重点之一 —— 订单问题要回到自己的购物 App 核实，
+ * 不要听信聊天里的「客服」。只记录一次线索，不影响余额。
+ */
 function openDetail(): void {
   playSound('tap')
-  detailOpen.value = true
   const option = props.level.chat.detailSheet?.option
   if (option) game.dispatch(option)
+  shopTab.value = 'orders'
+  view.value = 'shop'
 }
 
 function requestRestart(): void {
@@ -614,7 +626,6 @@ function doRestart(): void {
   resetClassGroupNews()
   confirmRestart.value = false
   profileOpen.value = false
-  detailOpen.value = false
   notices.clear()
   noticesReadAt.value = 0
   view.value = 'intro'
@@ -638,15 +649,16 @@ function openOutcome(): void {
   view.value = state.value.node === props.level.debriefNode ? 'review' : 'result'
 }
 
-/** 只读应用（相册 / 通知中心）。 */
-function openPlain(target: 'photos' | 'notifications'): void {
+/** 只读/轻交互应用（相册、通知、商城、音乐、视频）。 */
+function openPlain(target: PlainAppId): void {
   if (target === 'photos') {
     // 相册走自己的入口：每次都从网格开始
     openPhotos()
     return
   }
   playSound('tap')
-  markNoticesRead()
+  if (target === 'notifications') markNoticesRead()
+  if (target === 'shop') shopTab.value = 'home'
   view.value = target
 }
 
@@ -743,8 +755,6 @@ function onPopState(): void {
     confirmClearAll.value = false
   } else if (profileOpen.value) {
     profileOpen.value = false
-  } else if (detailOpen.value) {
-    detailOpen.value = false
   } else if (view.value !== 'home' && view.value !== 'intro') {
     view.value = 'home'
   }
@@ -752,14 +762,28 @@ function onPopState(): void {
   globalThis.history.pushState({ phone: true }, '')
 }
 
+/**
+ * 误刷新保护：关卡已经开始且尚未结束时，关闭/刷新页面会触发浏览器的
+ * 离开确认。移动端另外用 CSS 的 `overscroll-behavior` 关掉下拉刷新。
+ *
+ * 真正的进度保证仍来自「每次 dispatch 立即写存档」，这里只是减少误触。
+ */
+function onBeforeUnload(event: BeforeUnloadEvent): void {
+  if (state.value.node === props.level.startNode || state.value.ending) return
+  event.preventDefault()
+  event.returnValue = ''
+}
+
 onMounted(() => {
   globalThis.history.pushState({ phone: true }, '')
   historyGuardActive = true
   globalThis.addEventListener('popstate', onPopState)
+  globalThis.addEventListener('beforeunload', onBeforeUnload)
 })
 
 onBeforeUnmount(() => {
   globalThis.removeEventListener('popstate', onPopState)
+  globalThis.removeEventListener('beforeunload', onBeforeUnload)
   if (historyGuardActive) historyGuardActive = false
   notices.dispose()
 })
@@ -836,7 +860,6 @@ onBeforeUnmount(() => {
           :level="level"
           :session="chatView === 'list' ? null : chatView"
           :profile-open="profileOpen"
-          :detail-open="detailOpen"
           :code-gate="activeCodeGate"
           :code-attempts="codeAttempts"
           :code-sms="settings.banner ? '' : codeSmsText"
@@ -847,7 +870,6 @@ onBeforeUnmount(() => {
           @open-profile="openProfile"
           @close-profile="closeProfile"
           @open-detail="openDetail"
-          @close-detail="closeDetail"
           @back="backFromChat"
           @open-wallet="openWallet"
         />
@@ -946,6 +968,9 @@ onBeforeUnmount(() => {
           </div>
         </section>
 
+        <ShopScene v-else-if="view === 'shop'" :initial-tab="shopTab" @back="goBack" />
+        <MusicScene v-else-if="view === 'music'" @back="goBack" />
+        <VideoScene v-else-if="view === 'video'" @back="goBack" />
         <PlainAppScene v-else-if="view === 'photos'" :key="photosKey" @back="goBack" />
       </div>
     </main>

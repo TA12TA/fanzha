@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import AppHeader from '@/components/AppHeader.vue'
 import { BRAND, MANUAL_GENERAL } from '@/data/levels/shared'
+import { REAL_CASES } from '@/data/antifraud'
 import { hasOutcome } from '@/app/navigation'
 import antifraudLogo from '@/assets/antifraud-logo.png'
 import type { PlayableLevel } from '@/game/level'
@@ -54,6 +55,16 @@ const emit = defineEmits<{
         <li v-for="item in MANUAL_GENERAL.items" :key="item.title" class="card">
           <h3 class="manual__itemtitle">{{ item.title }}</h3>
           <p class="manual__itemtext">{{ item.body }}</p>
+        </li>
+      </ul>
+
+      <h2 class="manual__title">真实案例</h2>
+      <ul class="manual__list" aria-label="真实案例">
+        <li v-for="item in REAL_CASES" :key="item.id" class="card case">
+          <h3 class="manual__itemtitle">{{ item.title }}</h3>
+          <p class="manual__itemtext">{{ item.body }}</p>
+          <p class="case__takeaway">{{ item.takeaway }}</p>
+          <p class="case__source">来源：{{ item.source }}</p>
         </li>
       </ul>
 
@@ -191,6 +202,28 @@ const emit = defineEmits<{
   font-size: var(--font-sm);
   line-height: 1.6;
   color: var(--c-text-soft);
+}
+
+.case {
+  border-left: 3px solid var(--c-primary);
+}
+
+.case__takeaway {
+  margin-top: var(--space-2);
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--c-primary-soft);
+  color: var(--c-text);
+  font-size: var(--font-xs);
+  font-weight: 600;
+  line-height: 1.6;
+}
+
+.case__source {
+  margin-top: var(--space-2);
+  color: var(--c-text-tertiary);
+  font-size: 11px;
+  line-height: 1.5;
 }
 
 .manual__outcome {

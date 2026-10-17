@@ -1,6 +1,6 @@
 # 《反诈局中局：你的手机》协作规约
 
-适用范围：本仓库全部文件。接手开发的模型/开发者先读 `README.md`、`LEVELS.md`、`LEVEL-01.md`、`LEVEL-02.md`、`DEVELOPMENT.md`、`SCENES.md`、`ACCEPTANCE.md`，再修改项目。当前状态：**多关卡结构** —— 第一关「刷单返利」与第二关「冒充客服退款」可玩，第三关「冒充公检法」仅有元数据（大厅里是锁定卡，无剧情）。此文件是开发约束，不是已完成的功能声明。
+适用范围：本仓库全部文件。接手开发的模型/开发者先读 `README.md`、`LEVELS.md`、`LEVEL-01.md`、`LEVEL-02.md`、`DEVELOPMENT.md`、`SCENES.md`、`ACCEPTANCE.md`、`CASES.md`，再修改项目。当前状态：**多关卡结构** —— 第一关「刷单返利」与第二关「冒充客服退款」可玩，第三关「冒充公检法」仅有元数据（大厅里是锁定卡，无剧情）。此文件是开发约束，不是已完成的功能声明。
 
 ## 1. 产品边界（必须遵守，任何关卡都不例外）
 
@@ -25,7 +25,7 @@
 
 入口链：`index.html` → `src/main.ts` → `src/App.vue` → `src/app/AppShell.vue`。别名 `@` = `src/`。
 
-- `src/data/levels/`：剧情与文案的唯一来源。`level01.ts`（刷单返利）、`level02.ts`（冒充客服退款）可玩；`level03.ts` 只有 `coming-soon` 元数据；`index.ts` 是唯一注册表（`LEVELS`、`DEFAULT_LEVEL_ID`、`getPlayableLevel`、`requireLevel`）；`shared.ts` 是两关共用的虚构世界（品牌、妈妈转账、班级群）。
+- `src/data/levels/`：剧情与文案的唯一来源。`level01.ts`（刷单返利）、`level02.ts`（冒充客服退款）可玩；`level03.ts` 只有 `coming-soon` 元数据；`index.ts` 是唯一注册表（`LEVELS`、`DEFAULT_LEVEL_ID`、`getPlayableLevel`、`requireLevel`）；`shared.ts` 是两关共用的虚构世界（品牌、妈妈转账、班级群）。`src/data/shop.ts` / `music.ts` / `video.ts` 是桌面生活应用的虚构数据；`CASES.md` 记录真实案例来源。
 - `src/game/level.ts`：关卡契约 `defineLevel`（节点、转移、会话规格、金额口径 `validBalances` / `platformRequiresPaid`、复盘、提醒）。新增关卡只实现这个契约，引擎和场景不认具体关卡。
 - `src/game/engine.ts`：纯状态机。`createInitialState` / `choose` / `isStateConsistent`；所有金额变化只在 `applyEffect` 内发生一次。`STATE_VERSION` 必须与 `src/game/storage.ts` 的 `SAVE_VERSION` 锁步。
 - `src/game/storage.ts`：版本化 localStorage，**每关一个槽** `fj-juzhongju:save:v2:<levelId>`；`parseSave` 逐字段校验节点/选项/金额不变式，坏档只清该关并回退开场。

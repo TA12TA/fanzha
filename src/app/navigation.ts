@@ -10,7 +10,19 @@ import type { NodeId, OptionId } from '@/game/types'
  */
 
 /** 可打开的应用。 */
-export type AppId = 'chat' | 'wallet' | 'manual' | 'photos' | 'notifications' | 'settings'
+export type AppId =
+  | 'chat'
+  | 'wallet'
+  | 'manual'
+  | 'photos'
+  | 'notifications'
+  | 'settings'
+  | 'shop'
+  | 'music'
+  | 'video'
+
+/** 只读/轻交互应用：从桌面的通用入口打开。 */
+export type PlainAppId = 'photos' | 'notifications' | 'shop' | 'music' | 'video'
 
 /**
  * 消息应用内部的子视图。

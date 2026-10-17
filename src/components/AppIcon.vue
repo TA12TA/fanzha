@@ -82,6 +82,48 @@ const style = computed(() => ({
     </svg>
 
     <svg
+      v-else-if="id === 'shop'"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.7"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <path d="M4.6 8.4h14.8l-1.3 11.2H5.9Z" />
+      <path d="M8.9 8.4V6.6a3.1 3.1 0 0 1 6.2 0v1.8" />
+      <path d="M9.2 12.4h5.6" opacity=".7" />
+    </svg>
+
+    <svg
+      v-else-if="id === 'music'"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.7"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <path d="M9.2 17.6V6.4l9.1-2v11.2" />
+      <path d="M9.2 9.5l9.1-2" />
+      <circle cx="6.9" cy="18" r="2.3" />
+      <circle cx="16" cy="16" r="2.3" />
+    </svg>
+
+    <svg
+      v-else-if="id === 'video'"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.7"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      <rect x="3.2" y="5.4" width="17.6" height="13.2" rx="2.6" />
+      <path d="m10 9.4 4.8 2.6-4.8 2.6Z" fill="currentColor" stroke="none" />
+    </svg>
+
+    <svg
       v-else-if="id === 'levels'"
       viewBox="0 0 24 24"
       fill="none"
@@ -159,6 +201,18 @@ const style = computed(() => ({
 
 .app__glyph--photos {
   background: linear-gradient(150deg, #f0885a, #d15f36);
+}
+
+.app__glyph--shop {
+  background: linear-gradient(150deg, #f1785f, #c94a45);
+}
+
+.app__glyph--music {
+  background: linear-gradient(150deg, #a77bf3, #6d45c9);
+}
+
+.app__glyph--video {
+  background: linear-gradient(150deg, #38bcc9, #137c99);
 }
 
 /* 关卡入口：用紫罗兰色与六个应用区分开（它不是一个「应用」） */

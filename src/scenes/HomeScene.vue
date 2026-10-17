@@ -5,6 +5,7 @@ import { BRAND } from '@/data/levels/shared'
 import { resumeLabel } from '@/game/engine'
 import { hasOutcome, isPendingPayment, pendingAmount } from '@/app/navigation'
 import { useBeijingClock } from '@/app/clock'
+import type { PlainAppId } from '@/app/navigation'
 import type { PlayableLevel } from '@/game/level'
 import type { GameState } from '@/game/types'
 
@@ -41,7 +42,7 @@ const emit = defineEmits<{
   (e: 'open-chat'): void
   (e: 'open-wallet'): void
   (e: 'open-manual'): void
-  (e: 'open-app', app: 'photos' | 'notifications'): void
+  (e: 'open-app', app: PlainAppId): void
   (e: 'open-settings'): void
   (e: 'resume'): void
   (e: 'restart'): void
@@ -63,6 +64,9 @@ const dockApps = [
  * 避免玩到一半误触切关。
  */
 const gridApps = [
+  { id: 'shop', label: BRAND.shop, hint: '打开青集商城' },
+  { id: 'music', label: BRAND.music, hint: '打开青听音乐' },
+  { id: 'video', label: BRAND.video, hint: '打开青影' },
   { id: 'photos', label: '相册', hint: '打开相册' },
   { id: 'notifications', label: '通知', hint: '打开通知' },
   { id: 'settings', label: '设置', hint: '打开设置' },
@@ -76,7 +80,7 @@ function onAppClick(id: (typeof allApps)[number]['id']): void {
   else if (id === 'wallet') emit('open-wallet')
   else if (id === 'manual') emit('open-manual')
   else if (id === 'settings') emit('open-settings')
-  else emit('open-app', id)
+  else emit('open-app', id as PlainAppId)
 }
 
 /** 桌面「继续当前事项」文案；仅导航，不自动选择剧情。 */

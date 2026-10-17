@@ -7,6 +7,13 @@ body {
   margin: 0;
   padding: 0;
   height: 100%;
+  /*
+   * 整个 H5 是一个固定的手机视口：页面本身不滚动，滚动发生在应用内部。
+   * `overscroll-behavior: none` 关掉移动端的滚动链与下拉刷新，避免玩家
+   * 在聊天/列表顶部继续下拉时把整页刷新掉。
+   */
+  overflow: hidden;
+  overscroll-behavior: none;
   background: var(--c-bg-outer);
   color: var(--c-text);
   font-family:
@@ -24,7 +31,15 @@ body {
   -webkit-text-size-adjust: 100%;
 }
 
+body {
+  /* iOS 上同时用 fixed 锁住视口，减少顶部/底部橡皮筋触发刷新的机会 */
+  position: fixed;
+  inset: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
 #app {
+  height: 100%;
   min-height: 100%;
 }
 

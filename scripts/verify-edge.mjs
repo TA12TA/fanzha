@@ -95,6 +95,17 @@ class Cdp {
     this.pending = new Map()
     ws.addEventListener('message', (event) => {
       const msg = JSON.parse(event.data)
+
+      /*
+       * 关卡进行中刷新会触发 beforeunload 确认，这是产品行为。
+       * 验证脚本在「桌面」量完布局后要重新导航；不自动接受的话，
+       * 原生确认框会把 Page.navigate 卡到超时。
+       */
+      if (msg.method === 'Page.javascriptDialogOpening') {
+        this.send('Page.handleJavaScriptDialog', { accept: true }).catch(() => {})
+        return
+      }
+
       if (msg.id && this.pending.has(msg.id)) {
         const { resolve, reject } = this.pending.get(msg.id)
         this.pending.delete(msg.id)
@@ -354,6 +365,26 @@ async function main() {
      * 这一版的大厅是「书桌」：桌上平放几部手机，**没有手机外框**
      * （没有状态栏、没有底部导航），点一部手机 → 旋转放大转场 → 该关锁屏。
      */
+    /*
+     * 移动端视口保护：页面本身不滚动、下拉刷新被关掉。
+     * 这不是靠 JS 阻挡（会破坏内部列表滚动），而是根节点的 CSS。
+     */
+    const viewportGuard = await cdp.eval(`
+      const cs = getComputedStyle(document.body);
+      return {
+        overflow: cs.overflow,
+        overscroll: cs.overscrollBehaviorY || cs.overscrollBehavior,
+        position: cs.position,
+      };
+    `)
+    record(
+      '移动端锁定视口并关闭下拉刷新',
+      viewportGuard.overflow === 'hidden' &&
+        viewportGuard.overscroll === 'none' &&
+        viewportGuard.position === 'fixed',
+      JSON.stringify(viewportGuard),
+    )
+
     const firstScreen = await cdp.eval(`
       const phones = [...document.querySelectorAll('.deskphone')];
       const ret = [...document.querySelectorAll('button')].find(b => (b.textContent||'').includes('返回当前关卡'));
@@ -1276,7 +1307,7 @@ async function main() {
       `延迟期角标数=${badgesDuringDelay}`,
     )
 
-    // 图标风格统一：六个入口（网格区 + 程序坞）尺寸与圆角一致
+    // 图标风格统一：九个入口（网格区 + 程序坞）尺寸与圆角一致
     const iconStyles = await cdp.eval(`
       const list = [...document.querySelectorAll('.home .app .app__glyph')].map(g => {
         const cs = getComputedStyle(g);
@@ -1286,10 +1317,10 @@ async function main() {
       return list;
     `)
     const uniformIcons =
-      iconStyles.length === 6 &&
+      iconStyles.length === 9 &&
       iconStyles.every((s) => s.size === iconStyles[0].size && s.radius === iconStyles[0].radius)
     record(
-      '六个桌面入口尺寸与圆角统一（含程序坞）',
+      '九个桌面入口尺寸与圆角统一（含程序坞）',
       uniformIcons,
       `共 ${iconStyles.length} 个，首个=${JSON.stringify(iconStyles[0])}`,
     )
@@ -1347,7 +1378,7 @@ async function main() {
       return list;
     `)
     const allBare =
-      iconNoCard.length === 6 &&
+      iconNoCard.length === 9 &&
       iconNoCard.every(
         (s) => s.border === 'none' && s.bg === 'rgba(0, 0, 0, 0)' && s.pad === '0px',
       )
@@ -1406,8 +1437,15 @@ async function main() {
     `)
     record(
       '关卡进行中不再显示「关卡」入口',
-      desktopEntries.count === 6 && desktopEntries.hasLevels === false,
+      desktopEntries.count === 9 && desktopEntries.hasLevels === false,
       `入口=${desktopEntries.labels.join(' / ')}`,
+    )
+    record(
+      '桌面包含购物、听歌、视频三个生活应用',
+      ['青集商城', '青听音乐', '青影'].every((name) =>
+        desktopEntries.labels.some((label) => label.includes(name)),
+      ),
+      desktopEntries.labels.join(' / '),
     )
 
     await cdp.send('Page.navigate', { url: BASE })

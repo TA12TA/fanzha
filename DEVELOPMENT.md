@@ -23,6 +23,7 @@
 - 核心交互是「看到通知 → 点通知 → 在聊天中打开任务 → 切到模拟钱包确认/取消 → 回到聊天查看结果 → 在手机内复盘」，但**这只是可选主线，不是必须依次停留的锁定流程**。开场后玩家可随时回桌面、切换应用、查看手机内其他可点区域，回来后从原节点继续；剧情只由明确的剧情选择推进。
 - 必须有手机桌面、顶层模拟状态栏、应用界面层、底部导航/返回方式。移动端网页直接占满可见视口；桌面预览时只在中央展示手机尺寸的内容（可有外侧背景），**移动端不能出现套娃式第二个手机外框**。
 - 不声称控制真手机系统。状态栏时间/电量/信号为游戏 UI，不访问系统通知/短信/通话权限，退出/返回仅导航游戏内部。虚构品牌遵循 `AGENTS.md`。**不再挂「模拟标识 / 无真实交易声明」**（2026-10-17 取消）：整个网站本身就是模拟叙事，约束改为"根本不做真实的事"，而不是"做了再挂个牌子"。
+- **移动端视口**：`html/body` 固定为视口高度并 `overflow: hidden`、`overscroll-behavior: none`，滚动只发生在应用内部；关卡开始后注册 `beforeunload` 离开确认。新增应用必须自己提供内部滚动容器，不要在页面级制造滚动或下拉刷新。
 
 ## 2. 技术和建议目录
 
@@ -37,6 +38,12 @@ src/
   app/levelCardText.ts         # 关卡卡片文案推导（纯函数）
   app/PhoneShell.vue           # 一部手机：状态栏、视口、底部导航、弹层
   app/navigation.ts            # 视图栈与「节点 → 场景」的通用映射，不负责剧情金额
+  scenes/ShopScene.vue         # 青集商城（首页/搜索/详情/订单/心愿单）
+  scenes/MusicScene.vue        # 青听音乐（歌单/切歌/播放/进度）
+  scenes/VideoScene.vue        # 青影（视频列表/应用内播放页/收藏）
+  data/shop.ts                 # 商城商品与订单（虚构）
+  data/music.ts                # 曲库与歌单（虚构）
+  data/video.ts                # 视频列表（虚构）
   game/level.ts                # 关卡契约：defineLevel / validateLevel / collectLevelText
   game/engine.ts               # choose(state, optionId) 统一剧情事务（按 state.levelId 解析）
   game/types.ts                # 剧情状态、动作、节点与效果类型

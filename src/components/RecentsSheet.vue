@@ -29,6 +29,9 @@ const LABELS: Record<AppId, string> = {
   photos: '相册',
   notifications: '通知',
   settings: '设置',
+  shop: BRAND.shop,
+  music: BRAND.music,
+  video: BRAND.video,
 }
 </script>
 

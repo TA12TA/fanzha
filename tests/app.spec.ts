@@ -1141,9 +1141,19 @@ describe('M. 音效覆盖：没有静音按钮', () => {
     expect(audio.count(), '解锁应出声').toBeGreaterThan(before)
   })
 
-  it('M02 桌面六个入口每一个都有音效', async () => {
-    // 六个入口点击后都会切视图，因此每个都用全新挂载，避免互相影响
-    for (const label of ['青讯', '安心钱包', '国家反诈中心', '相册', '通知', '设置']) {
+  it('M02 桌面九个入口每一个都有音效', async () => {
+    // 九个入口点击后都会切视图，因此每个都用全新挂载，避免互相影响
+    for (const label of [
+      '青讯',
+      '安心钱包',
+      '国家反诈中心',
+      '青集商城',
+      '青听音乐',
+      '青影',
+      '相册',
+      '通知',
+      '设置',
+    ]) {
       const wrapper = await mountApp()
       await swipeUnlock(wrapper)
       const before = audio.count()
@@ -1249,18 +1259,18 @@ describe('M. 音效覆盖：没有静音按钮', () => {
  */
 describe('N. 桌面外观（真实手机样式）', () => {
   const dockLabels = ['青讯', '安心钱包', '国家反诈中心']
-  const gridLabels = ['相册', '通知', '设置']
+  const gridLabels = ['青集商城', '青听音乐', '青影', '相册', '通知', '设置']
 
-  it('N01 图标分布在程序坞与网格区，六个入口一个不少', async () => {
+  it('N01 图标分布在程序坞与网格区，九个入口一个不少', async () => {
     const wrapper = await mountApp()
     await swipeUnlock(wrapper)
 
     const dock = wrapper.findAll('.dock .app')
     const grid = wrapper.findAll('.apps .app')
     expect(dock.length, '程序坞应有 3 个应用').toBe(3)
-    expect(grid.length, '网格区应有 3 个入口').toBe(3)
+    expect(grid.length, '网格区应有 6 个入口').toBe(6)
 
-    // 六个入口恰好各出现一次，没有重复也没有遗漏
+    // 九个入口恰好各出现一次，没有重复也没有遗漏
     const labels = [...dock, ...grid].map((b) => b.text().replace(/\s+/g, ''))
     for (const label of [...dockLabels, ...gridLabels]) {
       expect(labels.filter((l) => l.includes(label)), `「${label}」应恰好出现一次`).toHaveLength(1)
@@ -1273,7 +1283,7 @@ describe('N. 桌面外观（真实手机样式）', () => {
     await swipeUnlock(wrapper)
 
     const buttons = wrapper.findAll('.home .app')
-    expect(buttons.length).toBe(6)
+    expect(buttons.length).toBe(9)
     for (const btn of buttons) {
       // 图标容器只包含「图标 + 标签（+ 角标）」，不应再有卡片式的额外结构
       const classes = btn.classes()
@@ -1867,6 +1877,133 @@ describe('W. 会话逐条出现只播一次', () => {
       wrapper.find('.chat__skiprow').exists(),
       '第二关的妈妈会话应当还能「显示全部」',
     ).toBe(true)
+  })
+})
+
+/**
+ * P. 常用生活应用：购物、音乐、视频。
+ *
+ * 用户要求「手机里的软件太少，添加购物、听歌、视频等，像正常手机」。
+ * 这些应用不参与剧情或金额，只提供可浏览、可操作的拟真界面。
+ */
+describe('P. 常用生活应用', () => {
+  it('P01 购物：搜索、商品详情与心愿单', async () => {
+    const wrapper = await mountApp()
+    await swipeUnlock(wrapper)
+    await clickDesktopApp(wrapper, '青集商城')
+
+    expect(wrapper.find('.shop').exists(), '应打开青集商城').toBe(true)
+    expect(wrapper.text()).toContain('青集商城')
+
+    const input = wrapper.find('.shop__search input')
+    expect(input.exists(), '商城应有搜索框').toBe(true)
+    await input.setValue('耳机')
+    expect(wrapper.text(), '搜索结果应包含耳机').toContain('静音降噪耳机')
+    expect(wrapper.text(), '搜索结果不应包含无关商品').not.toContain('云感轻便帆布鞋')
+
+    const product = wrapper.findAll('.product').find((item) => item.text().includes('静音降噪耳机'))
+    expect(product, '应能点开商品').toBeTruthy()
+    await product!.trigger('click')
+    expect(wrapper.find('.detail').exists(), '应打开商品详情').toBe(true)
+    await click(wrapper, '加入心愿单')
+    expect(wrapper.text(), '加入后按钮应变成已加入').toContain('已加入心愿单')
+  })
+
+  it('P02 音乐：切歌与播放/暂停有反馈', async () => {
+    const wrapper = await mountApp()
+    await swipeUnlock(wrapper)
+    await clickDesktopApp(wrapper, '青听音乐')
+
+    expect(wrapper.find('.music').exists(), '应打开青听音乐').toBe(true)
+    expect(wrapper.text()).toContain('晚风寄信')
+
+    const play = wrapper.find('.player__btn--main')
+    expect(play.attributes('aria-label'), '默认应可播放').toBe('播放')
+    await play.trigger('click')
+    expect(wrapper.find('.player__btn--main').attributes('aria-label'), '点击后应暂停').toBe('暂停')
+
+    const track = wrapper.findAll('.track').find((item) => item.text().includes('山城夜行'))
+    expect(track, '应能找到另一首歌').toBeTruthy()
+    await track!.trigger('click')
+    expect(wrapper.find('.player__title').text(), '播放器应切到新歌').toContain('山城夜行')
+  })
+
+  it('P03 视频：打开播放页、收藏并返回', async () => {
+    const wrapper = await mountApp()
+    await swipeUnlock(wrapper)
+    await clickDesktopApp(wrapper, '青影')
+
+    expect(wrapper.find('.video').exists(), '应打开青影').toBe(true)
+    const video = wrapper.findAll('.featured, .vcard')[0]
+    expect(video, '应能看到视频卡片').toBeTruthy()
+    await video!.trigger('click')
+    expect(wrapper.find('.player').exists(), '应打开播放页').toBe(true)
+
+    await wrapper.find('.player__like').trigger('click')
+    expect(wrapper.find('.player__like').text(), '收藏后应变成实心').toBe('♥')
+    await wrapper.find('.player__back').trigger('click')
+    expect(wrapper.find('.player').exists(), '关闭后应回到视频列表').toBe(false)
+  })
+
+  it('P05 订单核验在购物 App 里完成，并记录一次线索', async () => {
+    const wrapper = await mountApp({ atDesk: true })
+    await tapPhone(wrapper, 1)
+    await swipeUnlock(wrapper)
+    await clickDesktopApp(wrapper, '青讯')
+
+    await click(wrapper, '订单详情')
+    await flush()
+
+    expect(wrapper.find('.shop').exists(), '应切到购物 App').toBe(true)
+    expect(wrapper.find('.order').exists(), '应直接落在订单页').toBe(true)
+    expect(wrapper.text()).toContain('轻跑运动鞋')
+    expect(wrapper.text()).toContain('199')
+    expect(wrapper.text()).toContain('重复扣款')
+    expect(
+      readSave('level-02')?.riskTags,
+      '打开订单详情应记录一次「自己查了订单」的线索',
+    ).toContain('l2-checked-order')
+  })
+
+  it('P06 钱包显示虚构银行卡与验证码安全说明', async () => {
+    const wrapper = await mountApp()
+    await swipeUnlock(wrapper)
+    await clickDesktopApp(wrapper, '安心钱包')
+
+    expect(wrapper.text()).toContain('账户与安全')
+    expect(wrapper.text()).toContain('尾号 0427')
+    expect(wrapper.text()).toContain('不会索要短信验证码')
+    expect(wrapper.text()).toContain('不会让你共享屏幕')
+  })
+
+  it('P07 反诈手册展示带来源的真实案例，且不放外链', async () => {
+    const wrapper = await mountApp()
+    await swipeUnlock(wrapper)
+    await clickDesktopApp(wrapper, '国家反诈中心')
+
+    expect(wrapper.text()).toContain('真实案例')
+    expect(wrapper.text()).toContain('8901')
+    expect(wrapper.text()).toContain('98961')
+    expect(wrapper.text()).toContain('陵水县政府网')
+    expect(wrapper.text()).toContain('天津理工大学')
+    expect(wrapper.findAll('a').length, '案例卡不应包含可点击外链').toBe(0)
+  })
+
+  it('P04 误刷新保护：关卡开始后才拦截 beforeunload', async () => {
+    const wrapper = await mountApp()
+
+    // 还在开场节点：刷新不会丢进行中的进度，不拦截
+    const initial = new Event('beforeunload', { cancelable: true })
+    globalThis.dispatchEvent(initial)
+    expect(initial.defaultPrevented, '开场不应拦截刷新').toBe(false)
+
+    // 解锁并推进到群聊后：有关卡进度，刷新前弹浏览器确认
+    await swipeUnlock(wrapper)
+    await clickDesktopApp(wrapper, '青讯')
+    await click(wrapper, '进群看看')
+    const progress = new Event('beforeunload', { cancelable: true })
+    globalThis.dispatchEvent(progress)
+    expect(progress.defaultPrevented, '关卡进行中应拦截刷新').toBe(true)
   })
 })
 

@@ -4,7 +4,6 @@ import AppHeader from '@/components/AppHeader.vue'
 import ChatAvatar from '@/components/ChatAvatar.vue'
 import CodeGate from '@/components/CodeGate.vue'
 import MessageBubble from '@/components/MessageBubble.vue'
-import OverlaySheet from '@/components/OverlaySheet.vue'
 import { playSound } from '@/app/sound'
 import { markRevealed, revealedCountFor } from '@/app/chatReveal'
 import { classGroupNews } from '@/app/classNews'
@@ -31,8 +30,6 @@ const props = defineProps<{
   session: string | null
   /** 是否显示资料弹层。 */
   profileOpen: boolean
-  /** 是否显示详情弹层（订单等）。 */
-  detailOpen: boolean
   /** 当前节点的模拟验证码环节；null 表示这一步不需要验证码。 */
   codeGate: CodeGateSpec | null
   /** 已经被判错了几次（>0 时界面会显示对方那句"再看一下短信"）。 */
@@ -50,7 +47,6 @@ const emit = defineEmits<{
   (e: 'open-profile'): void
   (e: 'close-profile'): void
   (e: 'open-detail'): void
-  (e: 'close-detail'): void
   (e: 'back'): void
   (e: 'open-wallet'): void
   /** 玩家提交了一次模拟验证码。 */
@@ -487,25 +483,6 @@ const detail = computed(() => {
         </div>
       </div>
 
-      <!-- 详情弹层（订单等）：复用统一弹层，内容由关卡提供 -->
-      <OverlaySheet
-        v-if="detailOpen && detail"
-        :title="detail.title"
-        @close="emit('close-detail')"
-      >
-        <dl class="ordersheet__fields">
-          <div v-for="field in detail.fields" :key="field.label">
-            <dt>{{ field.label }}</dt>
-            <dd>{{ field.value }}</dd>
-          </div>
-        </dl>
-        <p class="ordersheet__notice">{{ detail.notice }}</p>
-        <template #footer>
-          <button type="button" class="btn btn--primary" @click="emit('close-detail')">
-            返回聊天
-          </button>
-        </template>
-      </OverlaySheet>
     </template>
   </section>
 </template>

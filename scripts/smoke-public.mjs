@@ -240,7 +240,7 @@ try {
     lockedBefore && !home.hasLock && home.hasHome,
     `解锁前锁屏=${lockedBefore} 解锁后桌面=${home.hasHome}`,
   )
-  record('桌面六个入口齐全（网格 + 程序坞）', home.apps.length === 6, home.apps.join(' / '))
+  record('桌面九个入口齐全（网格 + 程序坞）', home.apps.length === 9, home.apps.join(' / '))
   record('桌面含国家反诈中心', home.apps.some((a) => a.includes('国家反诈中心')))
   record('桌面不含关卡入口', !home.apps.some((a) => a.includes('关卡')))
   record('程序坞有三个常用应用', home.dockCount === 3, `dock=${home.dockCount}`)

@@ -63,6 +63,37 @@ const records = computed(() => props.level.walletRecords(props.state))
         <p class="platform__note">{{ level.copy.platformWalletNote }}</p>
       </div>
 
+      <!--
+        账户信息：骗子常常先要「银行卡、余额、验证码」再实施转账。
+        这里把玩家在钱包里能看到的（虚构）账户信息集中展示，
+        让「核对账户」和「把信息交给谁」成为两个可区分的动作。
+      -->
+      <section class="account" aria-label="账户与安全">
+        <div class="account__head">
+          <h2>账户与安全</h2>
+          <span>本机</span>
+        </div>
+        <dl class="account__rows">
+          <div>
+            <dt>绑定银行卡</dt>
+            <dd>青屏银行 · 储蓄卡（尾号 0427）</dd>
+          </div>
+          <div>
+            <dt>账户状态</dt>
+            <dd>正常</dd>
+          </div>
+          <div>
+            <dt>登录设备</dt>
+            <dd>本机 · 1 台</dd>
+          </div>
+          <div>
+            <dt>支付验证码</dt>
+            <dd>发送到本机通知，不转发</dd>
+          </div>
+        </dl>
+        <p class="account__note">任何客服都不会索要短信验证码，也不会让你共享屏幕。</p>
+      </section>
+
       <section v-if="request" class="request" aria-label="待确认的付款">
         <p class="request__title">{{ request.title }}</p>
         <p class="request__amount">{{ request.amount }} <span>元</span></p>
@@ -233,6 +264,67 @@ const records = computed(() => props.level.walletRecords(props.state))
   font-size: var(--font-xs);
   color: var(--c-text-soft);
   line-height: 1.55;
+}
+
+/* ============ 账户与安全 ============ */
+
+.account {
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--c-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.account__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--c-line);
+}
+
+.account__head h2 {
+  font-size: var(--font-sm);
+  font-weight: 700;
+}
+
+.account__head span {
+  font-size: var(--font-xs);
+  color: var(--c-accent);
+}
+
+.account__rows {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin: 0;
+  padding: var(--space-2) 0;
+}
+
+.account__rows div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font-size: var(--font-xs);
+}
+
+.account__rows dt {
+  flex: none;
+  color: var(--c-text-soft);
+}
+
+.account__rows dd {
+  margin: 0;
+  text-align: right;
+}
+
+.account__note {
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--c-line);
+  font-size: var(--font-xs);
+  color: var(--c-text-soft);
+  line-height: 1.6;
 }
 
 .request__actions {
