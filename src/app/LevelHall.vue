@@ -366,10 +366,14 @@ watch(activeIndex, () => {
   font-size: var(--font-xl);
   font-weight: 800;
   line-height: 1.2;
+  letter-spacing: 0.06em;
+  text-shadow: 0 2px 10px rgb(0 0 0 / 20%);
 }
 
 .hall__subtitle {
+  margin-top: 2px;
   font-size: var(--font-sm);
+  letter-spacing: 0.04em;
   color: var(--c-on-wall-soft);
 }
 
@@ -425,10 +429,22 @@ watch(activeIndex, () => {
   background: var(--c-wall-surface);
   color: inherit;
   font-size: var(--font-md);
+  /* 磨砂 + 投影：与桌面上的组件同一套玻璃质感，而不是一枚扁平圆圈 */
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 4px 14px rgb(4 10 20 / 18%);
+  transition:
+    background-color var(--dur-fast) ease,
+    transform var(--dur-fast) ease;
+}
+
+.hall__arrow:active:not(:disabled) {
+  transform: scale(0.94);
 }
 
 .hall__arrow:disabled {
-  opacity: 0.4;
+  opacity: 0.32;
+  box-shadow: none;
   cursor: not-allowed;
 }
 
@@ -456,9 +472,15 @@ watch(activeIndex, () => {
   border-radius: 50%;
   background: var(--c-on-wall-soft);
   opacity: 0.5;
+  transition:
+    inset var(--dur-fast) ease,
+    opacity var(--dur-fast) ease;
 }
 
+/* 选中项从圆点拉长成一小段胶囊：比「同一形状换个亮度」更容易一眼分辨 */
 .hall__dot--on::before {
+  inset: 11px 4px;
+  border-radius: 999px;
   opacity: 1;
   background: var(--c-on-wall);
 }

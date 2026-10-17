@@ -128,17 +128,27 @@ const miniApps = [
   scroll-snap-stop: always;
   /* 非中心卡：缩小、压暗，一眼看出「先移到中间」 */
   transform: scale(0.88);
-  opacity: 0.7;
+  opacity: 0.62;
   transition:
     transform var(--dur-base) ease,
-    opacity var(--dur-base) ease;
+    opacity var(--dur-base) ease,
+    border-color var(--dur-base) ease,
+    box-shadow var(--dur-base) ease;
 }
 
 .lvlcard--active {
   transform: scale(1);
   opacity: 1;
   border-color: var(--c-on-wall);
-  box-shadow: var(--shadow-dock);
+  /*
+   * 选中卡：外投影 + 一圈极淡外发光。
+   * 只有投影时，卡在深色壁纸上「浮」得不够明显；补一层光晕，
+   * 一眼就能看出哪一张是可以直接进入的。
+   */
+  box-shadow:
+    0 0 0 1px var(--c-wall-border),
+    0 0 26px rgb(255 255 255 / 10%),
+    var(--shadow-dock);
 }
 
 .lvlcard--locked {

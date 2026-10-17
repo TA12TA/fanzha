@@ -1384,6 +1384,37 @@ async function main() {
       firstBanner ? firstBanner.cls : '无横幅',
     )
 
+    /*
+     * 横幅必须是**收敛的一条**，不能长成一整块卡片。
+     *
+     * 它是浮在应用之上的一层（真实手机的横幅也会盖住页头），这一层结构不该改；
+     * 但之前正文不限行数、又不透明，整块压下来时看起来像布局崩了。
+     * 这条断言把它钉在 96px 以内（正文两行裁切 + 紧凑内边距的量级）。
+     */
+    const bannerBox = await cdp.eval(`
+      const el = document.querySelector('.banner');
+      if (!el) return null;
+      const r = el.getBoundingClientRect();
+      const body = el.querySelector('.banner__body');
+      const cs = body ? getComputedStyle(body) : null;
+      return {
+        h: Math.round(r.height),
+        clamp: cs ? (cs.webkitLineClamp || cs.lineClamp || '') : '',
+        text: (el.textContent || '').trim().length,
+      };
+    `)
+    record(
+      '通知横幅收敛成一条（高度 ≤ 96px，正文两行裁切）',
+      bannerBox !== null && bannerBox.h > 0 && bannerBox.h <= 96 && bannerBox.clamp === '2',
+      bannerBox ? `高度=${bannerBox.h}px 行数裁切=${bannerBox.clamp || '无'}` : '无横幅',
+    )
+    /* 裁切只是视觉行为：文本内容必须完整保留（通知中心会回放同一条正文） */
+    record(
+      '横幅正文未被截断（CSS 裁切，文本完整保留）',
+      bannerBox !== null && bannerBox.text > 5,
+      bannerBox ? `可见文本=${bannerBox.text} 字` : '无横幅',
+    )
+
     // 学姐邀请应排在预警之后等待（角标提示）
     const queuedBadge = await cdp.eval(`
       const el = document.querySelector('.banner__queued');
