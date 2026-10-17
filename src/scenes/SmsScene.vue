@@ -122,7 +122,6 @@ function send(): void {
           </button>
         </li>
       </ul>
-      <p class="sms__tip">验证码只会发送到本机短信里，转给别人就等于把账户交出去。</p>
     </div>
 
     <!-- 会话 -->
@@ -292,15 +291,6 @@ function send(): void {
   color: #fff;
   font-size: 10px;
   font-weight: 700;
-}
-
-.sms__tip {
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-sm);
-  background: var(--c-primary-soft);
-  color: var(--c-text-soft);
-  font-size: var(--font-xs);
-  line-height: 1.6;
 }
 
 /* ============ 会话 ============ */

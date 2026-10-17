@@ -88,10 +88,9 @@ const records = computed(() => props.level.walletRecords(props.state))
           </div>
           <div>
             <dt>支付验证码</dt>
-            <dd>发送到本机通知，不转发</dd>
+            <dd>发送到本机通知</dd>
           </div>
         </dl>
-        <p class="account__note">任何客服都不会索要短信验证码，也不会让你共享屏幕。</p>
       </section>
 
       <section v-if="request" class="request" aria-label="待确认的付款">
@@ -317,14 +316,6 @@ const records = computed(() => props.level.walletRecords(props.state))
 .account__rows dd {
   margin: 0;
   text-align: right;
-}
-
-.account__note {
-  padding-top: var(--space-2);
-  border-top: 1px solid var(--c-line);
-  font-size: var(--font-xs);
-  color: var(--c-text-soft);
-  line-height: 1.6;
 }
 
 .request__actions {

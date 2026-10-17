@@ -44,9 +44,8 @@ export const SHOP_ORDER = {
   paidWith: '安心钱包余额',
   date: '2026-10-12 14:32',
   image: shoePhoto,
-  note: '本订单只有一笔正常扣款。订单状态、金额与售后进度以本页为准。',
-  policy:
-    '退款会原路退回支付账户，不需要你先转账、提供短信验证码或下载会议软件。订单有问题时，留在商城 App 内处理，不要添加陌生客服。',
+  note: '订单状态、金额与售后进度以本页为准。',
+  policy: '退款会原路退回支付账户；售后请在订单页发起。',
 } as const
 
 export const SHOP_CATEGORIES = ['全部', '鞋服', '数码', '生活'] as const

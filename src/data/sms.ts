@@ -36,7 +36,7 @@ export const SMS_THREADS: SmsThread[] = [
     time: '今天 09:00',
     unread: 0,
     messages: [
-      { id: 's1', from: 'them', text: '账户安全提醒：任何客服都不会索要短信验证码。', time: '今天 09:00' },
+      { id: 's1', from: 'them', text: '您尾号 0427 的账户收入 800.00 元（生活费）。', time: '今天 09:00' },
     ],
   },
   {
@@ -48,7 +48,7 @@ export const SMS_THREADS: SmsThread[] = [
     unread: 0,
     messages: [
       { id: 's1', from: 'them', text: '您的订单已签收，感谢在青集商城购物。', time: '今天 17:02' },
-      { id: 's2', from: 'them', text: '订单有问题可在 App 内查看售后规则，平台不会要求您先转账。', time: '今天 17:02' },
+      { id: 's2', from: 'them', text: '订单已完成，如需售后请从订单页发起。', time: '今天 17:02' },
     ],
   },
   {

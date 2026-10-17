@@ -194,9 +194,6 @@ onBeforeUnmount(() => globalThis.removeEventListener('keydown', closeOnEscape))
         <p v-if="policyOpen" class="order__policy">{{ SHOP_ORDER.policy }}</p>
       </article>
 
-      <p class="order__tip">
-        订单有问题时，先在本页核实；不要添加陌生客服，也不要离开 App 去操作。
-      </p>
     </div>
 
     <div v-if="active" class="detail" role="dialog" aria-modal="true" :aria-label="active.name">
@@ -443,14 +440,7 @@ onBeforeUnmount(() => globalThis.removeEventListener('keydown', closeOnEscape))
   line-height: 1.6;
 }
 
-.order__tip {
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-sm);
-  background: var(--c-primary-soft);
-  color: var(--c-text-soft);
-  font-size: var(--font-xs);
-  line-height: 1.6;
-}
+
 
 .shop__search {
   display: flex;

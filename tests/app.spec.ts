@@ -1977,15 +1977,16 @@ describe('P. 常用生活应用', () => {
     ).toContain('l2-checked-order')
   })
 
-  it('P06 钱包显示虚构银行卡与验证码安全说明', async () => {
+  it('P06 钱包显示虚构银行卡与账户信息', async () => {
     const wrapper = await mountApp()
     await swipeUnlock(wrapper)
     await clickDesktopApp(wrapper, '安心钱包')
 
     expect(wrapper.text()).toContain('账户与安全')
     expect(wrapper.text()).toContain('尾号 0427')
-    expect(wrapper.text()).toContain('不会索要短信验证码')
-    expect(wrapper.text()).toContain('不会让你共享屏幕')
+    expect(wrapper.text()).toContain('发送到本机通知')
+    expect(wrapper.text(), '不应再出现说教式安全提醒').not.toContain('不会索要短信验证码')
+    expect(wrapper.text(), '不应再出现说教式共享屏幕提醒').not.toContain('不会让你共享屏幕')
   })
 
   it('P07 反诈手册展示带来源的真实案例，且不放外链', async () => {
@@ -2037,7 +2038,9 @@ describe('P. 常用生活应用', () => {
     const wallet = wrapper.findAll('.thread').find((item) => item.text().includes('安心钱包'))
     expect(wallet, '应能找到安心钱包短信').toBeTruthy()
     await wallet!.trigger('click')
-    expect(wrapper.text()).toContain('任何客服都不会索要短信验证码')
+    expect(wrapper.text()).toContain('收入 800.00 元')
+    expect(wrapper.text(), '不应再出现说教式安全提醒').not.toContain('任何客服都不会索要短信验证码')
+    expect(wrapper.text(), '不应再出现说教式验证码提示').not.toContain('转给别人就等于把账户交出去')
 
     const input = wrapper.find('.composer__input')
     await input.setValue('好的')
