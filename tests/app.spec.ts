@@ -830,9 +830,10 @@ describe('E. 整部手机的交互（B01–B14）', () => {
 
     await click(wrapper, '返回')
     await click(wrapper, '相册')
-    // 相册不再空着：有自绘风景照片
+    // 相册不再空着：有真实照片（本地打包）
     expect(wrapper.text()).toContain('张照片')
     expect(wrapper.findAll('.thumb').length).toBeGreaterThan(0)
+    expect(wrapper.findAll('.thumb img').length).toBeGreaterThanOrEqual(6)
     await click(wrapper, '桌面')
 
     // 桌面「通知」图标进入同一个界面
@@ -1460,9 +1461,9 @@ describe('Q. 青讯：会话列表 / 群聊与私聊 / 妈妈转账', () => {
 /**
  * R. 相册：不能是空白的。
  * 用户要求「相册里面也放一些风景照片不能空着」。
- * 照片是自绘 SVG（无外部资源、无版权风险），这里锁住结构与交互。
+ * 照片是真实照片、打包为本地资源；这里锁住结构与交互。
  */
-describe('R. 相册（自绘风景照片 + 全屏查看器）', () => {
+describe('R. 相册（真实照片 + 全屏查看器）', () => {
   it('R01 相册里有照片，按日期分组显示', async () => {
     const wrapper = await mountApp()
     await swipeUnlock(wrapper)
@@ -1470,6 +1471,8 @@ describe('R. 相册（自绘风景照片 + 全屏查看器）', () => {
 
     const thumbs = wrapper.findAll('.thumb')
     expect(thumbs.length, '相册应有照片').toBeGreaterThanOrEqual(6)
+    expect(wrapper.findAll('.thumb img').length, '相册应使用真实照片 img').toBeGreaterThanOrEqual(6)
+    expect(wrapper.findAll('.thumb svg').length, '相册不应再使用自绘 SVG').toBe(0)
     expect(wrapper.text(), '不再出现「相册是空的」这类说明').not.toContain('用不到它')
 
     // 每张照片都有可读名称，供读屏与查看器使用

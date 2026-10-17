@@ -1,18 +1,17 @@
+import lakeSunset from '@/assets/photos/lake-sunset.jpg'
+import snowPeak from '@/assets/photos/snow-peak.jpg'
+import beachSunset from '@/assets/photos/beach-sunset.jpg'
+import cityNight from '@/assets/photos/city-night.jpg'
+import ginkgoRoad from '@/assets/photos/ginkgo-road.jpg'
+import starrySky from '@/assets/photos/starry-sky.jpg'
+
 /**
  * 相册照片数据。
  *
- * 照片全部是**自绘 SVG 风景**（见 `components/ScenicPhoto.vue`）：
- * 不使用任何真实照片或外部资源，因此没有版权风险、不增加仓库体积、离线可用。
+ * 使用下载到 `src/assets/photos/` 的真实照片（Picsum 的公开图片），
+ * 由 Vite 作为本地资源打包，运行时不请求外部图片服务。
+ * 标题按实际照片内容命名，不再使用自绘 SVG。
  */
-
-/** 风景类型（决定画哪一幅画）。 */
-export type ScenicKind =
-  | 'lake-sunset'
-  | 'snow-peak'
-  | 'beach-sunset'
-  | 'city-night'
-  | 'ginkgo-road'
-  | 'starry-sky'
 
 export interface Photo {
   id: string
@@ -20,7 +19,8 @@ export interface Photo {
   title: string
   /** 拍摄日期（虚构，用于相册按日期分组）。 */
   date: string
-  kind: ScenicKind
+  /** 本地图片资源。 */
+  src: string
 }
 
 /**
@@ -30,10 +30,10 @@ export interface Photo {
  * 分组后每行不会只剩一张孤零零的缩略图，看起来更像真机相册。
  */
 export const PHOTOS: Photo[] = [
-  { id: 'p1', title: '晚霞下的湖面', date: '10月12日', kind: 'lake-sunset' },
-  { id: 'p2', title: '远处的雪山', date: '10月12日', kind: 'snow-peak' },
-  { id: 'p3', title: '海边的日落', date: '10月12日', kind: 'beach-sunset' },
-  { id: 'p4', title: '城市夜景', date: '10月9日', kind: 'city-night' },
-  { id: 'p5', title: '校园里的银杏道', date: '10月9日', kind: 'ginkgo-road' },
-  { id: 'p6', title: '夜里拍的星空', date: '10月3日', kind: 'starry-sky' },
+  { id: 'p1', title: '峡湾与湖面', date: '10月12日', src: lakeSunset },
+  { id: 'p2', title: '高地公路', date: '10月12日', src: snowPeak },
+  { id: 'p3', title: '海岸悬崖', date: '10月12日', src: beachSunset },
+  { id: 'p4', title: '山谷与松林', date: '10月9日', src: cityNight },
+  { id: 'p5', title: '森林瀑布', date: '10月9日', src: ginkgoRoad },
+  { id: 'p6', title: '橙色水母', date: '10月3日', src: starrySky },
 ]

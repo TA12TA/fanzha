@@ -256,6 +256,10 @@ function badgeAria(id: string, badge: string): string {
   -webkit-overflow-scrolling: touch;
 }
 
+.home__scroll > * {
+  flex: none;
+}
+
 /* ============ Widget 控件区 ============ */
 
 /* 两列组件排布：左时钟、右钱包（真实手机桌面的常见布局） */

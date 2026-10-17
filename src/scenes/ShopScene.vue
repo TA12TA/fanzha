@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import AppHeader from '@/components/AppHeader.vue'
-import ShopArt from '@/components/ShopArt.vue'
 import { SHOP_CATEGORIES, SHOP_ORDER, SHOP_PRODUCTS, type ShopProduct } from '@/data/shop'
 import { playSound } from '@/app/sound'
 
@@ -134,11 +133,8 @@ onBeforeUnmount(() => globalThis.removeEventListener('keydown', closeOnEscape))
             :aria-label="`查看${product.name}，${product.price} 元`"
             @click="openProduct(product)"
           >
-            <span
-              class="product__art"
-              :style="{ background: `linear-gradient(145deg, ${product.colors[0]}, ${product.colors[1]})` }"
-            >
-              <ShopArt :art="product.art" />
+            <span class="product__art">
+              <img :src="product.image" :alt="product.name" loading="lazy" />
               <span class="product__tag">{{ product.tag }}</span>
             </span>
             <span class="product__info">
@@ -165,8 +161,8 @@ onBeforeUnmount(() => globalThis.removeEventListener('keydown', closeOnEscape))
           <span class="order__status">{{ SHOP_ORDER.status }}</span>
         </div>
         <div class="order__main">
-          <div class="order__art" style="background: linear-gradient(145deg, #f6a26b, #d8613c)">
-            <ShopArt art="shoe" />
+          <div class="order__art">
+            <img :src="SHOP_ORDER.image" :alt="SHOP_ORDER.title" loading="lazy" />
           </div>
           <div class="order__info">
             <p class="order__title">{{ SHOP_ORDER.title }}</p>
@@ -211,11 +207,8 @@ onBeforeUnmount(() => globalThis.removeEventListener('keydown', closeOnEscape))
       </header>
 
       <div class="detail__scroll">
-        <div
-          class="detail__art"
-          :style="{ background: `linear-gradient(145deg, ${active.colors[0]}, ${active.colors[1]})` }"
-        >
-          <ShopArt :art="active.art" />
+        <div class="detail__art">
+          <img :src="active.image" :alt="active.name" />
         </div>
         <div class="detail__body">
           <span class="detail__tag">{{ active.tag }}</span>
@@ -314,6 +307,14 @@ onBeforeUnmount(() => globalThis.removeEventListener('keydown', closeOnEscape))
   -webkit-overflow-scrolling: touch;
 }
 
+/*
+ * 关键：滚动容器里的卡片/横滑条不能被 flex 压缩。
+ * 之前 `.shop__chips` 被挤成 1px 高，分类按钮看上去只剩一条线。
+ */
+.shop__body > * {
+  flex: none;
+}
+
 .shop__orders {
   gap: var(--space-3);
 }
@@ -356,18 +357,19 @@ onBeforeUnmount(() => globalThis.removeEventListener('keydown', closeOnEscape))
 }
 
 .order__art {
-  display: grid;
-  place-items: center;
   flex: none;
   width: 74px;
   height: 74px;
   border-radius: var(--radius-md);
-  color: rgb(255 255 255 / 92%);
+  overflow: hidden;
+  background: var(--c-surface-2);
 }
 
-.order__art :deep(svg) {
-  width: 70%;
-  height: 70%;
+.order__art img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .order__info {
@@ -573,11 +575,15 @@ onBeforeUnmount(() => globalThis.removeEventListener('keydown', closeOnEscape))
   position: relative;
   display: block;
   aspect-ratio: 1.15;
-  color: rgb(255 255 255 / 92%);
+  overflow: hidden;
+  background: var(--c-surface-2);
 }
 
-.product__art :deep(svg) {
-  padding: 16%;
+.product__art img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .product__tag {
@@ -685,15 +691,15 @@ onBeforeUnmount(() => globalThis.removeEventListener('keydown', closeOnEscape))
 }
 
 .detail__art {
-  display: grid;
-  place-items: center;
-  height: 210px;
-  color: rgb(255 255 255 / 92%);
+  height: 230px;
+  background: var(--c-surface-2);
 }
 
-.detail__art :deep(svg) {
-  width: 46%;
-  height: 58%;
+.detail__art img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .detail__body {

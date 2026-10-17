@@ -47,6 +47,29 @@ https://itunes.apple.com/cn/search?term=国家反诈中心&entity=software&limit
 import antifraudLogo from '@/assets/antifraud-logo.png'
 ```
 
+## 相册与商城照片
+
+2026-10-17 按用户要求把相册与商城商品图换成了真实照片。图片已下载到本地，
+由 Vite 打包，运行时不请求外部图库。来源记录如下（仅用于追溯）：
+
+| 文件 | 来源 |
+|---|---|
+| `photos/lake-sunset.jpg` | `https://picsum.photos/id/1015/1200/900` |
+| `photos/snow-peak.jpg` | `https://picsum.photos/id/1018/1200/900` |
+| `photos/beach-sunset.jpg` | `https://picsum.photos/id/1050/1200/900` |
+| `photos/city-night.jpg` | `https://picsum.photos/id/1043/1200/900` |
+| `photos/ginkgo-road.jpg` | `https://picsum.photos/id/1039/1200/900` |
+| `photos/starry-sky.jpg` | `https://picsum.photos/id/1069/1200/900` |
+| `shop/shoe.jpg` | Pexels photo `1464625` |
+| `shop/headphones.jpg` | `https://images.unsplash.com/photo-1505740420928-5e560c06d30e` |
+| `shop/cup.jpg` | `https://images.unsplash.com/photo-1544787219-7f47ccb76574` |
+| `shop/bag.jpg` | `https://images.unsplash.com/photo-1553062407-98eeb64c6a62` |
+| `shop/lamp.jpg` | `https://images.unsplash.com/photo-1507473885765-e6ed057f782c` |
+| `shop/bottle.jpg` | `https://images.unsplash.com/photo-1523362628745-0c100150b504` |
+
+> 用户明确要求「不用考虑侵权」；以上来源仅作为素材追溯，未做商用授权审核。
+> 图片中如出现品牌元素，应在上线前替换为无品牌素材。
+
 ## 合规说明
 
 `AGENTS.md` 第 1 节要求不使用真实机构标志，用意是避免产出**可被伪造的官方素材**。

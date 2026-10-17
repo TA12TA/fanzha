@@ -1922,7 +1922,7 @@ async function main() {
     `)
     record('状态栏不再显示「模拟」', !statusText.includes('模拟'))
 
-    // 相册：不为空，且有可全屏查看的照片（自绘 SVG，无外部资源）
+    // 相册：不为空，且有可全屏查看的真实照片（本地打包）
     await cdp.eval(`
       const b = [...document.querySelectorAll('.home .app')].find(x => (x.textContent||'').includes('相册'));
       if (b) b.click();
@@ -1931,18 +1931,20 @@ async function main() {
     await sleep(400)
     const album = await cdp.eval(`
       const thumbs = [...document.querySelectorAll('.thumb')];
+      const imgs = [...document.querySelectorAll('.thumb img')];
       const first = thumbs[0];
       return {
         count: thumbs.length,
         svg: document.querySelectorAll('.thumb svg').length,
-        external: document.querySelectorAll('.thumb img').length,
+        images: imgs.length,
+        loaded: imgs.every((img) => img.complete && img.naturalWidth > 0),
         label: first ? first.getAttribute('aria-label') : null,
       };
     `)
     record(
-      '相册里有照片（自绘 SVG，无外部图片）',
-      album.count >= 6 && album.svg >= 6 && album.external === 0,
-      `照片=${album.count} 张，SVG=${album.svg}，img=${album.external}`,
+      '相册里有真实照片（本地图片，全部加载成功）',
+      album.count >= 6 && album.images >= 6 && album.svg === 0 && album.loaded,
+      `照片=${album.count} 张，img=${album.images}，SVG=${album.svg}，已加载=${album.loaded}`,
     )
 
     await cdp.eval(`
@@ -1953,17 +1955,18 @@ async function main() {
     await sleep(400)
     const viewerInfo = await cdp.eval(`
       const v = document.querySelector('.viewer');
-      const stage = document.querySelector('.viewer__stage svg');
+      const stage = document.querySelector('.viewer__stage img');
       return {
         open: !!v,
         text: v ? (v.textContent || '').trim().slice(0, 40) : '',
         big: stage ? Math.round(stage.getBoundingClientRect().width) : 0,
+        loaded: stage ? stage.complete && stage.naturalWidth > 0 : false,
       };
     `)
     record(
       '点击照片可全屏查看并可翻页',
-      viewerInfo.open && viewerInfo.text.includes('第 1 /'),
-      `查看器=${viewerInfo.open} 文案=${viewerInfo.text.replace(/\\s+/g, ' ')}`,
+      viewerInfo.open && viewerInfo.text.includes('第 1 /') && viewerInfo.loaded && viewerInfo.big > 0,
+      `查看器=${viewerInfo.open} 图片已加载=${viewerInfo.loaded} 文案=${viewerInfo.text.replace(/\\s+/g, ' ')}`,
     )
     await cdp.eval(`
       const b = document.querySelector('.viewer__close');

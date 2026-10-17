@@ -1,16 +1,15 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import AppHeader from '@/components/AppHeader.vue'
-import ScenicPhoto from '@/components/ScenicPhoto.vue'
 import { PHOTOS } from '@/data/photos'
 
 /**
- * 相册：本机照片（全部是自绘风景）。
+ * 相册：本机照片（真实照片，打包为本地资源）。
  *
  * 之前相册是空的（写着「这局用不到它」），空着的相册会让整部手机显得假；
- * 现在放 6 张风景照，点开可全屏查看并左右翻页，和真机相册一样。
+ * 现在放 6 张真实风景照，点开可全屏查看并左右翻页，和真机相册一样。
  *
- * 照片是纯 SVG，不联网、不占体积、没有版权问题。
+ * 图片来自公开图库并下载到 `src/assets/photos/`，运行时不联网。
  */
 const emit = defineEmits<{ (e: 'back'): void }>()
 
@@ -80,7 +79,7 @@ onBeforeUnmount(() => {
               :aria-label="`查看照片：${photo.title}`"
               @click="open(PHOTOS.indexOf(photo))"
             >
-              <ScenicPhoto :kind="photo.kind" />
+              <img :src="photo.src" :alt="photo.title" class="thumb__img" loading="lazy" />
             </button>
           </li>
         </ul>
@@ -95,7 +94,7 @@ onBeforeUnmount(() => {
       </header>
 
       <div class="viewer__stage">
-        <ScenicPhoto :kind="current.kind" />
+        <img :src="current.src" :alt="current.title" class="viewer__img" />
       </div>
 
       <footer class="viewer__foot">
@@ -175,6 +174,13 @@ onBeforeUnmount(() => {
   opacity: 0.8;
 }
 
+.thumb__img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 /* ============ 全屏查看器 ============ */
 
 .viewer {
@@ -213,9 +219,20 @@ onBeforeUnmount(() => {
 }
 
 .viewer__stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex: 1;
   min-height: 0;
   overflow: hidden;
+  background: #000;
+}
+
+.viewer__img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .viewer__foot {

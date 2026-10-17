@@ -228,6 +228,10 @@ onBeforeUnmount(() => {
   -webkit-overflow-scrolling: touch;
 }
 
+.music__body > * {
+  flex: none;
+}
+
 .hero {
   display: flex;
   align-items: center;

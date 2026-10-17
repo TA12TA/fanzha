@@ -309,6 +309,14 @@ onBeforeUnmount(() => {
   -webkit-overflow-scrolling: touch;
 }
 
+/*
+ * 同商城：横滑分类与精选卡不能被 flex 压缩。
+ * 之前精选卡被挤成 0 高，分类按钮只剩一条细线，属于真实的“按钮被遮挡”。
+ */
+.video__body > * {
+  flex: none;
+}
+
 .video__chips {
   display: flex;
   gap: var(--space-2);
