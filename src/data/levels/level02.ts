@@ -635,6 +635,13 @@ export const level02 = defineLevel<L2Node, L2Option>({
       },
     ],
 
+    /*
+     * 班级通知群在固定消息之后追加一组**随机**的反诈通知（每关每局抽一批）。
+     * 见 `app/classNews.ts`：抽到哪几条由关卡 id 与本次会话的随机种子决定，
+     * 一局之内稳定，重新打开页面才会换。
+     */
+    newsSession: 'classgroup',
+
     extraMessages: {
       'l2-refund-claim': [{ session: 'l2-service', messages: REFUND_MESSAGES }],
       'l2-verify-2': [

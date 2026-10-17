@@ -623,6 +623,74 @@ async function main() {
       sessionRows.hasGroupPreview ? '列表里已经能看到群里的话术' : '',
     )
 
+    /*
+     * 班级通知群：通知多一点、随机一点（用户要求）。
+     *
+     * 固定几条辅导员/同学的消息 + 每局随机抽 3–5 条反诈通知。
+     * 这里量的是真实浏览器里的条数与内容，并且**退出再进一次**，
+     * 确认抽签结果被缓存住、不会当场换一批（那会让"群消息"立刻露馅）。
+     */
+    const openClassGroup = async () => {
+      await cdp.eval(`
+        const b = [...document.querySelectorAll('.session')]
+          .find(x => (x.textContent || '').includes('班级通知群'));
+        if (b) b.click();
+        return true;
+      `)
+      await sleep(400)
+      const skip = await cdp.eval(`
+        const b = [...document.querySelectorAll('button')]
+          .find(x => (x.textContent || '').trim() === '显示全部');
+        if (!b) return false;
+        b.click();
+        return true;
+      `)
+      if (skip) await sleep(300)
+    }
+
+    await openClassGroup()
+    const classGroup = await cdp.eval(`
+      const rows = [...document.querySelectorAll('.chat__list .row')];
+      return {
+        count: rows.length,
+        text: rows.map(r => (r.textContent || '')).join(' '),
+        names: rows.map(r => (r.querySelector('.row__name')?.textContent || '').trim()).filter(Boolean),
+      };
+    `)
+    record(
+      '班级通知群消息更多（固定消息 + 随机通知，≥ 6 条）',
+      classGroup.count >= 6 && classGroup.text.includes('教材科'),
+      `条数=${classGroup.count} 发言人=${classGroup.names.slice(0, 6).join('、')}`,
+    )
+    /*
+     * 注意这里**不**断言"含某个反诈关键词"：随机抽到哪 3–5 条是不确定的，
+     * 抽到的组合可能恰好一个关键词都不含 —— 那种断言会随机变红（第一版就是这么红的）。
+     * 「通知池里每一条都是反诈内容」这件事由 `tests/classNews.spec.ts` 保证；
+     * 这里只量浏览器里能确定的两件事：条数够、以及固定消息仍在。
+     */
+    record(
+      '随机通知追加在固定消息之后（总条数多于固定的 3 条）',
+      classGroup.count > 3,
+      `随机部分=${classGroup.count - 3} 条`,
+    )
+    await cdp.screenshot(path.join(shotsDir, '13-classgroup.png'))
+
+    // 退到列表再进一次：抽到的通知不该换
+    await cdp.click('返回上一层')
+    await sleep(300)
+    await openClassGroup()
+    const classGroupAgain = await cdp.eval(`
+      const rows = [...document.querySelectorAll('.chat__list .row')];
+      return { count: rows.length, text: rows.map(r => (r.textContent || '')).join(' ') };
+    `)
+    record(
+      '同一局内重进班级群，通知不会换一批',
+      classGroupAgain.count === classGroup.count && classGroupAgain.text === classGroup.text,
+      `第一次=${classGroup.count} 条，第二次=${classGroupAgain.count} 条`,
+    )
+    await cdp.click('返回上一层')
+    await sleep(300)
+
     await cdp.eval(`
       const b = [...document.querySelectorAll('.session')].find(x => (x.textContent||'').includes('妈妈'));
       if (b) b.click();

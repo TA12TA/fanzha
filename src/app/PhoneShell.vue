@@ -28,6 +28,7 @@ import {
 import { useNotifications } from '@/app/notifications'
 import { useSettings } from '@/app/settings'
 import { resetChatReveal } from '@/app/chatReveal'
+import { resetClassGroupNews } from '@/app/classNews'
 import { codeMatches, generateCode, renderSms } from '@/app/smsCode'
 import { playSound, setSoundEnabled } from '@/app/sound'
 import { useGame } from '@/app/useGame'
@@ -606,6 +607,11 @@ function doRestart(): void {
   game.restart()
   // 新的一局应当重新逐条播放每个会话，清掉这一关「看过哪些消息」的记忆
   resetChatReveal(props.level.meta.id)
+  /*
+   * 班级通知群的随机反诈通知也重新抽一批。
+   * 不清的话，「再玩一次」看到的还是上一局那几条，随机就白做了。
+   */
+  resetClassGroupNews()
   confirmRestart.value = false
   profileOpen.value = false
   detailOpen.value = false

@@ -1241,6 +1241,51 @@ describe('Q. 青讯：会话列表 / 群聊与私聊 / 妈妈转账', () => {
     expect(badge.text()).toBe('1')
   })
 
+  /**
+   * 班级通知群「通知多一点、随机一点」（用户要求）。
+   *
+   * 固定的几条把群立起来，另外每局随机抽 3–5 条反诈通知。
+   * 这里断言的正是关键性质：条数够、有反诈内容、而且**切走再回来不会换一批**
+   * （换一批就说明抽签放在了渲染里，"群消息"立刻露馅）。
+   */
+  it('Q01b 班级通知群消息更多，且带随机反诈通知（重进不换）', async () => {
+    const wrapper = await mountApp()
+    await swipeUnlock(wrapper)
+
+    /** 打开班级通知群：青讯会先落在待处理的邀请上，得先退到会话列表。 */
+    const openClassGroup = async (): Promise<void> => {
+      await clickDesktopApp(wrapper, '青讯')
+      await click(wrapper, '返回上一层')
+      await click(wrapper, '群聊：班级通知群')
+      // 「逐条出现」的进度会被记住，第二次进来可能已经没有这个按钮了
+      if (findButton(wrapper, '显示全部')) await click(wrapper, '显示全部')
+    }
+
+    await openClassGroup()
+
+    const list = wrapper.find('.chat__list')
+    expect(list.exists(), '应进入班级通知群').toBe(true)
+    const first = list.findAll('.row')
+    expect(first.length, '班级群消息应不止一条').toBeGreaterThanOrEqual(6)
+
+    // 固定内容还在（群才立得住）
+    expect(list.text(), '辅导员的教材通知应保留').toContain('教材科')
+    // 随机部分来自反诈通知池
+    expect(list.text(), '应包含反诈类通知').toContain('验证码')
+
+    const before = first.map((row) => row.text()).join('|')
+
+    // 切到别的应用再回来：仍是同一批（缓存生效），不会当场换一批
+    await click(wrapper, '桌面')
+    await openClassGroup()
+    const after = wrapper
+      .find('.chat__list')
+      .findAll('.row')
+      .map((row) => row.text())
+      .join('|')
+    expect(after, '同一局内重进班级群，通知不该换一批').toBe(before)
+  })
+
   it('Q02 生活费 800 元来自妈妈转账，以转账卡片呈现', async () => {
     const wrapper = await mountApp()
     await swipeUnlock(wrapper)

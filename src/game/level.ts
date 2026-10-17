@@ -145,6 +145,13 @@ export interface LevelChatSpec<TNode extends string = string, TOption extends st
   unread?: Partial<Record<TNode, string>>
   /** 详情弹层（订单等）。 */
   detailSheet?: DetailSheet<TNode, TOption>
+  /**
+   * 这个会话在固定消息之后追加一组**随机**的反诈通知（2026-10-17 新增）。
+   *
+   * 用在班级通知群上：群里的固定消息负责把这个群立起来，随机部分让它像真群一样
+   * 「每次打开都不太一样」。抽取逻辑在 `app/classNews.ts`（每关只抽一次并缓存）。
+   */
+  newsSession?: string
 }
 
 /* ============================ 关卡元数据 ============================ */
@@ -561,6 +568,10 @@ export function validateLevel(level: PlayableLevel): string[] {
     for (const at of list ?? []) {
       if (!nodeIds.includes(at)) problems.push(`hiddenAt[${node}] 里有未知节点「${at}」`)
     }
+  }
+  // 随机通知的挂载点必须是真实会话，否则「班级群通知」会永远不出现、也不报错。
+  if (level.chat.newsSession && !sessionIds.has(level.chat.newsSession)) {
+    problems.push(`newsSession 指向不存在的会话「${level.chat.newsSession}」`)
   }
   for (const [node, id] of Object.entries(level.chat.optionSession)) {
     if (id && !(level.nodeOptions[node] ?? []).length) {

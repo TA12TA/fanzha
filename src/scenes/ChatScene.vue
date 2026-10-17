@@ -7,6 +7,7 @@ import MessageBubble from '@/components/MessageBubble.vue'
 import OverlaySheet from '@/components/OverlaySheet.vue'
 import { playSound } from '@/app/sound'
 import { markRevealed, revealedCountFor } from '@/app/chatReveal'
+import { classGroupNews } from '@/app/classNews'
 import { avatarFor } from '@/data/levels/shared'
 import { pendingRequestOf } from '@/app/navigation'
 import type { ChatMessage, CodeGate as CodeGateSpec, PlayableLevel } from '@/game/level'
@@ -68,6 +69,10 @@ const isGroupChat = computed(() => active.value?.kind === 'group')
 /**
  * 某会话在当前剧情节点下的消息 = 基础消息 + 该节点追加的卡片。
  * 追加顺序即 `extraMessages` 里声明的顺序。
+ *
+ * 班级通知群还会追加一组**随机**的反诈通知（`newsSession` + `app/classNews.ts`）：
+ * 抽签结果按关卡缓存在模块里，所以切到别的应用再回来仍是同一批 ——
+ * 一进一出就换一批的话，「群消息」立刻露馅。
  */
 function messagesOf(id: string): ChatMessage[] {
   const base = spec.value.sessions.find((s) => s.id === id)?.messages ?? []
@@ -75,6 +80,9 @@ function messagesOf(id: string): ChatMessage[] {
   const list = [...base]
   for (const item of extra) {
     if (item.session === id) list.push(...item.messages)
+  }
+  if (spec.value.newsSession === id) {
+    list.push(...classGroupNews(props.level.meta.id))
   }
   return list
 }

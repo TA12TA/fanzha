@@ -681,6 +681,13 @@ export const level01 = defineLevel<L1Node, L1Option>({
      */
     hiddenAt: { taskgroup: ['intro', 'invite'] },
 
+    /*
+     * 班级通知群在固定消息之后追加一组**随机**的反诈通知（每关每局抽一批）。
+     * 见 `app/classNews.ts`：抽到哪几条由关卡 id 与本次会话的随机种子决定，
+     * 一局之内稳定，重新打开页面才会换。
+     */
+    newsSession: 'classgroup',
+
     /** 群聊会话按剧情节点追加返利 / 提现异常卡片。 */
     extraMessages: {
       rebate: [{ session: 'taskgroup', messages: REBATE_MESSAGES }],

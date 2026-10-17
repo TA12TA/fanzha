@@ -35,6 +35,8 @@ src/data/levels/
   index.ts                  # 注册表：LEVELS / getLevel / getPlayableLevel / playableLevels
 src/app/navigation.ts       # 节点 → 场景的通用映射（不含任何具体关卡 id）
 src/app/smsCode.ts          # 模拟验证码：生成（可注入随机源）/ 清洗 / 比对 / 模板替换
+src/app/random.ts           # 可复现随机源（mulberry32）：浏览器用时间戳播种，测试用固定种子
+src/app/classNews.ts        # 班级通知群的随机反诈通知（每关抽一次并缓存）
 src/app/LevelHall.vue       # 关卡大厅（轮播版，main 分支；hall-desk 上是 LevelDesk.vue）
 src/app/LevelCard.vue       # 单张关卡卡（轮播版）
 src/app/AppShell.vue        # 根壳：大厅 / 手机 两态
@@ -82,6 +84,25 @@ popupReminders: ['l2-refund-claim'],   // 只有它弹窗，其余仍是横幅
   也就是**判断依据**。所以提醒文案要写得像"为什么提醒你"，别写成口号；
 - **不要每个节点都列进来**：弹窗打断操作，满屏弹窗会让玩家开始无脑点「我知道了」；
 - `validateLevel` 会检查：节点存在、且该节点**确实有提醒正文**（否则弹出一个空弹窗）。
+
+## 2.3 班级通知群的随机反诈通知
+
+会话规格里的 `newsSession` 指向哪个会话，那个会话就会在固定消息之后
+追加 3–5 条随机反诈通知（内容来自 `CLASSGROUP_NEWS` 池子）：
+
+```ts
+chat: {
+  sessions: [ /* … */ ],
+  newsSession: 'classgroup',   // 就是班级通知群
+}
+```
+
+- 抽取在 `app/classNews.ts`：**每关抽一次并缓存**，同一次游玩里切来切去都是同一批；
+  重新打开页面 / 「重新开始本局」才会换；
+- 随机源是 `app/random.ts`，浏览器启动时用时间戳播种；测试用固定种子；
+- 想加内容就往 `CLASSGROUP_NEWS` 里加一条（`{ name, text }`），不必改代码；
+- `validateLevel` 会检查 `newsSession` 指向的会话真实存在。
+
 
 
 
