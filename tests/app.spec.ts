@@ -2138,8 +2138,13 @@ describe('Y. 关卡大厅（轮播选关）', () => {
    * 并且第一行要说明原因（检测到你疑似被诈骗）。
    */
   it('Y21 关键节点弹「国家反诈中心」弹窗，说明原因并给出判断依据', async () => {
-    const wrapper = await mountApp({ atDesk: true })
-    await tapPhone(wrapper, 1)
+    const wrapper = await mountApp()
+    await swipeUnlock(wrapper)
+    await openHall(wrapper)
+    await wrapper.find('.hall__arrow[aria-label="下一个关卡"]').trigger('click')
+    await flush()
+    await click(wrapper, '进入第二关')
+    await flush()
     await swipeUnlock(wrapper)
     await clickDesktopApp(wrapper, '青讯')
     await click(wrapper, '按他说的做')
