@@ -1802,6 +1802,28 @@ async function main() {
         `之前=${beforeAntifraudTile} 之后=${afterAntifraudTile}`,
       )
 
+      /*
+       * 手册页**不再有免责声明套话**。
+       *
+       * 按用户要求去掉了页脚那句「以上是通用提醒，不构成法律意见，也不承诺追回损失。」，
+       * 并且不要再出现类似的「关于内容本身的法律措辞」。这条断言把移除钉住 ——
+       * 以后谁再顺手加回一句免责声明，这里会立刻变红。
+       * 注意：**不是**要求删掉「剧情演示 · 不涉及真实资金」这类模拟标记，
+       * 那些是产品边界要求的持续提示，与免责声明是两回事。
+       */
+      const manualBody = await cdp.text()
+      const boilerplate = /不构成法律意见|不承诺追回损失|以上是通用提醒|仅供参考，不构成/
+      record(
+        '手册页没有免责声明套话（不构成法律意见 / 不承诺追回损失）',
+        manualBody.length > 0 && !boilerplate.test(manualBody),
+        boilerplate.test(manualBody) ? '仍存在免责声明套话' : '已移除',
+      )
+      // 手册本身仍要有内容，避免「把整页删了就通过」这种假绿
+      record(
+        '手册页正文仍在（移除的只是页脚套话）',
+        manualBody.includes('识骗手册') || manualBody.includes('国家反诈中心'),
+      )
+
       await cdp.click('桌面')
       await sleep(200)
       const beforeRecents = await cdp.eval(`return window.__osc || 0`)
