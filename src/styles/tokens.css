@@ -46,8 +46,7 @@
   --c-warn-bg: #fdf2e3;
   --c-warn-line: #e8b877;
   --c-warn-text: #7a4a12;
-  --c-sim-bg: #1b2634;
-  --c-sim-text: #9fd8ff;
+  /* 原 --c-sim-bg / --c-sim-text 是「剧情模拟」标记用的，随标记一起删除 */
   /*
    * 文字层级（2026-10-14 新增，同日修正过一次）。
    *

@@ -429,12 +429,15 @@ async function main() {
     await cdp.swipeUp({ fromY: 620, toY: 600 })
     record('轻微上滑不解锁', await cdp.isLocked())
 
-    // 锁屏不该有大段解释（真手机的锁屏只有时间/日期/壁纸）
+    // 锁屏不该有任何说明文字（真手机的锁屏只有时间/日期/壁纸）
     const lockText = await cdp.text()
     record(
-      '锁屏无多余说明文字（只留必要的一行模拟标记）',
-      !lockText.includes('虚构的手机') && !lockText.includes('虚拟生活费'),
-      lockText.includes('剧情演示') ? '保留了「剧情演示」标记' : '缺少模拟标记',
+      '锁屏无任何说明文字（连模拟标记也已去掉）',
+      !lockText.includes('虚构的手机') &&
+        !lockText.includes('虚拟生活费') &&
+        !lockText.includes('剧情演示') &&
+        !lockText.includes('不涉及真实资金'),
+      lockText.includes('剧情演示') ? '仍有「剧情演示」标记' : '已清空',
     )
 
     // 锁屏必须挂载壁纸图层（与桌面共用同一份 styles/wallpaper.css）
@@ -484,7 +487,7 @@ async function main() {
         const cs = getComputedStyle(el);
         if (cs.display === 'none' || cs.visibility === 'hidden' || Number(cs.opacity) === 0) return;
         // 图标底板与角标自带底色（白字压彩色块），不参与「压壁纸」的判断
-        const inTile = el.closest && el.closest('.app__glyph, .app__badge, .sim');
+        const inTile = el.closest && el.closest('.app__glyph, .app__badge');
         const own = [...el.childNodes]
           .filter((n) => n.nodeType === 3)
           .map((n) => n.textContent.trim())
@@ -737,8 +740,12 @@ async function main() {
     await cdp.screenshot(path.join(shotsDir, '04-wallet-pending.png'))
     text = await cdp.text()
     record(
-      '待付款页显示固定金额与模拟声明',
-      text.includes('确认垫付 100 元') && text.includes('不会动你的真钱') && text.includes('不用输卡号'),
+      '待付款页显示固定金额，且不再有模拟声明牌',
+      text.includes('确认垫付 100 元') &&
+        text.includes('这一页不用输卡号') &&
+        !text.includes('不会动你的真钱') &&
+        !text.includes('剧情演示'),
+      text.includes('不会动你的真钱') ? '仍有模拟声明' : '已移除',
     )
 
     // 离开待付款页再返回，请求仍在
@@ -1279,8 +1286,11 @@ async function main() {
     await sleep(400)
     const l2Wallet = await cdp.text()
     record(
-      '第二关首笔是「账户验证金 200」',
-      l2Wallet.includes('确认转出 200 元') && l2Wallet.includes('不会动你的真钱'),
+      '第二关首笔是「账户验证金 200」，且无模拟声明牌',
+      l2Wallet.includes('确认转出 200 元') &&
+        !l2Wallet.includes('不会动你的真钱') &&
+        !l2Wallet.includes('剧情演示'),
+      l2Wallet.includes('不会动你的真钱') ? '仍有模拟声明' : '已移除',
     )
     await cdp.screenshot(path.join(shotsDir, '08-level02-pending.png'))
     await cdp.click('确认转出 200 元')

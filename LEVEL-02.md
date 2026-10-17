@@ -32,7 +32,7 @@
 |---|---|---|---|
 | `intro` / 锁屏 | 副标题「大学生反诈互动 · 第二关「冒充客服退款」」 | `start` → `l2-contact` | 开局 |
 | `l2-contact` / 客服私聊 | 订单卡（轻跑运动鞋 ¥199 · 已完成已签收）；「系统升级导致重复扣款，退你 199」；「账户等级不够，先转 200 验证金，验证完立刻原路退回」；风险卡「真客服不会让你先转账验证」 | `l2-cooperate` → `l2-verify-1`；`l2-refuse` → `l2-end-clear`；`l2-check-order` → 留在本节点（订单详情弹层） | 分别记 `l2-cooperated` / `l2-early-refuse` / `l2-checked-order` |
-| `l2-verify-1` / 首次待确认 | 安心钱包：待确认「账户验证金 200」；余额 800；模拟声明 | `l2-confirm-200` → `l2-refund-claim`；`l2-cancel-200` → `l2-end-stop` | 确认仅一次：800→600，记 `l2-paid-200` |
+| `l2-verify-1` / 首次待确认 | 安心钱包：待确认「账户验证金 200」；余额 800（**不再有模拟声明牌**，见 `AGENTS.md` §1） | `l2-confirm-200` → `l2-refund-claim`；`l2-cancel-200` → `l2-end-stop` | 确认仅一次：800→600，记 `l2-paid-200` |
 | `l2-refund-claim` / 退款进度 | 退款进度卡（退款 ¥199 · 已受理，等待入账）；「风控等级不够，需要再验证一次」；「把短信验证码发我，我帮你打开通道」；风险卡「页面上的退款进度不是你的余额」 | `l2-continue` → `l2-verify-2`；`l2-stop` → `l2-end-stop` | `onEnter`：平台展示 199，记 `l2-saw-refund-claim`、`l2-asked-code` |
 | `l2-verify-2` / 二次验证失败 | 「验证失败，需要 300 保证金刷流水，处理完一并退回」；「不处理会影响你的征信和购物额度」；风险卡「拿征信吓你是话术」 | `l2-accept-300` → `l2-verify-3`；`l2-refuse-300` → `l2-end-stop` | 记 `l2-credit-threat`、`l2-asked-300` |
 | `l2-verify-3` / 追加待确认 | 安心钱包：待确认「保证金 300」；余额 600 | `l2-confirm-300` → `l2-end-loss`；`l2-cancel-300` → `l2-end-stop` | 确认仅一次：600→300，记 `l2-paid-300` |

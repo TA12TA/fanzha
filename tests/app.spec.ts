@@ -640,12 +640,24 @@ describe('E. 整部手机的交互（B01–B14）', () => {
     expect(readSave()?.balance).toBe(700)
   })
 
-  it('B02 转账页有明确的模拟声明，且不要求敏感信息', async () => {
+  it('B02 转账页不要求敏感信息，也没有任何模拟声明牌', async () => {
     const wrapper = await mountApp()
     await startAndReachPayment(wrapper)
     const text = wrapper.text()
-    expect(text).toContain('不会动你的真钱')
-    expect(text).toContain('不用输卡号、验证码或密码')
+    /*
+     * 按用户要求去掉了「游戏内模拟，不会动你的真钱」这类模拟声明：
+     * 整个网站本身就是模拟叙事，不需要再挂一块"这是假的"的牌子。
+     * 这里改为**反向**断言，防止它被顺手加回来。
+     */
+    expect(text, '不应再有「不会动你的真钱」这类模拟声明').not.toContain('不会动你的真钱')
+    expect(text, '不应再有「剧情演示」字样').not.toContain('剧情演示')
+    expect(text).toContain('这一页不用输卡号')
+    /*
+     * 仍然不允许真的收集敏感信息：
+     * - 不许有链接（不能跳走）
+     * - 不许有输入框——**例外**是第二关的模拟验证码输入，那是游戏内的剧情环节、
+     *   不采集任何真实信息；第一关这里不该出现任何输入框。
+     */
     expect(wrapper.findAll('input')).toHaveLength(0)
     expect(wrapper.findAll('a')).toHaveLength(0)
   })
@@ -1289,11 +1301,15 @@ describe('R. 相册（自绘风景照片 + 全屏查看器）', () => {
  * 真手机的锁屏只有时间、日期和壁纸，不会先解释一遍这是什么。
  */
 describe('S. 沉浸感（去说明文字 / 解锁过渡 / 设置页重开）', () => {
-  it('S01 锁屏只留一行必要标记，不再有大段解释', async () => {
+  it('S01 锁屏只有时间、日期与标题，没有任何说明文字', async () => {
     const wrapper = await mountApp()
 
-    // 必要的模拟标记仍在（合规要求：持续可见）
-    expect(wrapper.text()).toContain('剧情演示')
+    /*
+     * 按用户要求，连「剧情演示 · 不涉及真实资金」这类模拟标记也去掉了：
+     * 整个网站本身就是模拟叙事。这里改成反向断言，防止它被顺手加回来。
+     */
+    expect(wrapper.text(), '不应再有「剧情演示」模拟标记').not.toContain('剧情演示')
+    expect(wrapper.text(), '不应再有「不涉及真实资金」').not.toContain('不涉及真实资金')
 
     // 元叙述已删除
     expect(wrapper.text(), '不应再解释「这是虚构手机」').not.toContain('虚构的手机')

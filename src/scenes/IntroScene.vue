@@ -134,13 +134,6 @@ const subtitle = computed(
           <span id="lock-title" class="lock__title">反诈局中局：你的手机</span>
           <span class="lock__subtitle">{{ subtitle }}</span>
         </span>
-
-        <!--
-          只保留一行必要的说明标记（AGENTS.md 要求持续可见的「剧情模拟」标识）。
-          原先这里还有两段解释（虚构手机、800 元生活费怎么来的），属于元叙述，
-          已删除：生活费来源改由青讯里妈妈的转账卡片交代，用叙事代替说明。
-        -->
-        <span class="lock__note">剧情演示 · 不涉及真实资金</span>
       </span>
 
       <!-- 解锁指示：可点、可键盘触发 -->
@@ -266,16 +259,6 @@ const subtitle = computed(
 
 .lock__subtitle {
   font-size: var(--font-base);
-  color: var(--c-on-wall-soft);
-}
-
-/*
- * 「剧情演示 · 不涉及真实资金」是必须看清的模拟标记，
- * 所以用第二档（不是最浅的 dim），浅色壁纸上也要读得出来。
- */
-.lock__note {
-  font-size: var(--font-xs);
-  line-height: 1.6;
   color: var(--c-on-wall-soft);
 }
 

@@ -49,8 +49,8 @@ function resolveHex(name: string): string | null {
 /**
  * 收集「文字层级」token（`--c-text*`）。
  *
- * 刻意排除语义色（`--c-warn-text` / `--c-sim-text`）—— 它们是「风险/提示」
- * 这类有含义的颜色，彼此接近是正常的，与层级无关。
+ * 刻意排除语义色（`--c-warn-text`）—— 它是「风险」这类有含义的颜色，
+ * 彼此接近是正常的，与文字层级无关。
  */
 function textLevelTokens(): { name: string; hex: string }[] {
   const rootBlock = tokensCss.slice(0, tokensCss.indexOf("[data-theme='day']"))

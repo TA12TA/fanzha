@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import AppHeader from '@/components/AppHeader.vue'
-import SimulationBadge from '@/components/SimulationBadge.vue'
 import { BRAND } from '@/data/levels/shared'
 import { pendingRequestOf } from '@/app/navigation'
 import type { PlayableLevel } from '@/game/level'
@@ -68,7 +67,6 @@ const records = computed(() => props.level.walletRecords(props.state))
         <p class="request__title">{{ request.title }}</p>
         <p class="request__amount">{{ request.amount }} <span>元</span></p>
         <p class="request__hint">离开只是先放着，不会扣款或取消。</p>
-        <SimulationBadge strong text="游戏内模拟，不会动你的真钱" />
         <div class="request__actions">
           <button
             type="button"
@@ -87,7 +85,13 @@ const records = computed(() => props.level.walletRecords(props.state))
             {{ cancelLabel }}
           </button>
         </div>
-        <p class="request__note">不用输卡号、验证码或密码。</p>
+        <!--
+          原来这句是「不用输卡号、验证码或密码」。
+          现在游戏里真的会出现一次「把短信验证码发给对方」的环节（在聊天里，
+          见 level02 的 codeGate），钱包页再说「不用输验证码」会自相矛盾。
+          这里只保留与钱包页本身相关的部分。
+        -->
+        <p class="request__note">这一页不用输卡号，也不用输密码。</p>
       </section>
 
       <section v-else class="norequest" aria-label="当前没有待处理请求">
