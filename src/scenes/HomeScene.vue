@@ -257,7 +257,8 @@ function badgeAria(id: string, badge: string): string {
 .widgets {
   display: grid;
   grid-template-columns: 1.06fr 1fr;
-  gap: var(--space-2);
+  /* 组件之间的缝隙比图标之间略大，两块磨砂玻璃才不会粘在一起 */
+  gap: var(--space-3);
 }
 
 .widget {
@@ -285,10 +286,11 @@ function badgeAria(id: string, badge: string): string {
   font-variant-numeric: tabular-nums;
 }
 
-/* 日期是时钟组件的次要信息：比时间浅一档 */
+/* 日期是时钟组件的次要信息：比时间浅一档，字距略放开更透气 */
 .clock__date {
   font-size: var(--font-xs);
   font-weight: 400;
+  letter-spacing: 0.04em;
   color: var(--c-on-wall-soft);
 }
 
@@ -429,21 +431,40 @@ function badgeAria(id: string, badge: string): string {
 
 /* ============ 底部：重新开始（低存在感） ============ */
 
+/*
+ * 2026-10-17：改成**幽灵胶囊按钮**。
+ *
+ * 改之前它是一行裸文字直接压在壁纸上，既不像桌面图标也不像按钮，
+ * 是整屏最违和的一处（截图核对时一眼就看到）。现在给它一个半透明的胶囊底
+ * 与描边：仍然是桌面上的最低优先级操作（颜色比图标标签还浅一档），
+ * 但看得出「这是一个可以点的东西」。
+ *
+ * 文案与元素类型不变 —— 多处测试按文本点击它。
+ */
 .home__foot {
   display: flex;
   justify-content: center;
-  padding: var(--space-2) 0;
+  padding: var(--space-3) 0 var(--space-2);
 }
 
-/* 「重新开始本局」是桌面上的最低优先级操作：比标签还浅一档 */
 .home__restart {
   min-height: var(--tap-min);
-  padding: 0 var(--space-3);
-  border: none;
-  background: transparent;
+  padding: 0 var(--space-5);
+  border: 1px solid var(--c-wall-border);
+  border-radius: 999px;
+  background: var(--c-wall-surface);
   color: var(--c-on-wall-dim);
   font-size: var(--font-sm);
-  font-weight: 400;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  transition:
+    background-color var(--dur-fast) ease,
+    transform var(--dur-fast) ease;
+}
+
+.home__restart:active {
+  transform: scale(0.985);
+  background: var(--c-wall-dock);
 }
 
 /* ============ 程序坞（Dock） ============ */
@@ -451,6 +472,9 @@ function badgeAria(id: string, badge: string): string {
 /*
  * 磨砂玻璃 Dock：真实手机桌面的标配。
  * 放在滚动区之外（.home 是纵向 flex，dock 是最后一个子项，不随内容滚动）。
+ *
+ * `::before` 是 Dock 上方的一层渐隐遮罩：不这么做的话 Dock 像直接"贴"在壁纸上，
+ * 图标与壁纸之间没有过渡。遮罩用纯伪元素，不动 DOM（图标数量与结构有断言守着）。
  */
 .dock {
   position: relative;
@@ -463,6 +487,21 @@ function badgeAria(id: string, badge: string): string {
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   box-shadow: var(--shadow-dock);
+}
+
+.dock::before {
+  content: '';
+  position: absolute;
+  left: -1px;
+  right: -1px;
+  bottom: calc(100% - 1px);
+  height: 56px;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    var(--wall-vignette)
+  );
+  pointer-events: none;
 }
 
 .dock__list {

@@ -92,15 +92,26 @@ const emit = defineEmits<{
   display: flex;
   align-items: flex-start;
   gap: var(--space-1);
-  padding: var(--space-3);
+  padding: var(--space-2) var(--space-3);
   padding-left: calc(var(--space-3) + 3px);
   border: 1px solid var(--c-line);
   border-left-width: 3px;
   border-radius: var(--radius-md);
-  background: rgb(255 255 255 / 97%);
+  /*
+   * 2026-10-17 画面打磨：从「不透明纯白大卡片」改成**磨砂玻璃**。
+   *
+   * 横幅是浮在应用之上的一层（真实手机的横幅也会盖住应用页头），这一层
+   * 结构没法也不该改。之前的问题是它完全不透明、又高又白，整块压住页头时
+   * 看起来像布局崩了。改成半透明 + 强模糊之后，页头会隐约透出来，
+   * 「这是盖在上面的一条通知」这层语义就成立了。
+   */
+  background: rgb(255 255 255 / 80%);
   color: var(--c-text);
-  box-shadow: 0 8px 26px rgb(4 10 20 / 26%);
-  backdrop-filter: blur(6px);
+  box-shadow:
+    0 10px 30px rgb(4 10 20 / 22%),
+    inset 0 1px 0 rgb(255 255 255 / 70%);
+  backdrop-filter: blur(22px) saturate(180%);
+  -webkit-backdrop-filter: blur(22px) saturate(180%);
   animation: banner-in var(--dur-base) ease-out;
 }
 
@@ -160,23 +171,38 @@ const emit = defineEmits<{
 .banner__title {
   font-size: var(--font-sm);
   font-weight: 700;
+  line-height: 1.4;
   color: var(--c-text);
 }
 
+/*
+ * 正文最多两行（CSS 裁切）。
+ *
+ * 用 `-webkit-line-clamp` 而不是在 JS 里截断字符串：**文本内容必须完整保留**，
+ * 通知中心会回放同一条正文，测试也按文本查找。裁切只是视觉行为。
+ * 两行足够放下现有全部通知文案，同时把横幅高度压下来，少盖住一点内容。
+ */
 .banner__body {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
   font-size: var(--font-sm);
-  line-height: 1.5;
+  line-height: 1.45;
   color: var(--c-text-soft);
 }
 
 .banner__queued {
   flex: none;
-  align-self: center;
+  /* 与标题行对齐，而不是垂直居中 —— 居中会显得挂在正文旁边 */
+  align-self: flex-start;
+  margin-top: 1px;
   padding: 1px 7px;
   border-radius: 999px;
-  background: var(--c-surface-2);
+  background: rgb(22 32 46 / 8%);
   color: var(--c-text-soft);
   font-size: var(--font-xs);
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 

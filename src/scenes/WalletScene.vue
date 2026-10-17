@@ -122,10 +122,11 @@ const records = computed(() => props.level.walletRecords(props.state))
 .wallet__body {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  /* 三块卡（余额 / 待确认 / 记录）之间留出等距节奏，避免挤成一摞 */
+  gap: var(--space-4);
   flex: 1;
   min-height: 0;
-  padding: var(--space-3);
+  padding: var(--space-4) var(--space-3);
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
@@ -133,12 +134,15 @@ const records = computed(() => props.level.walletRecords(props.state))
 .balance {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--space-1);
   padding: var(--space-4);
   border-radius: var(--radius-md);
-  background: linear-gradient(150deg, #1d4f8f, #163d70);
+  background: linear-gradient(150deg, #21589c, #163d70 78%);
   color: #fff;
-  box-shadow: var(--shadow-card);
+  box-shadow:
+    /* 顶部一道极淡内高光：深色卡片没有它就像一块平色块 */
+    inset 0 1px 0 rgb(255 255 255 / 14%),
+    var(--shadow-card);
 }
 
 .balance__label {
@@ -195,7 +199,7 @@ const records = computed(() => props.level.walletRecords(props.state))
 .request {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-3);
   padding: var(--space-4);
   border: 1px solid var(--c-line);
   border-radius: var(--radius-md);

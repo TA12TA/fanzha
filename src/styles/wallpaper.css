@@ -6,10 +6,23 @@
  * 解锁时背景会跳一下。
  *
  * 主题由 `<html data-theme="day|night">` 决定（见 `app/theme.ts`）：
- * - 夜间：深蓝夜空 + 星点 + 山峦剪影（原来的效果）；
- * - 白天：晨光天空 + 云带 + 远山（新增，亮度更高但文字仍可读）。
+ * - 夜间：深蓝夜空 + 星点 + 三层山峦剪影；
+ * - 白天：晨光天空 + 云带 + 三层远山。
  *
  * 全部是纯 CSS 渐变，不引入任何图片资源。
+ *
+ * ── 2026-10-17 画面打磨 ────────────────────────────────────────────────
+ * 这一版主要解决「大片空白显得没做完」的问题（截图核对时最明显的短板）：
+ * 1. 太阳/月亮从**一个硬边圆盘**改成「内核 + 光晕 + 大气散射」三层叠加，
+ *    硬边是之前最扎眼的一处；
+ * 2. 山峦从 2 层加到 3 层，越远越淡越平，中间留雾 —— 只有这样才有纵深，
+ *    否则两条椭圆看起来就是两块贴纸；
+ * 3. 地平线加一条雾带，让天与山之间有过渡，不是硬切；
+ * 4. 星点分三档（大量微星 + 少量中星 + 几颗亮星），避免「均匀撒点」的死板；
+ * 5. 整体加极淡暗角，收住画面边缘。
+ *
+ * **不要动 `--c-on-wall*` 令牌**：锁屏/桌面的文字对比度守卫依赖它们，
+ * 那一组属于文字层级体系，归 `tokens.css` 管。
  */
 
 .wall {
@@ -23,75 +36,158 @@
 
 /* ============ 夜间（默认） ============ */
 
+/* 天空底色：顶部略偏紫、中段最深、贴近地平线回暖一点，避免整块死平 */
 .wall {
-  background: linear-gradient(170deg, #16233a, #0b1424 62%, #080f1c);
+  background: linear-gradient(
+    178deg,
+    #16263f 0%,
+    #101d33 34%,
+    #0a1424 62%,
+    #070d1a 82%,
+    #060b16 100%
+  );
 }
 
+/*
+ * 夜空：星点 + 月光 + 城市天光。
+ *
+ * 星点分三档透明度/半径：绝大多数是 1px 微星，少量 1.4px，几颗更亮的「亮星」。
+ * 全部撒成一样的大小会让它看起来像噪点而不是星空。
+ */
 .wall__sky {
   position: absolute;
   inset: 0;
   background:
-    /* 星点：细小白点，低透明度 */
+    /* 亮星（3 颗，带一点点光晕） */
+      radial-gradient(circle 2px at 74% 27%, rgb(255 255 255 / 85%) 0 1px, transparent 3px),
+    radial-gradient(circle 2px at 27% 44%, rgb(214 232 255 / 78%) 0 1px, transparent 3px),
+    radial-gradient(circle 2px at 88% 18%, rgb(255 255 255 / 72%) 0 1px, transparent 3px),
+    /* 中星 */
       radial-gradient(circle 1.4px at 18% 12%, rgb(255 255 255 / 62%) 0 1.4px, transparent 1.5px),
-    radial-gradient(circle 1px at 33% 22%, rgb(255 255 255 / 45%) 0 1px, transparent 1.1px),
     radial-gradient(circle 1.2px at 61% 15%, rgb(255 255 255 / 52%) 0 1.2px, transparent 1.3px),
-    radial-gradient(circle 1px at 74% 27%, rgb(255 255 255 / 40%) 0 1px, transparent 1.1px),
-    radial-gradient(circle 1.3px at 88% 18%, rgb(255 255 255 / 48%) 0 1.3px, transparent 1.4px),
-    radial-gradient(circle 1px at 46% 34%, rgb(255 255 255 / 34%) 0 1px, transparent 1.1px),
-    radial-gradient(circle 1.1px at 8% 29%, rgb(255 255 255 / 36%) 0 1.1px, transparent 1.2px),
-    radial-gradient(circle 1px at 27% 44%, rgb(255 255 255 / 28%) 0 1px, transparent 1.1px),
-    /* 月光光晕 */
-      radial-gradient(circle 26px at 76% 14%, rgb(226 236 255 / 26%) 0 26px, transparent 27px),
-    radial-gradient(circle at 76% 14%, rgb(214 228 255 / 16%), transparent 40%),
-    /* 城市天光 */
-      radial-gradient(circle at 12% 18%, rgb(120 90 220 / 20%), transparent 42%),
-    radial-gradient(circle at 92% 40%, rgb(52 120 200 / 14%), transparent 38%);
+    radial-gradient(circle 1.3px at 46% 34%, rgb(255 255 255 / 44%) 0 1.3px, transparent 1.4px),
+    radial-gradient(circle 1.2px at 8% 29%, rgb(255 255 255 / 40%) 0 1.2px, transparent 1.3px),
+    radial-gradient(circle 1.1px at 33% 22%, rgb(255 255 255 / 45%) 0 1.1px, transparent 1.2px),
+    /* 微星 */
+      radial-gradient(circle 1px at 12% 7%, rgb(255 255 255 / 30%) 0 1px, transparent 1.1px),
+    radial-gradient(circle 1px at 38% 9%, rgb(255 255 255 / 26%) 0 1px, transparent 1.1px),
+    radial-gradient(circle 1px at 55% 6%, rgb(255 255 255 / 22%) 0 1px, transparent 1.1px),
+    radial-gradient(circle 1px at 82% 8%, rgb(255 255 255 / 28%) 0 1px, transparent 1.1px),
+    radial-gradient(circle 1px at 95% 31%, rgb(255 255 255 / 24%) 0 1px, transparent 1.1px),
+    radial-gradient(circle 1px at 68% 39%, rgb(255 255 255 / 20%) 0 1px, transparent 1.1px),
+    radial-gradient(circle 1px at 4% 44%, rgb(255 255 255 / 18%) 0 1px, transparent 1.1px),
+    /* 月光：内核 + 光晕 + 大范围散射（三层，替代原来的硬圆） */
+      radial-gradient(circle 17px at 76% 14%, rgb(240 246 255 / 92%) 0 13px, transparent 17px),
+    radial-gradient(circle at 76% 14%, rgb(214 230 255 / 30%) 0%, transparent 26%),
+    radial-gradient(circle at 76% 14%, rgb(180 205 250 / 14%) 0%, transparent 52%),
+    /* 城市天光（左右各一抹，让天空有冷暖对比） */
+      radial-gradient(circle at 10% 20%, rgb(120 90 220 / 20%), transparent 44%),
+    radial-gradient(circle at 92% 42%, rgb(52 120 200 / 14%), transparent 40%);
   transition: opacity 600ms ease;
 }
 
-/* 山峦剪影：两段错落的椭圆，落在可视区下半部 */
+/*
+ * 山峦剪影：三层。
+ * 越远的一层越高越淡（大气透视），最前面一层最宽最深。
+ * 只有两层时看起来像两块贴纸，三层才有纵深。
+ *
+ * 位置从原来「贴在最底部」抬到了画面中下部：桌面上半屏被组件与图标占满，
+ * 山脊如果全落在最低 10%，下半屏就是一片纯色，整屏看起来没做完。
+ */
 .wall__hills {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(ellipse 120% 22% at 24% 90%, rgb(15 42 78 / 88%), transparent 74%),
-    radial-gradient(ellipse 132% 19% at 88% 95%, rgb(9 28 56 / 94%), transparent 76%);
+    /* 远山：淡 */
+      radial-gradient(ellipse 108% 16% at 18% 76%, rgb(40 76 122 / 54%), transparent 72%),
+    radial-gradient(ellipse 96% 14% at 76% 74%, rgb(35 68 110 / 48%), transparent 74%),
+    /* 中山 */
+      radial-gradient(ellipse 122% 21% at 30% 84%, rgb(19 50 90 / 80%), transparent 74%),
+    radial-gradient(ellipse 110% 18% at 96% 86%, rgb(16 44 82 / 74%), transparent 76%),
+    /* 近山：最深，压在最低处 */
+      radial-gradient(ellipse 140% 17% at 44% 94%, rgb(8 24 46 / 93%), transparent 72%),
+    radial-gradient(ellipse 130% 14% at 86% 96%, rgb(6 19 38 / 90%), transparent 74%);
 }
 
-/* 地平线暖光：让剪影有层次，不是一块死黑 */
+/* 地平线暖光 + 一层薄雾 + 暗角：让剪影有层次，不是一块死黑 */
 .wall__glow {
   position: absolute;
   inset: 0;
-  background: radial-gradient(ellipse 66% 12% at 70% 84%, rgb(96 150 226 / 26%), transparent 70%);
+  background:
+    radial-gradient(ellipse 64% 10% at 70% 78%, rgb(96 150 226 / 30%), transparent 70%),
+    linear-gradient(
+      180deg,
+      transparent 76%,
+      rgb(120 168 236 / 10%) 84%,
+      rgb(150 195 245 / 14%) 90%,
+      transparent 96%
+    ),
+    /* 暗角：收住四边，避免画面边缘「没画完」 */
+      radial-gradient(ellipse 92% 62% at 50% 46%, transparent 58%, rgb(4 10 22 / 42%));
 }
 
 /* ============ 白天 ============ */
 
+/* 天空底色：顶部更蓝、中段通透、地平线泛白 —— 四段比两段更有层次 */
 [data-theme='day'] .wall {
-  background: linear-gradient(170deg, #8fc4ef, #cfe6f8 55%, #eaf4fb);
+  background: linear-gradient(
+    178deg,
+    #74a9e0 0%,
+    #97c4ec 28%,
+    #bcdcf5 54%,
+    #d3e9f8 78%,
+    #e2f1fc 100%
+  );
 }
 
 [data-theme='day'] .wall__sky {
-  /* 白天没有星点：换成云带与暖阳 */
+  /* 白天没有星点：换成云带 + 暖阳（三层）+ 大气散射 */
   background:
-    radial-gradient(ellipse 34% 9% at 24% 20%, rgb(255 255 255 / 78%), transparent 70%),
-    radial-gradient(ellipse 26% 7% at 46% 13%, rgb(255 255 255 / 62%), transparent 70%),
-    radial-gradient(ellipse 30% 8% at 78% 26%, rgb(255 255 255 / 58%), transparent 70%),
-    radial-gradient(ellipse 22% 6% at 62% 33%, rgb(255 255 255 / 46%), transparent 70%),
-    /* 太阳与光晕 */
-      radial-gradient(circle 22px at 80% 15%, rgb(255 246 214 / 92%) 0 22px, transparent 23px),
-    radial-gradient(circle at 80% 15%, rgb(255 236 178 / 40%), transparent 44%),
-    radial-gradient(circle at 12% 16%, rgb(255 255 255 / 34%), transparent 40%);
+    /* 云带：5 条，越靠下越大越淡 */
+      radial-gradient(ellipse 30% 7% at 22% 17%, rgb(255 255 255 / 74%), transparent 70%),
+    radial-gradient(ellipse 22% 5% at 44% 11%, rgb(255 255 255 / 58%), transparent 70%),
+    radial-gradient(ellipse 34% 8% at 74% 24%, rgb(255 255 255 / 56%), transparent 70%),
+    radial-gradient(ellipse 26% 6% at 56% 31%, rgb(255 255 255 / 44%), transparent 70%),
+    radial-gradient(ellipse 46% 9% at 26% 39%, rgb(255 255 255 / 34%), transparent 72%),
+    /* 太阳：内核 + 光晕 + 散射（原来是硬边圆盘） */
+      radial-gradient(circle 15px at 80% 15%, rgb(255 252 235 / 96%) 0 11px, transparent 15px),
+    radial-gradient(circle at 80% 15%, rgb(255 242 196 / 46%) 0%, transparent 22%),
+    radial-gradient(circle at 80% 15%, rgb(255 238 186 / 22%) 0%, transparent 48%),
+    /* 左侧天光，避免整片天空单向平涂 */
+      radial-gradient(circle at 8% 14%, rgb(255 255 255 / 40%), transparent 42%);
 }
 
 [data-theme='day'] .wall__hills {
+  /*
+   * 远山偏冷灰蓝、中山偏青、近山偏深青绿：三层拉开色相，纵深更明显。
+   * 位置与夜间一致（76% → 84% → 94%），让山脊落在画面中下部，
+   * 而不是全挤在最低的 10% 里 —— 挤在底部时桌面下半部就是一片空白。
+   */
   background:
-    radial-gradient(ellipse 120% 22% at 24% 90%, rgb(96 138 178 / 72%), transparent 74%),
-    radial-gradient(ellipse 132% 19% at 88% 95%, rgb(72 112 156 / 80%), transparent 76%);
+    radial-gradient(ellipse 104% 16% at 16% 76%, rgb(120 160 198 / 54%), transparent 72%),
+    radial-gradient(ellipse 92% 14% at 78% 74%, rgb(104 148 190 / 48%), transparent 74%),
+    radial-gradient(ellipse 118% 21% at 28% 84%, rgb(76 126 168 / 72%), transparent 74%),
+    radial-gradient(ellipse 106% 18% at 98% 86%, rgb(64 114 158 / 66%), transparent 76%),
+    radial-gradient(ellipse 138% 17% at 42% 94%, rgb(44 94 136 / 88%), transparent 72%),
+    radial-gradient(ellipse 128% 14% at 88% 96%, rgb(38 84 126 / 84%), transparent 74%);
 }
 
+/*
+ * 白天：地平线薄雾 + 暖光 + 暗角。
+ * 雾带要**窄且淡**：之前它压在 74%–82% 的高度、白色到 46%，
+ * 把山脊整条盖掉了，桌面下半部因此看起来是一片空白。
+ */
 [data-theme='day'] .wall__glow {
-  background: radial-gradient(ellipse 66% 12% at 70% 84%, rgb(255 240 200 / 34%), transparent 70%);
+  background:
+    radial-gradient(ellipse 62% 9% at 68% 78%, rgb(255 246 214 / 48%), transparent 70%),
+    linear-gradient(
+      180deg,
+      transparent 80%,
+      rgb(255 255 255 / 22%) 88%,
+      rgb(255 255 255 / 28%) 93%,
+      transparent 99%
+    ),
+    radial-gradient(ellipse 96% 66% at 50% 44%, transparent 64%, rgb(74 118 168 / 20%));
 }
 
 @media (prefers-reduced-motion: reduce) {

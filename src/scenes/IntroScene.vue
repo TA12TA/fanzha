@@ -208,24 +208,54 @@ const subtitle = computed(
   transition: transform var(--dur-fast) ease-out;
 }
 
+/*
+ * 2026-10-17 画面打磨：时钟放大并收紧字距。
+ *
+ * 大字号 + 细字重 + 负字距是「时钟」这类数字最耐看的组合；配合下面日期的
+ * 正字距，两者形成明确的层级差，而不是两个同色同粗细的行堆在一起。
+ * 320px 宽下「13:15」仍在一行内（约 145px），不会挤出横向滚动。
+ */
 .lock__clock {
-  font-size: 46px;
+  font-size: 52px;
   font-weight: 300;
-  line-height: 1.05;
+  line-height: 1.02;
+  letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
 }
 
 .lock__date {
   margin-top: calc(-1 * var(--space-1));
   font-size: var(--font-sm);
+  letter-spacing: 0.06em;
   color: var(--c-on-wall-soft);
 }
 
+/*
+ * 品牌/标题块：上方加一小段短横线做视觉锚点。
+ *
+ * 之前时钟、日期、标题三段全靠「间距」区分，在浅色壁纸上读起来是一整片文字。
+ * 一条 44px 的短横线（伪元素，不进无障碍树、不改 DOM）把「现在几点」和
+ * 「这是什么作品」分开，这一屏立刻就有的结构感。
+ */
 .lock__brand {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 2px;
   margin-top: var(--space-5);
+  padding-top: var(--space-4);
+}
+
+.lock__brand::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 44px;
+  height: 2px;
+  border-radius: 2px;
+  background: currentcolor;
+  opacity: 0.32;
 }
 
 .lock__title {
@@ -259,12 +289,31 @@ const subtitle = computed(
   transition: transform var(--dur-fast) ease-out;
 }
 
+/*
+ * 上滑箭头：暗示「往上走」。
+ *
+ * 原来只有一根细横条 + 一行小字，可操作性暗示太弱（第一眼容易当成装饰）。
+ * 加一个小箭头（伪元素，纯装饰、不进无障碍树）之后，方向就一目了然了。
+ */
+.lock__hint::before {
+  content: '';
+  width: 10px;
+  height: 10px;
+  margin-bottom: 2px;
+  border-top: 2px solid var(--c-on-wall-dim);
+  border-left: 2px solid var(--c-on-wall-dim);
+  border-radius: 1px;
+  transform: rotate(45deg);
+  opacity: 0.85;
+}
+
 .lock__hintline {
   position: relative;
-  width: 46px;
-  height: 5px;
+  width: 58px;
+  height: 6px;
   border-radius: 999px;
   background: var(--c-wall-hint-track);
+  box-shadow: inset 0 1px 2px rgb(4 10 20 / 12%);
   overflow: hidden;
 }
 
@@ -281,7 +330,8 @@ const subtitle = computed(
 
 .lock__hinttext {
   font-size: var(--font-sm);
-  letter-spacing: 1px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
   color: var(--c-on-wall-soft);
   animation: hint-breathe 2.4s ease-in-out infinite;
 }

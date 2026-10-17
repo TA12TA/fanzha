@@ -568,6 +568,19 @@ const detail = computed(() => {
   padding: var(--space-3);
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  /*
+   * 2026-10-17 画面打磨：底部 16px 渐隐。
+   *
+   * 消息滚到底之前，列表下边缘是一条硬切的线，看起来像内容被裁掉了。
+   * 用 mask 让它渐隐（沿用滚动容器的底边，不随内容滚动），就能读出
+   * 「下面还有」这层意思。只能这么写：滚动容器里放 `::after` 会跟着内容一起
+   * 滚走，反而只在末尾才出现。
+   *
+   * 代价：内容很短、不需要滚动时，最后一条气泡的底部 16px 会略淡。
+   * 选 16px 就是为了把这个副作用压到几乎看不出来。
+   */
+  -webkit-mask-image: linear-gradient(180deg, #000 calc(100% - 16px), transparent 100%);
+  mask-image: linear-gradient(180deg, #000 calc(100% - 16px), transparent 100%);
 }
 
 /* 跳过动画的入口：跟在消息末尾，低调不抢戏 */
@@ -645,6 +658,11 @@ const detail = computed(() => {
   color: var(--c-text-secondary);
 }
 
+/*
+ * 底部动作区（待确认提示 / 剧情选项）。
+ * 2026-10-17：加一层极淡的向上投影，让它明确「压在消息区之上」，
+ * 而不是消息区突然断掉、下面又冒出一条白底按钮带。
+ */
 .chat__pending,
 .chat__actions {
   display: flex;
@@ -654,6 +672,7 @@ const detail = computed(() => {
   padding: var(--space-3);
   border-top: 1px solid var(--c-line);
   background: var(--c-surface);
+  box-shadow: 0 -8px 20px rgb(16 30 54 / 7%);
 }
 
 .chat__pendingtext {
