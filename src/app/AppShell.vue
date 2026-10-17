@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import LevelHall from '@/app/LevelHall.vue'
+import LevelDesk from '@/app/LevelDesk.vue'
 import PhoneShell from '@/app/PhoneShell.vue'
 import { getPlayableLevel, playableLevels } from '@/data/levels'
 import { clearAllSaves, loadActiveLevel, readSlotSummary, saveActiveLevel } from '@/game/storage'
@@ -10,7 +10,7 @@ import type { LevelSlotSummary } from '@/game/storage'
 import type { LevelId } from '@/game/types'
 
 /**
- * 根壳：一部虚构手机 + 关卡大厅两种形态。
+ * 根壳：一张书桌（选关）+ 一部虚构手机，两种形态。
  *
  * 两级结构（用户要求）：
  * - **一级 = 关卡大厅**：打开页面/刷新后的首屏就是大厅，先选关；
@@ -25,7 +25,7 @@ import type { LevelId } from '@/game/types'
  *
  * 手机内部的「关卡」图标、设置页入口仍然保留：玩到一半想换关不必刷新。
  */
-const screen = ref<'hall' | 'phone'>('hall')
+const screen = ref<'desk' | 'phone'>('desk')
 /** 当前在玩的关卡：读上次的选择，用于大厅初始居中与卡片状态。 */
 const activeLevelId = ref<LevelId>(loadActiveLevel())
 
@@ -72,10 +72,10 @@ const activeLevel = computed(() => getPlayableLevel(activeLevelId.value) ?? play
 /** 手机挂载钥匙：切关时 +1，强制整部手机重挂载。 */
 const phoneKey = ref(0)
 
-/** 打开大厅。 */
+/** 打开大厅（书桌）。 */
 function openHall(): void {
   refreshSlots()
-  screen.value = 'hall'
+  screen.value = 'desk'
 }
 
 /** 从大厅回到当前关卡（不改变任何进度）。首屏还没进过任何关时为空操作。 */
@@ -112,7 +112,7 @@ function clearAll(): void {
   // 清完回大厅：玩家会想重新挑一关，而且卡片状态刚刚全变了。
   // 同时清掉「进过关」的标记 —— 现在等于回到没选过任何关的状态。
   enteredLevel.value = false
-  screen.value = 'hall'
+  screen.value = 'desk'
 }
 
 /**
@@ -125,7 +125,7 @@ function clearAll(): void {
 let hallGuardActive = false
 
 function onPopState(): void {
-  if (screen.value === 'hall' && enteredLevel.value) {
+  if (screen.value === 'desk' && enteredLevel.value) {
     screen.value = 'phone'
   }
   if (hallGuardActive) globalThis.history.pushState({ hall: true }, '')
@@ -144,14 +144,14 @@ onBeforeUnmount(() => {
 
 // 切关或清档后刷新卡片状态，避免大厅显示过期余额。
 watch(screen, (value) => {
-  if (value === 'hall') refreshSlots()
+  if (value === 'desk') refreshSlots()
 })
 </script>
 
 <template>
   <div class="phone">
-    <LevelHall
-      v-if="screen === 'hall'"
+    <LevelDesk
+      v-if="screen === 'desk'"
       class="phone__frame"
       :current-level-id="activeLevelId"
       :slots="slots"

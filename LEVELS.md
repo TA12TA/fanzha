@@ -37,8 +37,8 @@ src/app/navigation.ts       # 节点 → 场景的通用映射（不含任何具
 src/app/smsCode.ts          # 模拟验证码：生成（可注入随机源）/ 清洗 / 比对 / 模板替换
 src/app/random.ts           # 可复现随机源（mulberry32）：浏览器用时间戳播种，测试用固定种子
 src/app/classNews.ts        # 班级通知群的随机反诈通知（每关抽一次并缓存）
-src/app/LevelHall.vue       # 关卡大厅（轮播版，main 分支；hall-desk 上是 LevelDesk.vue）
-src/app/LevelCard.vue       # 单张关卡卡（轮播版）
+src/app/LevelDesk.vue       # 关卡大厅（书桌版，当前主版本）
+src/app/DeskPhone.vue       # 书桌上的「一部手机」
 src/app/AppShell.vue        # 根壳：大厅 / 手机 两态
 src/app/PhoneShell.vue      # 一部手机（= 一个关卡）
 ```

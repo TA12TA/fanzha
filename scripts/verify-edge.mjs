@@ -291,17 +291,18 @@ async function main() {
     await cdp.send('Runtime.enable')
 
     /*
-     * 首屏是关卡大厅：进入第一关，停在锁屏。
+     * 首屏是关卡大厅（书桌）：点桌上第一部手机，等转场播完，停在锁屏。
      * 后续各段流程沿用原有的「锁屏 → 上滑解锁 → 桌面」路径，
-     * 因此凡是「清档后重新导航」的地方都要先调用它，否则会停在首屏大厅。
+     * 因此凡是「清档后重新导航」的地方都要先调用它，否则会停在首屏书桌。
      */
     async function enterFirstLevel() {
       const clicked = await cdp.eval(`
-        const b = [...document.querySelectorAll('button')].find(x => (x.textContent||'').includes('进入第'));
+        const b = document.querySelector('.deskphone');
         if (b) b.click();
         return !!b;
       `)
-      await sleep(700)
+      // 转场 520ms + 落定，留足余量
+      await sleep(800)
       return clicked
     }
 
@@ -350,72 +351,194 @@ async function main() {
 
     /*
      * 两级菜单：首屏必须是**关卡大厅**（先选关），而不是直接进某一关的锁屏。
-     * 选定关卡之后才出现这一关的锁屏，再上滑解锁进桌面。
+     * 这一版的大厅是「书桌」：桌上平放几部手机，**没有手机外框**
+     * （没有状态栏、没有底部导航），点一部手机 → 旋转放大转场 → 该关锁屏。
      */
     const firstScreen = await cdp.eval(`
-      const cards = document.querySelectorAll('.lvlcard');
+      const phones = [...document.querySelectorAll('.deskphone')];
       const ret = [...document.querySelectorAll('button')].find(b => (b.textContent||'').includes('返回当前关卡'));
       return {
-        inHall: !!document.querySelector('.hall'),
+        onDesk: !!document.querySelector('.desk'),
         hasLock: !!document.querySelector('.lock__surface'),
-        cards: cards.length,
+        phones: phones.length,
+        hasStatusbar: !!document.querySelector('.statusbar'),
+        hasNavKeys: document.querySelectorAll('.nav__btn').length,
         hasReturn: !!ret,
+        tilts: phones.map(p => p.style.getPropertyValue('--tilt')),
+        miniScreens: phones.filter(p => p.querySelector('.deskphone__screen')).length,
+        hasWall: document.querySelectorAll('.deskphone__screen .wall').length,
         text: (document.body.innerText || '').slice(0, 80),
       };
     `)
     record(
       '首屏是关卡大厅（先选关，不直接进锁屏）',
-      firstScreen.inHall && !firstScreen.hasLock && firstScreen.cards === 3,
-      `大厅=${firstScreen.inHall} 锁屏=${firstScreen.hasLock} 卡片=${firstScreen.cards}`,
+      firstScreen.onDesk && !firstScreen.hasLock && firstScreen.phones === 3,
+      `书桌=${firstScreen.onDesk} 锁屏=${firstScreen.hasLock} 手机=${firstScreen.phones}`,
+    )
+    record(
+      '书桌版没有手机外框（无状态栏、无底部导航）',
+      firstScreen.hasStatusbar === false && firstScreen.hasNavKeys === 0,
+      `状态栏=${firstScreen.hasStatusbar} 导航键=${firstScreen.hasNavKeys}`,
+    )
+    record(
+      '每部手机都是手机样式（机身屏幕 + 共用壁纸）',
+      firstScreen.miniScreens === 3 && firstScreen.hasWall === 3,
+      `屏幕=${firstScreen.miniScreens} 壁纸=${firstScreen.hasWall}`,
+    )
+    record(
+      '三部手机被摆成不同角度（固定值）',
+      new Set(firstScreen.tilts).size === 3 && firstScreen.tilts.every((t) => /^-?\d+deg$/.test(t)),
+      `倾斜=[${firstScreen.tilts.join(', ')}]`,
     )
     record(
       '首屏大厅没有「返回当前关卡」（还没进过任何关）',
       firstScreen.hasReturn === false,
     )
-    await cdp.screenshot(path.join(shotsDir, '00-hall-first.png'))
+    await cdp.screenshot(path.join(shotsDir, '00-level-desk.png'))
 
     /*
-     * 大厅顶部的状态栏必须真的看得见。
+     * 书桌文字在两种主题下都必须看得清。
      *
-     * `.wall` 是 `position: absolute; inset: 0`，会盖住顶部那一条；用
-     * `elementFromPoint` 做命中检测最直接 —— 如果壁纸压在上面，命中的就是
-     * 壁纸而不是状态栏。只看 DOM 里有没有 `.statusbar` 是查不出这个问题的。
+     * 与锁屏那条守卫同一个思路（白天浅色木头 → 文字转深；夜间深色木头 → 文字转浅），
+     * 但这里不逐条检查颜色，只验证**明暗真的跟着主题翻转**：
+     * 书桌是新增的整屏界面，最容易犯的错就是「背景跟着主题变了、文字没跟着变」，
+     * 于是白天或夜间必有一边看不清（锁屏当初就是这么翻车的）。
      */
-    const statusbarHit = await cdp.eval(`
-      const sb = document.querySelector('.statusbar');
-      if (!sb) return { exists: false };
-      const r = sb.getBoundingClientRect();
-      const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
-      return {
-        exists: true,
-        covered: !(hit && sb.contains(hit)),
-        hitClass: hit ? (hit.className || '').toString().slice(0, 40) : null,
-        rect: { top: Math.round(r.top), h: Math.round(r.height) },
-      };
-    `)
-    record(
-      '大厅顶部状态栏没有被壁纸盖住',
-      statusbarHit.exists && statusbarHit.covered === false,
-      statusbarHit.covered ? `被「${statusbarHit.hitClass}」盖住` : `命中状态栏本身`,
-    )
+    for (const mode of ['day', 'night']) {
+      await cdp.eval(`
+        localStorage.setItem('fj-juzhongju:settings:v1', JSON.stringify({
+          version: 1, sound: true, banner: true, theme: ${JSON.stringify(mode)},
+        }));
+        return true;
+      `)
+      await cdp.send('Page.navigate', { url: BASE })
+      await sleep(1000)
+      const deskTheme = await cdp.eval(`
+        const title = document.querySelector('.desk__title');
+        const surface = document.querySelector('.desk__surface');
+        if (!title || !surface) return null;
+        const lum = (css) => {
+          const m = (css || '').match(/\\d+/g);
+          if (!m) return null;
+          const [r, g, b] = [0, 1, 2].map((i) => {
+            const v = Number(m[i]) / 255;
+            return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+          });
+          return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+        };
+        return {
+          applied: document.documentElement.getAttribute('data-theme'),
+          titleLum: lum(getComputedStyle(title).color),
+          deskLum: lum(getComputedStyle(surface).backgroundColor),
+        };
+      `)
+      /*
+       * 用 **WCAG 对比度**判定，而不是随便挑一个亮度阈值：
+       * 白天（浅色木头）→ 文字必须比桌面暗；夜间（深色木头）→ 文字必须比桌面亮；
+       * 两种情况下的对比度都要达到正文标准的 4.5:1。
+       *
+       * 两个方向都要查，而且**底色也要真的量**：实测踩过一次
+       * 「文字跟着主题翻了、桌面底色没翻」（`.desk` 的底色被根壳的
+       * `.phone__frame` 背景盖掉），结果深色标题压在深蓝黑底上，
+       * 而只查文字亮度的弱断言照过。用对比度算就不会漏。
+       */
+      const directionOk =
+        deskTheme !== null &&
+        deskTheme.applied === mode &&
+        (mode === 'day'
+          ? deskTheme.titleLum < deskTheme.deskLum
+          : deskTheme.titleLum > deskTheme.deskLum)
+      const contrast =
+        deskTheme === null
+          ? 0
+          : (Math.max(deskTheme.titleLum, deskTheme.deskLum) + 0.05) /
+            (Math.min(deskTheme.titleLum, deskTheme.deskLum) + 0.05)
+      record(
+        `书桌文字在${mode === 'day' ? '白天' : '夜间'}主题下可读（对比度 ≥ 4.5:1 且随主题翻转）`,
+        directionOk && contrast >= 4.5,
+        deskTheme
+          ? `theme=${deskTheme.applied} 对比度=${contrast.toFixed(2)}:1（标题=${deskTheme.titleLum?.toFixed(3)} 桌面=${deskTheme.deskLum?.toFixed(3)}）`
+          : '未找到书桌',
+      )
+    }
 
-    // 选定第一关：这时才应该出现这一关的锁屏
-    await cdp.eval(`
-      const b = [...document.querySelectorAll('button')].find(x => (x.textContent||'').includes('进入第一关'));
+    // 恢复默认主题与干净状态，继续后面的转场流程
+    await cdp.eval(`localStorage.clear(); return true`)
+    await cdp.send('Page.navigate', { url: BASE })
+    await sleep(1000)
+
+    /*
+     * 转场：点手机后应当先出现**飞行层**（被点的那部手机在放大），
+     * 再落到那一关的锁屏。这里在动画中途采样一次，确认飞行层真的出现过 ——
+     * 只看「最终进了锁屏」是查不出「有没有动画」的。
+     */
+    const flyStart = await cdp.eval(`
+      const b = document.querySelector('.deskphone');
       if (b) b.click();
       return !!b;
     `)
-    await sleep(700)
-    const afterEnter = await cdp.eval(`
+    await sleep(170)
+    const midFlight = await cdp.eval(`
+      const fly = document.querySelector('.desk__fly');
+      if (!fly) return { fly: false };
+      const cs = getComputedStyle(fly);
+      /* 从矩阵里取出缩放分量：飞行中途它应当明显小于 1（还在长大）。
+         matrix(a, b, c, d, e, f) → 缩放 ≈ sqrt(a² + b²) */
+      const m = (cs.transform || '').match(/matrix\\(([^)]+)\\)/);
+      const parts = m ? m[1].split(',').map(Number) : null;
+      const scale = parts ? Math.sqrt(parts[0] * parts[0] + parts[1] * parts[1]) : null;
       return {
-        inHall: !!document.querySelector('.hall'),
-        hasLock: !!document.querySelector('.lock__surface'),
+        fly: true,
+        hasPhoneBody: !!fly.querySelector('.deskphone__body'),
+        transform: cs.transform,
+        scale,
+        // FLIP 起始值是否真的算出来了（没算出来会退回纯 CSS 兜底）
+        flipVars: fly.style.getPropertyValue('--fly-sx'),
+        duration: cs.transitionDuration,
+        stageFading: !!document.querySelector('.desk__stage--flying'),
       };
     `)
     record(
-      '选定关卡后才进入锁屏解锁界面',
-      afterEnter.hasLock && !afterEnter.inHall,
-      `锁屏=${afterEnter.hasLock} 大厅=${afterEnter.inHall}`,
+      '点手机会出现飞行层（被点的手机在放大）',
+      flyStart && midFlight.fly && midFlight.hasPhoneBody && midFlight.stageFading,
+      midFlight.fly ? `transform=${(midFlight.transform || '').slice(0, 28)}` : '没有飞行层',
+    )
+    record(
+      '转场起点由卡片矩形算出（FLIP 起始值不为空）',
+      Boolean(midFlight.flipVars),
+      `--fly-sx=${midFlight.flipVars || '（空，已退回兜底）'}`,
+    )
+    /*
+     * 关键一条：飞行**中途**的 transform 不能是单位矩阵。
+     *
+     * 如果起始态与终态被合并成同一次样式计算，浏览器只会看到终态 ——
+     * 对象瞬间到位、完全没有「旋转放大」的过程。这种 bug 在 DOM 上完全看不出来
+     * （飞行层在、`--fly-*` 变量也对），只有量中途的计算值才能发现。
+     * 实测踩过一次，所以这里同时要求「不是单位矩阵」且「缩放明显小于 1」。
+     */
+    record(
+      '转场是真的在放大（中途 transform 不是单位矩阵）',
+      midFlight.fly &&
+        typeof midFlight.scale === 'number' &&
+        midFlight.scale > 0.2 &&
+        midFlight.scale < 0.97 &&
+        midFlight.duration !== '0s',
+      `中途缩放=${midFlight.scale === null ? '无法解析' : midFlight.scale.toFixed(2)} duration=${midFlight.duration}`,
+    )
+
+    // 等转场播完
+    await sleep(900)
+    const afterEnter = await cdp.eval(`
+      return {
+        onDesk: !!document.querySelector('.desk'),
+        hasLock: !!document.querySelector('.lock__surface'),
+        flyGone: !document.querySelector('.desk__fly'),
+      };
+    `)
+    record(
+      '转场结束后落在这一关的锁屏，飞行层已撤掉',
+      afterEnter.hasLock && !afterEnter.onDesk && afterEnter.flyGone,
+      `锁屏=${afterEnter.hasLock} 书桌=${afterEnter.onDesk} 飞行层已撤=${afterEnter.flyGone}`,
     )
 
     await cdp.screenshot(path.join(shotsDir, '01-intro.png'))
@@ -1271,12 +1394,11 @@ async function main() {
     )
 
     /*
-     * 关卡大厅（轮播选关）。
+     * 关卡大厅（书桌版），从手机桌面上的「关卡」图标进入。
      *
-     * 用户要求：「一个关卡为一个手机，所有关卡在中间轮播，用户可以自行选择」。
      * 这里验证的是**真实浏览器里的布局与交互**，jsdom 里量不出来的部分：
-     * 轮播轨道真的是横向可滚动的、中心卡比侧卡大、锁定卡不可进入、
-     * 以及切关后确实换了一部手机（会话与金额都变）。
+     * 桌上三部手机各自的倾斜与手机外观、锁定手机不可进入、
+     * 点手机后的旋转放大转场，以及切关后确实换了一部手机。
      */
     await cdp.eval(`
       const b = [...document.querySelectorAll('.home .app')].find(x => (x.textContent||'').includes('关卡'));
@@ -1285,85 +1407,68 @@ async function main() {
     `)
     await sleep(500)
     const hallInfo = await cdp.eval(`
-      const track = document.querySelector('.hall__track');
-      const cards = [...document.querySelectorAll('.lvlcard')];
-      const scales = cards.map(c => {
-        const cs = getComputedStyle(c);
-        const m = cs.transform.match(/matrix\\(([^,]+)/);
-        return m ? Number(m[1]) : 1;
-      });
-      const activeIndex = cards.findIndex(c => c.className.includes('lvlcard--active'));
-      const locked = document.querySelector('.lvlcard--locked');
+      const phones = [...document.querySelectorAll('.deskphone')];
+      const locked = document.querySelector('.deskphone--locked');
       return {
-        inHall: !!document.querySelector('.hall'),
-        cardCount: cards.length,
-        snapType: track ? getComputedStyle(track).scrollSnapType : null,
-        scrollable: track ? track.scrollWidth > track.clientWidth : false,
-        overflowX: track ? getComputedStyle(track).overflowX : null,
-        scales,
-        activeIndex,
+        onDesk: !!document.querySelector('.desk'),
+        phoneCount: phones.length,
+        tilts: phones.map(p => p.style.getPropertyValue('--tilt')),
+        miniStatusbars: document.querySelectorAll('.deskphone__statusbar').length,
+        miniIcons: document.querySelectorAll('.deskphone__icons').length,
         lockedDisabled: locked ? locked.getAttribute('aria-disabled') : null,
-        hasMiniStatusbar: document.querySelectorAll('.lvlcard__statusbar').length,
-        hasMiniIcons: document.querySelectorAll('.lvlcard__icons').length,
+        // 书桌版不该有手机外框
+        hasStatusbar: !!document.querySelector('.statusbar'),
+        hasNavKeys: document.querySelectorAll('.nav__btn').length,
+        hasReturn: [...document.querySelectorAll('button')].some(b => (b.textContent||'').includes('返回当前关卡')),
         title: (document.body.innerText || '').includes('关卡大厅'),
-        // 整页不应产生横向溢出（轮播的滚动发生在轨道内部）
         docOverflow: document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1,
       };
     `)
-    record('桌面「关卡」入口可打开关卡大厅', hallInfo.inHall && hallInfo.title)
+    record('桌面「关卡」入口可回到关卡大厅（书桌）', hallInfo.onDesk && hallInfo.title)
     record(
-      '大厅每关一张手机样式卡片（迷你状态栏 + 迷你图标）',
-      hallInfo.cardCount === 3 &&
-        hallInfo.hasMiniStatusbar === 3 &&
-        hallInfo.hasMiniIcons === 3,
-      `卡片=${hallInfo.cardCount} 状态栏=${hallInfo.hasMiniStatusbar} 图标区=${hallInfo.hasMiniIcons}`,
+      '桌上三部手机都有手机样式（迷你状态栏 + 迷你图标）',
+      hallInfo.phoneCount === 3 && hallInfo.miniStatusbars === 3 && hallInfo.miniIcons === 3,
+      `手机=${hallInfo.phoneCount} 状态栏=${hallInfo.miniStatusbars} 图标区=${hallInfo.miniIcons}`,
     )
     record(
-      '轮播轨道横向可滚动并使用 scroll-snap 吸附',
-      hallInfo.scrollable && (hallInfo.snapType || '').includes('x') && hallInfo.overflowX === 'auto',
-      `snap=${hallInfo.snapType} overflowX=${hallInfo.overflowX} scrollable=${hallInfo.scrollable}`,
+      '从手机回到大厅时仍没有手机外框',
+      hallInfo.hasStatusbar === false && hallInfo.hasNavKeys === 0,
+      `状态栏=${hallInfo.hasStatusbar} 导航键=${hallInfo.hasNavKeys}`,
     )
     record(
-      '中心卡比侧卡大（居中放大）',
-      hallInfo.activeIndex >= 0 &&
-        hallInfo.scales[hallInfo.activeIndex] > Math.max(
-          ...hallInfo.scales.filter((_, i) => i !== hallInfo.activeIndex),
-        ),
-      `缩放=[${hallInfo.scales.map((s) => s.toFixed(2)).join(', ')}] 中心=${hallInfo.activeIndex}`,
+      '三部手机倾斜角互不相同',
+      new Set(hallInfo.tilts).size === 3,
+      `倾斜=[${hallInfo.tilts.join(', ')}]`,
     )
     record(
       '锁定关卡标记为不可进入',
       hallInfo.lockedDisabled === 'true',
       `aria-disabled=${hallInfo.lockedDisabled}`,
     )
-    record('大厅不产生整页横向溢出', hallInfo.docOverflow)
+    record('从手机内打开大厅时能返回当前关卡', hallInfo.hasReturn === true)
+    record('书桌版大厅不产生整页横向溢出', hallInfo.docOverflow)
 
-    await cdp.screenshot(path.join(shotsDir, '00-level-hall.png'))
+    await cdp.screenshot(path.join(shotsDir, '10-level-desk-from-phone.png'))
 
-    // 切到第二关并进入：应当换了一部手机
+    // 点第二部手机进入第二关：应当走完转场并换了一部手机
     await cdp.eval(`
-      const b = document.querySelector('.hall__arrow[aria-label="下一个关卡"]');
+      const b = [...document.querySelectorAll('.deskphone')][1];
       if (b) b.click();
       return true;
     `)
-    await sleep(400)
-    await cdp.eval(`
-      const b = [...document.querySelectorAll('button')].find(x => (x.textContent||'').trim() === '进入第二关');
-      if (b) b.click();
-      return true;
-    `)
-    await sleep(600)
+    await sleep(1000)
     const switched = await cdp.eval(`
       return {
-        inHall: !!document.querySelector('.hall'),
+        onDesk: !!document.querySelector('.desk'),
         onLock: !!document.querySelector('.lock__surface'),
+        flyGone: !document.querySelector('.desk__fly'),
         text: document.body.innerText || '',
       };
     `)
     record(
-      '进入第二关后确实换了一部手机（锁屏副标题随之改变）',
-      !switched.inHall && switched.text.includes('冒充客服退款') && !switched.text.includes('刷单返利'),
-      switched.inHall ? '仍在大厅' : `锁屏=${switched.onLock}`,
+      '点第二部手机后确实换了一部手机（锁屏副标题随之改变）',
+      !switched.onDesk && switched.flyGone && switched.text.includes('冒充客服退款') && !switched.text.includes('刷单返利'),
+      switched.onDesk ? '仍在书桌' : `锁屏=${switched.onLock} 飞行层已撤=${switched.flyGone}`,
     )
 
     // 第二关：会话是「客服」，不是兼职群；金额口径 800 → 600
@@ -1604,17 +1709,11 @@ async function main() {
     `)
     await sleep(500)
     await cdp.eval(`
-      const b = document.querySelector('.hall__arrow[aria-label="上一个关卡"]');
+      const b = document.querySelector('.deskphone');
       if (b) b.click();
       return true;
     `)
-    await sleep(400)
-    await cdp.eval(`
-      const b = [...document.querySelectorAll('button')].find(x => (x.textContent||'').trim() === '进入第一关');
-      if (b) b.click();
-      return true;
-    `)
-    await sleep(600)
+    await sleep(1000)
     const back1 = await cdp.eval(`
       const save = localStorage.getItem('fj-juzhongju:save:v2:level-01');
       const parsed = save ? JSON.parse(save) : null;
@@ -1665,6 +1764,7 @@ async function main() {
       return {
         h: Math.round(r.height),
         clamp: cs ? (cs.webkitLineClamp || cs.lineClamp || '') : '',
+        bg: getComputedStyle(el).backgroundColor,
         text: (el.textContent || '').trim().length,
       };
     `)

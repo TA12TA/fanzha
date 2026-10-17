@@ -24,14 +24,16 @@ const mounted: VueWrapper[] = []
 /**
  * 挂载一部新的手机；默认先清空存档（模拟全新开局）。
  *
- * 首屏现在是**关卡大厅**（一级菜单），选定关卡后才进那一关的锁屏。
- * 为了让既有用例继续从「第一关的锁屏」开始，这里默认进入第一关；
- * 需要停在大厅本身（例如断言首屏顺序）的用例传 `{ atHall: true }`。
+ * 首屏现在是**关卡大厅**（一级菜单，书桌版），选定关卡后才进那一关的锁屏。
+ * 为了让既有用例继续从「第一关的锁屏」开始，这里默认点桌上第一部手机进入第一关；
+ * 需要停在书桌本身（例如断言首屏顺序）的用例传 `{ atDesk: true }`。
  *
- * **必须 await**：点关卡卡之后 Vue 的 DOM 更新是微任务，不等一拍的话
- * 调用方紧接着断言读到的还是大厅（`.lvlcard` 还在、锁屏还没出现）。
+ * **必须 await**：点手机之后转场是异步的，不等一拍的话调用方紧接着
+ * 断言读到的还是书桌（`.deskphone` 还在、锁屏还没出现）。
  */
-async function mountApp(options: { keepSave?: boolean; atHall?: boolean } = {}): Promise<VueWrapper> {
+async function mountApp(
+  options: { keepSave?: boolean; atDesk?: boolean; attach?: boolean } = {},
+): Promise<VueWrapper> {
   if (!options.keepSave) globalThis.localStorage.clear()
   /*
    * 会话「逐条出现」的进度记在模块级（app/chatReveal.ts），这样离开消息应用
@@ -40,17 +42,72 @@ async function mountApp(options: { keepSave?: boolean; atHall?: boolean } = {}):
    * 让每个用例都从「第一次进入会话」开始。
    */
   resetChatReveal()
-  const wrapper = mount(AppShell)
+  /*
+   * `attach`：默认挂载到游离容器（更快，也够用于大多数断言）。
+   * 但**键盘焦点**相关用例必须挂到 document 上 —— 游离元素调 `.focus()`
+   * 不会生效，`document.activeElement` 会一直是 `<body>`。
+   */
+  const wrapper = mount(AppShell, options.attach ? { attachTo: document.body } : undefined)
   mounted.push(wrapper)
 
-  if (!options.atHall) {
-    await wrapper.findAll('.lvlcard')[0]?.trigger('click')
+  if (!options.atDesk) {
+    await tapPhone(wrapper, 0)
   }
   return wrapper
 }
 
+/**
+ * 直接结束转场：给飞行层派发一次 `propertyName === 'transform'` 的 `transitionend`。
+ *
+ * 为什么不真的等 520ms：集成测试有几十个用例都要从书桌进第一关，真等的话
+ * 每个用例多花半秒，整套测试会慢几十秒；而且等真实定时器本身也不确定。
+ * 派发事件走的是与真机**完全相同**的提交路径（`onTransitionEnd` → `commit`），
+ * 所以覆盖度没有损失，速度却是确定的。超时兜底那条路径由 Y06 单独用假定时器覆盖。
+ */
+function finishFlight(wrapper: VueWrapper): void {
+  const fly = wrapper.find('.desk__fly')
+  if (!fly.exists()) return
+  const event = new Event('transitionend', { bubbles: true })
+  // jsdom 的 TransitionEvent 拿不到 propertyName，手动注入（与 pointerEvent 同一手法）
+  Object.defineProperty(event, 'propertyName', { value: 'transform' })
+  ;(fly.element as HTMLElement).dispatchEvent(event)
+}
+
+/** 点桌上第 `index` 部手机（0 起），并把转场直接走完。 */
+async function tapPhone(wrapper: VueWrapper, index: number): Promise<void> {
+  const phone = wrapper.findAll('.deskphone')[index]
+  if (!phone) {
+    const available = wrapper.findAll('.deskphone').map((p) => p.text().trim()).join(' | ')
+    throw new Error(`书桌上找不到第 ${index + 1} 部手机。当前可用：${available}`)
+  }
+  await phone.trigger('click')
+  /*
+   * 这里**只能等微任务（$nextTick），不能等 setTimeout**。
+   *
+   * 原因：本文件里有三个用假定时器的通知用例，它们会在 try 块里调用
+   * `mountApp()`。如果挂载过程中 await 了真实定时器（原先的 flush 就是
+   * `setTimeout(…, 5)`），在假定时器下这个 promise 永远不会 settle ——
+   * 用例超时、`finally` 里的 `useRealTimers()` 也就永远等不到，
+   * 于是假定时器泄漏给后面所有用例，整份文件几十个用例一起超时。
+   * 流程本身（点击 → 飞行层 → transitionend → 进入）全是微任务，够用。
+   */
+  await wrapper.vm.$nextTick()
+  finishFlight(wrapper)
+  await wrapper.vm.$nextTick()
+}
+
 afterEach(() => {
   while (mounted.length) mounted.pop()?.unmount()
+  /*
+   * 兜底复位：本文件有几处用假定时器的用例。一旦某个用例在假定时器下超时，
+   * 它 `finally` 里的 `useRealTimers()` 可能永远等不到（异步函数停在永不
+   * settle 的 await 上），假定时器就会泄漏给后面所有用例 —— 表现是几十个
+   * 用例一起 5 秒超时。这里每个用例结束都强制复位，把「一个用例出问题」
+   * 的爆炸半径限制在那一个用例内。
+   */
+  vi.useRealTimers()
+  // 减弱动效的用例会替换 globalThis.matchMedia，同样用完必须还原
+  vi.unstubAllGlobals()
 })
 
 function play(optionIds: OptionId[], from: GameState = createInitialState()): GameState {
@@ -1786,10 +1843,7 @@ describe('W. 会话逐条出现只播一次', () => {
     await click(wrapper, '回到桌面')
     await clickDesktopApp(wrapper, '关卡')
     await flush()
-    await wrapper.find('.hall__arrow[aria-label="下一个关卡"]').trigger('click')
-    await flush()
-    await click(wrapper, '进入第二关')
-    await flush()
+    await tapPhone(wrapper, 1)
     await swipeUnlock(wrapper)
     await clickDesktopApp(wrapper, '青讯')
     await click(wrapper, '返回上一层')
@@ -1807,134 +1861,220 @@ describe('W. 会话逐条出现只播一次', () => {
 })
 
 /**
- * Y. 关卡大厅与多关卡切换。
+ * Y. 关卡大厅（第二版：书桌）。
  *
- * 用户要求：「做成一个关卡为一个手机，然后所有关卡（手机样式）在中间轮播，
- * 用户可以自行选择」。这一组锁住四件事：
- * 1. 桌面有「关卡」入口，能进大厅；
- * 2. 大厅里每关一张手机样式卡片，轮播可切换、锁定关进不去；
- * 3. 进入第二关后**确实换了一部手机**（会话、文案、余额都变了）；
- * 4. 两关进度各自保留（这是「不弹确认、随时切回」的前提）。
+ * 用户要求：「做成几个卡片（像手机样式）放在桌面上，点击相应关卡后
+ * 手机旋转过渡逐渐完全放大覆盖全屏」。这一组锁住五件事：
+ * 1. 首屏是书桌，桌上是几部手机，**没有手机外框**；
+ * 2. 点手机 → 出现飞行层 → 转场结束后落在那一关的锁屏；
+ * 3. 转场不会把玩家卡住：`transitionend` 不来有兜底，减弱动效直接进；
+ * 4. 锁定关与连点都有明确处理；
+ * 5. 换关确实换了「一部手机」，且两关进度各自保留。
  */
-describe('Y. 关卡大厅（轮播选关）', () => {
-  /** 从桌面进入关卡大厅。 */
-  async function openHall(wrapper: VueWrapper): Promise<void> {
+describe('Y. 关卡大厅（书桌选关）', () => {
+  /** 从手机桌面进入关卡大厅（书桌）。 */
+  async function openDesk(wrapper: VueWrapper): Promise<void> {
     await clickDesktopApp(wrapper, '关卡')
     await flush()
   }
 
-  it('Y01 桌面「关卡」入口能打开大厅，展示每关一张手机样式卡片', async () => {
-    const wrapper = await mountApp()
-    await swipeUnlock(wrapper)
-    await openHall(wrapper)
+  it('Y01 首屏是书桌：三部手机、没有手机外框', async () => {
+    const wrapper = await mountApp({ atDesk: true })
 
-    expect(wrapper.find('.hall').exists(), '应进入关卡大厅').toBe(true)
+    expect(wrapper.find('.desk').exists(), '首屏应是书桌场景').toBe(true)
     expect(wrapper.text()).toContain('关卡大厅')
+    expect(wrapper.text()).toContain('选一部手机开始挑战')
 
-    const cards = wrapper.findAll('.lvlcard')
-    expect(cards.length, '三关应有三张卡（两关可玩 + 一关锁定）').toBe(3)
+    const phones = wrapper.findAll('.deskphone')
+    expect(phones.length, '三关应有三部手机（两关可玩 + 一关锁定）').toBe(3)
 
-    // 每张卡都有手机样式的预览区（迷你状态栏 + 迷你图标）
-    for (const card of cards) {
-      expect(card.find('.lvlcard__preview').exists(), '每张卡都应有手机样式预览').toBe(true)
-      expect(card.find('.lvlcard__statusbar').exists(), '预览里应有迷你状态栏').toBe(true)
-      expect(card.find('.lvlcard__icons').exists(), '预览里应有迷你图标').toBe(true)
-    }
+    // 关键：这一版**没有**状态栏与底部导航 —— 整屏就是一张桌子
+    expect(wrapper.find('.statusbar').exists(), '书桌版不该有手机状态栏').toBe(false)
+    expect(wrapper.findAll('.nav__btn').length, '书桌版不该有底部三大金刚键').toBe(0)
 
-    // 卡上写清关号与标题
     const text = wrapper.text()
-    expect(text).toContain('第一关')
-    expect(text).toContain('刷单返利')
-    expect(text).toContain('第二关')
-    expect(text).toContain('冒充客服退款')
-    expect(text).toContain('第三关')
+    for (const label of ['第一关', '刷单返利', '第二关', '冒充客服退款', '第三关', '冒充公检法']) {
+      expect(text, `桌上应写清「${label}」`).toContain(label)
+    }
   })
 
-  it('Y02 轮播可切换：箭头与键盘等效，且箭头在两端禁用', async () => {
-    const wrapper = await mountApp()
-    await swipeUnlock(wrapper)
-    await openHall(wrapper)
+  it('Y02 每部手机都是手机样式（机身 + 屏幕 + 迷你状态栏 + 迷你图标）', async () => {
+    const wrapper = await mountApp({ atDesk: true })
 
-    // 打开时停在当前关卡（第一关），因此上一个箭头应禁用
-    const prevBtn = wrapper.find('.hall__arrow[aria-label="上一个关卡"]')
-    const nextBtn = wrapper.find('.hall__arrow[aria-label="下一个关卡"]')
-    expect(prevBtn.exists() && nextBtn.exists(), '应有两个箭头').toBe(true)
-    expect(prevBtn.attributes('disabled'), '在第一关时「上一个」应禁用').toBeDefined()
-
-    // 点「下一个」→ 第二关居中
-    await nextBtn.trigger('click')
-    await flush()
-    const active = wrapper.findAll('.lvlcard').find((c) => c.classes().includes('lvlcard--active'))
-    expect(active?.text(), '中心卡应变成第二关').toContain('冒充客服退款')
-
-    // 键盘 → 也能切（焦点无关：大厅监听 window keydown）
-    globalThis.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }))
-    await flush()
-    const active2 = wrapper.findAll('.lvlcard').find((c) => c.classes().includes('lvlcard--active'))
-    expect(active2?.text(), '键盘右箭头也应切到第三关').toContain('冒充公检法')
-
-    // 到最后一关，「下一个」禁用
-    expect(
-      wrapper.find('.hall__arrow[aria-label="下一个关卡"]').attributes('disabled'),
-      '在最后一关时「下一个」应禁用',
-    ).toBeDefined()
+    for (const phone of wrapper.findAll('.deskphone')) {
+      expect(phone.find('.deskphone__body').exists(), '应有手机机身').toBe(true)
+      expect(phone.find('.deskphone__screen').exists(), '机身里应有屏幕').toBe(true)
+      expect(phone.find('.deskphone__statusbar').exists(), '屏幕里应有迷你状态栏').toBe(true)
+      expect(phone.find('.deskphone__icons').exists(), '屏幕里应有迷你图标').toBe(true)
+      // 屏幕用的是真机那张共用壁纸（飞行层放大后与锁屏同源）
+      expect(phone.find('.deskphone__screen .wall').exists(), '屏幕应是同一张壁纸').toBe(true)
+      // 信息与行动条在手机下方
+      expect(phone.find('.deskphone__info').exists()).toBe(true)
+      expect(phone.find('.deskphone__cta').exists()).toBe(true)
+    }
   })
 
-  it('Y03 点非中心卡先居中，再点一次才进入（触屏与键盘一致）', async () => {
-    const wrapper = await mountApp()
-    await swipeUnlock(wrapper)
-    await openHall(wrapper)
+  it('Y03 三部手机被摆成不同角度（固定值，不是随机）', async () => {
+    const wrapper = await mountApp({ atDesk: true })
 
-    const cards = wrapper.findAll('.lvlcard')
-    const third = cards[2]
-    expect(third, '应有第三张卡').toBeTruthy()
-
-    // 第一次点：只居中，不进入
-    await third!.trigger('click')
-    await flush()
-    expect(wrapper.find('.hall').exists(), '第一次点击不该离开大厅').toBe(true)
-    expect(
-      wrapper.findAll('.lvlcard').find((c) => c.classes().includes('lvlcard--active'))?.text(),
-      '第一次点击应把它移到中间',
-    ).toContain('冒充公检法')
+    const tilts = wrapper
+      .findAll('.deskphone')
+      .map((p) => (p.element as HTMLElement).style.getPropertyValue('--tilt'))
+    expect(tilts.length).toBe(3)
+    for (const tilt of tilts) expect(tilt, '每部手机都应有倾斜角').toMatch(/^-?\d+deg$/)
+    expect(new Set(tilts).size, '三部手机的倾斜角应互不相同').toBe(3)
   })
 
-  it('Y04 锁定关卡点了有明确提示且不进入，不写任何存档', async () => {
-    const wrapper = await mountApp()
-    await swipeUnlock(wrapper)
-    await openHall(wrapper)
+  it('Y04 点手机 → 出现飞行层 → 转场结束后落在该关锁屏', async () => {
+    const wrapper = await mountApp({ atDesk: true })
 
-    // 移到第三关（锁定）
-    await wrapper.find('.hall__arrow[aria-label="下一个关卡"]').trigger('click')
-    await flush()
-    await wrapper.find('.hall__arrow[aria-label="下一个关卡"]').trigger('click')
+    // 只点，不结束转场
+    await wrapper.findAll('.deskphone')[0].trigger('click')
     await flush()
 
-    const lockedCard = wrapper.findAll('.lvlcard')[2]
-    expect(lockedCard.attributes('aria-disabled'), '锁定卡应标为不可进入').toBe('true')
+    const fly = wrapper.find('.desk__fly')
+    expect(fly.exists(), '点手机后应出现飞行层').toBe(true)
+    expect(fly.find('.deskphone__body').exists(), '飞行层里应是被点的那部手机').toBe(true)
+    // 转场期间桌上的手机会淡出，避免叠影
+    expect(wrapper.find('.desk__stage--flying').exists()).toBe(true)
+    expect(wrapper.find('.lock__surface').exists(), '转场还没结束，不该已经进锁屏').toBe(false)
 
-    // 点它：给提示、不进入
-    await lockedCard.trigger('click')
+    // 结束转场
+    finishFlight(wrapper)
     await flush()
-    expect(wrapper.find('.hall').exists(), '不应进入锁定关卡').toBe(true)
-    expect(wrapper.find('.hall__lock').exists(), '应给出「正在制作」的提示').toBe(true)
-    expect(wrapper.text()).toContain('敬请期待')
-    // 第三关没有存档
+
+    expect(wrapper.find('.desk').exists(), '转场结束后应离开书桌').toBe(false)
+    expect(wrapper.find('.desk__fly').exists(), '飞行层应被撤掉').toBe(false)
+    expect(wrapper.find('.lock__surface').exists(), '应落在这一关的锁屏').toBe(true)
+    expect(wrapper.text()).toContain('上滑解锁')
+  })
+
+  it('Y05 转场期间连点被忽略（只进入一次）', async () => {
+    const wrapper = await mountApp({ atDesk: true })
+
+    // 第一下：开始转场
+    await wrapper.findAll('.deskphone')[0].trigger('click')
+    await flush()
+    expect(wrapper.find('.desk__fly').exists()).toBe(true)
+
+    // 转场中再连点几下：都该被忽略，不能叠加飞行层
+    await wrapper.findAll('.deskphone')[1].trigger('click')
+    await wrapper.findAll('.deskphone')[2].trigger('click')
+    await flush()
+    expect(wrapper.findAll('.desk__fly').length, '转场期间不应叠加第二个飞行层').toBe(1)
+
+    finishFlight(wrapper)
+    await flush()
+    // 落在第一部手机对应的关卡（第一关），而不是后来点的那两部
+    expect(wrapper.text()).toContain('刷单返利')
+    expect(wrapper.text()).not.toContain('冒充客服退款')
+  })
+
+  it('Y06 transitionend 不触发时，兜底超时仍会进入（不会卡在动画里）', async () => {
+    const wrapper = await mountApp({ atDesk: true })
+
+    vi.useFakeTimers()
+    try {
+      await wrapper.findAll('.deskphone')[0].trigger('click')
+      await vi.advanceTimersByTimeAsync(700)
+
+      expect(wrapper.find('.lock__surface').exists(), '兜底超时后应已进入锁屏').toBe(true)
+      expect(wrapper.find('.desk__fly').exists(), '飞行层应被撤掉').toBe(false)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('Y07 prefers-reduced-motion 下直接进入，不播转场', async () => {
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      matches: query.includes('prefers-reduced-motion'),
+      media: query,
+      onchange: null,
+      addEventListener() {},
+      removeEventListener() {},
+      addListener() {},
+      removeListener() {},
+      dispatchEvent() {
+        return false
+      },
+    }))
+
+    const wrapper = await mountApp({ atDesk: true })
+    await wrapper.findAll('.deskphone')[0].trigger('click')
+    await flush()
+
+    expect(wrapper.find('.desk__fly').exists(), '减弱动效时不该出现飞行层').toBe(false)
+    expect(wrapper.find('.lock__surface').exists(), '减弱动效时应直接落在锁屏').toBe(true)
+  })
+
+  it('Y08 转场期间按 Esc 取消：留在书桌、不进入、不写存档', async () => {
+    const wrapper = await mountApp({ atDesk: true })
+
+    await wrapper.findAll('.deskphone')[0].trigger('click')
+    await flush()
+    expect(wrapper.find('.desk__fly').exists()).toBe(true)
+
+    globalThis.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+    await flush()
+
+    expect(wrapper.find('.desk__fly').exists(), '按 Esc 应取消转场').toBe(false)
+    expect(wrapper.find('.desk').exists(), '应留在书桌上').toBe(true)
+    expect(wrapper.find('.lock__surface').exists(), '取消后不该进关').toBe(false)
+    expect(readSave('level-01'), '取消转场不该写存档').toBeNull()
+  })
+
+  it('Y09 锁定关卡：标为不可进入、点了给提示、不进入、不写存档', async () => {
+    const wrapper = await mountApp({ atDesk: true })
+
+    const locked = wrapper.findAll('.deskphone')[2]
+    expect(locked.attributes('aria-disabled'), '锁定手机应标为不可进入').toBe('true')
+    expect(locked.text(), '锁定手机应写明正在制作').toContain('敬请期待')
+
+    await locked.trigger('click')
+    await flush()
+
+    expect(wrapper.find('.desk').exists(), '不应进入锁定关卡').toBe(true)
+    expect(wrapper.find('.desk__lock').exists(), '应给出「正在制作」的提示').toBe(true)
+    expect(wrapper.text()).toContain('正在制作')
+    expect(wrapper.find('.desk__fly').exists(), '锁定关卡不该有转场').toBe(false)
     expect(readSave('level-03' as LevelId), '锁定关卡不该产生存档').toBeNull()
   })
 
-  it('Y05 进入第二关：换了一部手机（会话、文案、余额都变）', async () => {
-    const wrapper = await mountApp()
-    await swipeUnlock(wrapper)
-    await openHall(wrapper)
+  it('Y10 手机是真实 button，方向键可在手机之间移动焦点', async () => {
+    // 焦点用例必须把组件挂到 document 上，游离元素调 focus() 不生效
+    const wrapper = await mountApp({ atDesk: true, attach: true })
 
-    // 切到第二关并进入
-    await wrapper.find('.hall__arrow[aria-label="下一个关卡"]').trigger('click')
-    await flush()
-    await click(wrapper, '进入第二关')
-    await flush()
+    const phones = wrapper.findAll('.deskphone')
+    for (const phone of phones) {
+      expect(phone.element.tagName, '手机应是真实 button（键盘可达）').toBe('BUTTON')
+    }
 
-    expect(wrapper.find('.hall').exists(), '应离开大厅进入手机').toBe(false)
+    // 方向键移动焦点：与第一版的 ←→ 切卡对齐（第二版没有选中态，但有焦点）
+    globalThis.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }))
+    await flush()
+    expect(document.activeElement, '右方向键应把焦点落在第一部手机上').toBe(phones[0].element)
+
+    globalThis.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }))
+    await flush()
+    expect(document.activeElement, '再按一次应移到第二部').toBe(phones[1].element)
+
+    // 两列网格、最后一行只有一部：从第二列往下没有正下方的手机，
+    // 应当「就近」落到最后一个，而不是原地不动（按了没反应会让人以为键盘坏了）
+    globalThis.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' }))
+    await flush()
+    expect(document.activeElement, '往下应就近落到第三部').toBe(phones[2].element)
+
+    globalThis.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp' }))
+    await flush()
+    expect(document.activeElement, '往上应回到第一部').toBe(phones[0].element)
+  })
+
+  it('Y11 进入第二关：换了一部手机（会话、文案、余额都变）', async () => {
+    const wrapper = await mountApp({ atDesk: true })
+
+    await tapPhone(wrapper, 1)
+
+    expect(wrapper.find('.desk').exists(), '应离开书桌进入手机').toBe(false)
     // 换了一部手机：锁屏副标题跟着变
     expect(wrapper.text(), '第二关的锁屏应写明本关标题').toContain('冒充客服退款')
     expect(wrapper.text(), '不应还显示第一关的标题').not.toContain('刷单返利')
@@ -1953,14 +2093,9 @@ describe('Y. 关卡大厅（轮播选关）', () => {
     expect(wrapper.text()).toContain('800')
   })
 
-  it('Y06 第二关金额口径：800 → 600 → 300，平台 199 不入账', async () => {
-    const wrapper = await mountApp()
-    await swipeUnlock(wrapper)
-    await openHall(wrapper)
-    await wrapper.find('.hall__arrow[aria-label="下一个关卡"]').trigger('click')
-    await flush()
-    await click(wrapper, '进入第二关')
-    await flush()
+  it('Y12 第二关金额口径：800 → 600 → 300，平台 199 不入账', async () => {
+    const wrapper = await mountApp({ atDesk: true })
+    await tapPhone(wrapper, 1)
 
     await swipeUnlock(wrapper)
     await clickDesktopApp(wrapper, '青讯')
@@ -1986,7 +2121,7 @@ describe('Y. 关卡大厅（轮播选关）', () => {
     expect(wrapper.text(), '结局应显示累计 500').toContain('500')
   })
 
-  it('Y07 两关进度各自保留：切关回来仍是原来的余额与节点', async () => {
+  it('Y13 两关进度各自保留：切关回来仍是原来的余额与节点', async () => {
     const wrapper = await mountApp()
     await swipeUnlock(wrapper)
 
@@ -2001,11 +2136,8 @@ describe('Y. 关卡大厅（轮播选关）', () => {
 
     // 切到第二关：付掉 200
     await click(wrapper, '回到桌面')
-    await openHall(wrapper)
-    await wrapper.find('.hall__arrow[aria-label="下一个关卡"]').trigger('click')
-    await flush()
-    await click(wrapper, '进入第二关')
-    await flush()
+    await openDesk(wrapper)
+    await tapPhone(wrapper, 1)
     await swipeUnlock(wrapper)
     await clickDesktopApp(wrapper, '青讯')
     await click(wrapper, '按他说的做')
@@ -2018,11 +2150,8 @@ describe('Y. 关卡大厅（轮播选关）', () => {
 
     // 切回第一关：已有存档，因此**直接回到桌面**（不回锁屏），进度仍是 700
     await click(wrapper, '回到桌面')
-    await openHall(wrapper)
-    await wrapper.find('.hall__arrow[aria-label="上一个关卡"]').trigger('click')
-    await flush()
-    await click(wrapper, '进入第一关')
-    await flush()
+    await openDesk(wrapper)
+    await tapPhone(wrapper, 0)
     expect(
       wrapper.find('.lock__surface').exists(),
       '已有进度的关卡应直接回到桌面，不重新走一遍锁屏',
@@ -2034,7 +2163,7 @@ describe('Y. 关卡大厅（轮播选关）', () => {
     expect(readSave('level-02')?.balance, '第二关的进度也不该被覆盖').toBe(600)
   })
 
-  it('Y08 大厅卡片显示各关状态（未开始 / 进行中 / 已完成）', async () => {
+  it('Y14 手机上的状态行显示各关进度（未开始 / 进行中 / 已完成）', async () => {
     const wrapper = await mountApp()
     await swipeUnlock(wrapper)
 
@@ -2044,17 +2173,17 @@ describe('Y. 关卡大厅（轮播选关）', () => {
     await flush()
 
     await click(wrapper, '回到桌面')
-    await openHall(wrapper)
+    await openDesk(wrapper)
 
-    const cards = wrapper.findAll('.lvlcard')
-    const firstText = cards[0].text()
-    expect(firstText, '第一关已完成，卡片应显示结局').toContain('已完成')
+    const phones = wrapper.findAll('.deskphone')
+    const firstText = phones[0].text()
+    expect(firstText, '第一关已完成，状态行应显示结局').toContain('已完成')
     expect(firstText).toContain('提前识破')
-    expect(cards[1].text(), '第二关还没开始').toContain('还没开始')
-    expect(cards[2].text(), '第三关锁定').toContain('正在制作')
+    expect(phones[1].text(), '第二关还没开始').toContain('还没开始')
+    expect(phones[2].text(), '第三关锁定').toContain('正在制作')
   })
 
-  it('Y09 复盘页可返回关卡大厅', async () => {
+  it('Y15 复盘页可返回关卡大厅', async () => {
     const wrapper = await mountApp()
     await swipeUnlock(wrapper)
     await clickDesktopApp(wrapper, '青讯')
@@ -2065,16 +2194,16 @@ describe('Y. 关卡大厅（轮播选关）', () => {
 
     await click(wrapper, '返回关卡大厅')
     await flush()
-    expect(wrapper.find('.hall').exists(), '应进入关卡大厅').toBe(true)
+    expect(wrapper.find('.desk').exists(), '应进入关卡大厅').toBe(true)
 
     // 「返回当前关卡」回到手机（不改变进度）
     await click(wrapper, '返回当前关卡')
     await flush()
-    expect(wrapper.find('.hall').exists()).toBe(false)
+    expect(wrapper.find('.desk').exists()).toBe(false)
     expect(readSave('level-01')?.ending, '来回切界面不得改变剧情').toBe('end-clear')
   })
 
-  it('Y10 设置页可进大厅、可重新开始本局，且清空全部关卡需二次确认', async () => {
+  it('Y16 设置页可进大厅、可重新开始本局，且清空全部关卡需二次确认', async () => {
     const wrapper = await mountApp()
     await swipeUnlock(wrapper)
     await clickDesktopApp(wrapper, '设置')
@@ -2094,7 +2223,7 @@ describe('Y. 关卡大厅（轮播选关）', () => {
     expect(readSave('level-01'), '取消后存档应还在').not.toBeNull()
   })
 
-  it('Y11 清空全部关卡：所有存档清掉并回到大厅', async () => {
+  it('Y17 清空全部关卡：所有存档清掉并回到大厅', async () => {
     const wrapper = await mountApp()
     await swipeUnlock(wrapper)
 
@@ -2102,11 +2231,8 @@ describe('Y. 关卡大厅（轮播选关）', () => {
     await clickDesktopApp(wrapper, '青讯')
     await click(wrapper, '进群看看')
     await click(wrapper, '回到桌面')
-    await openHall(wrapper)
-    await wrapper.find('.hall__arrow[aria-label="下一个关卡"]').trigger('click')
-    await flush()
-    await click(wrapper, '进入第二关')
-    await flush()
+    await openDesk(wrapper)
+    await tapPhone(wrapper, 1)
     await swipeUnlock(wrapper)
     await clickDesktopApp(wrapper, '青讯')
     await click(wrapper, '按他说的做')
@@ -2125,22 +2251,19 @@ describe('Y. 关卡大厅（轮播选关）', () => {
 
     expect(readSave('level-01'), '第一关应被清掉').toBeNull()
     expect(readSave('level-02'), '第二关应被清掉').toBeNull()
-    expect(wrapper.find('.hall').exists(), '清完应回到大厅重新挑').toBe(true)
+    expect(wrapper.find('.desk').exists(), '清完应回到大厅重新挑').toBe(true)
   })
 
-  it('Y12 切关后不会残留上一关的通知与已读进度', async () => {
+  it('Y18 切关后不会残留上一关的通知与已读进度', async () => {
     const wrapper = await mountApp()
     await swipeUnlockAndWaitNotices(wrapper)
     // 第一关的通知已经弹出过
     expect(wrapper.find('.banner').exists()).toBe(true)
 
-    await openHall(wrapper)
-    await wrapper.find('.hall__arrow[aria-label="下一个关卡"]').trigger('click')
-    await flush()
-    await click(wrapper, '进入第二关')
-    await flush()
+    await openDesk(wrapper)
+    await tapPhone(wrapper, 1)
 
-    // 换了一部手机：大厅/新手机里不该还压着第一关的横幅
+    // 换了一部手机：书桌/新手机里不该还压着第一关的横幅
     expect(wrapper.find('.banner').exists(), '切关后不应残留上一关的横幅').toBe(false)
   })
 
@@ -2151,14 +2274,8 @@ describe('Y. 关卡大厅（轮播选关）', () => {
    * 输错了对方会要求重新输入，但**语气不能突兀**。
    */
   it('Y19 验证码：短信弹出、输错会换新码并要求重输、输对才继续', async () => {
-    const wrapper = await mountApp()
-    await swipeUnlock(wrapper)
-    await openHall(wrapper)
-    await wrapper.find('.hall__arrow[aria-label="下一个关卡"]').trigger('click')
-    await flush()
-    await click(wrapper, '进入第二关')
-    await flush()
-
+    const wrapper = await mountApp({ atDesk: true })
+    await tapPhone(wrapper, 1)
     await swipeUnlock(wrapper)
     await clickDesktopApp(wrapper, '青讯')
     await click(wrapper, '按他说的做')
@@ -2199,14 +2316,8 @@ describe('Y. 关卡大厅（轮播选关）', () => {
   })
 
   it('Y20 验证码：可以要求重新发一条（换新码），且不改变剧情与余额', async () => {
-    const wrapper = await mountApp()
-    await swipeUnlock(wrapper)
-    await openHall(wrapper)
-    await wrapper.find('.hall__arrow[aria-label="下一个关卡"]').trigger('click')
-    await flush()
-    await click(wrapper, '进入第二关')
-    await flush()
-
+    const wrapper = await mountApp({ atDesk: true })
+    await tapPhone(wrapper, 1)
     await swipeUnlock(wrapper)
     await clickDesktopApp(wrapper, '青讯')
     await click(wrapper, '按他说的做')
@@ -2231,13 +2342,8 @@ describe('Y. 关卡大厅（轮播选关）', () => {
    * 并且第一行要说明原因（检测到你疑似被诈骗）。
    */
   it('Y21 关键节点弹「国家反诈中心」弹窗，说明原因并给出判断依据', async () => {
-    const wrapper = await mountApp()
-    await swipeUnlock(wrapper)
-    await openHall(wrapper)
-    await wrapper.find('.hall__arrow[aria-label="下一个关卡"]').trigger('click')
-    await flush()
-    await click(wrapper, '进入第二关')
-    await flush()
+    const wrapper = await mountApp({ atDesk: true })
+    await tapPhone(wrapper, 1)
     await swipeUnlock(wrapper)
     await clickDesktopApp(wrapper, '青讯')
     await click(wrapper, '按他说的做')
@@ -2275,26 +2381,25 @@ describe('Y. 关卡大厅（轮播选关）', () => {
  * 用户要求：「应该是先选择关卡，选了之后才进入锁屏解锁界面，然后结束后可以返回，
  * 相当于做出一二级菜单那种」。
  *
- * 因此顺序是：**首屏 = 关卡大厅** → 选定关卡 → 该关**锁屏** → 上滑解锁 → 桌面；
- * 结局页与复盘页都能回到大厅重新选关。
+ * 因此顺序是：**首屏 = 关卡大厅（书桌）** → 点手机选关 → 该关**锁屏** →
+ * 上滑解锁 → 桌面；结局页与复盘页都能回到大厅重新选关。
  */
 describe('Z. 两级菜单：先选关再进锁屏', () => {
   it('Z01 首屏是关卡大厅，不是锁屏', async () => {
-    const wrapper = await mountApp({ atHall: true })
+    const wrapper = await mountApp({ atDesk: true })
 
-    expect(wrapper.find('.hall').exists(), '首屏应是关卡大厅').toBe(true)
+    expect(wrapper.find('.desk').exists(), '首屏应是关卡大厅（书桌）').toBe(true)
     expect(wrapper.find('.lock__surface').exists(), '首屏不该直接是某一关的锁屏').toBe(false)
     expect(wrapper.text()).toContain('关卡大厅')
-    expect(wrapper.findAll('.lvlcard').length, '大厅应列出全部关卡').toBe(3)
+    expect(wrapper.findAll('.deskphone').length, '大厅应列出全部关卡').toBe(3)
   })
 
   it('Z02 大厅选定关卡后才进锁屏，上滑解锁进桌面', async () => {
-    const wrapper = await mountApp({ atHall: true })
+    const wrapper = await mountApp({ atDesk: true })
 
-    await click(wrapper, '进入第一关')
-    await flush()
+    await tapPhone(wrapper, 0)
 
-    expect(wrapper.find('.hall').exists(), '进入后应离开大厅').toBe(false)
+    expect(wrapper.find('.desk').exists(), '进入后应离开大厅').toBe(false)
     expect(wrapper.find('.lock__surface').exists(), '应先落在这一关的锁屏').toBe(true)
     expect(wrapper.text()).toContain('上滑解锁')
 
@@ -2303,19 +2408,18 @@ describe('Z. 两级菜单：先选关再进锁屏', () => {
   })
 
   it('Z03 首屏大厅没有「返回当前关卡」（还没进过任何关）', async () => {
-    const wrapper = await mountApp({ atHall: true })
+    const wrapper = await mountApp({ atDesk: true })
     expect(
       wrapper.findAll('button').some((b) => b.text().includes('返回当前关卡')),
       '首屏还没选过关，不该有「返回当前关卡」',
     ).toBe(false)
 
     // 进关之后从桌面打开大厅，这时才应该有
-    await click(wrapper, '进入第一关')
-    await flush()
+    await tapPhone(wrapper, 0)
     await swipeUnlock(wrapper)
     await clickDesktopApp(wrapper, '关卡')
     await flush()
-    expect(wrapper.find('.hall').exists(), '手机内应能打开大厅').toBe(true)
+    expect(wrapper.find('.desk').exists(), '手机内应能打开大厅').toBe(true)
     expect(
       wrapper.findAll('button').some((b) => b.text().includes('返回当前关卡')),
       '从手机内打开大厅时应能返回当前关卡',
@@ -2331,7 +2435,7 @@ describe('Z. 两级菜单：先选关再进锁屏', () => {
     expect(wrapper.text(), '应已到结局页').toContain('本局结果')
     await click(wrapper, '返回关卡大厅')
     await flush()
-    expect(wrapper.find('.hall').exists(), '结局页应能一步回到大厅').toBe(true)
+    expect(wrapper.find('.desk').exists(), '结局页应能一步回到大厅').toBe(true)
   })
 
   it('Z05 复盘页也能返回关卡大厅', async () => {
@@ -2344,7 +2448,7 @@ describe('Z. 两级菜单：先选关再进锁屏', () => {
 
     await click(wrapper, '返回关卡大厅')
     await flush()
-    expect(wrapper.find('.hall').exists(), '复盘页应能回到大厅').toBe(true)
+    expect(wrapper.find('.desk').exists(), '复盘页应能回到大厅').toBe(true)
   })
 
   it('Z06 玩到一半重新挂载（模拟刷新）回大厅，进度仍在', async () => {
@@ -2354,14 +2458,13 @@ describe('Z. 两级菜单：先选关再进锁屏', () => {
     await flush()
     expect(readSave()?.balance).toBe(700)
 
-    // 刷新：重新挂载，存档保留 → 首屏回大厅，卡片显示「进行中」
-    const reopened = await mountApp({ keepSave: true, atHall: true })
-    expect(reopened.find('.hall').exists(), '刷新后应先回到大厅').toBe(true)
-    expect(reopened.text(), '大厅卡片应显示这一关进行中').toContain('进行中')
+    // 刷新：重新挂载，存档保留 → 首屏回大厅，手机显示「进行中」
+    const reopened = await mountApp({ keepSave: true, atDesk: true })
+    expect(reopened.find('.desk').exists(), '刷新后应先回到大厅').toBe(true)
+    expect(reopened.text(), '大厅应显示这一关进行中').toContain('进行中')
 
     // 再进这一关：进度没丢
-    await click(reopened, '进入第一关')
-    await flush()
+    await tapPhone(reopened, 0)
     expect(readSave()?.balance, '进度不该因刷新丢失').toBe(700)
   })
 })
