@@ -13,6 +13,15 @@ import type { NodeId } from '@/game/types'
 
 export const REMINDER_TITLE = '国家反诈中心提醒您'
 
+/**
+ * 弹窗提醒的第一行（2026-10-17 新增）。
+ *
+ * 用户要求：「国家反诈的提示应该为检测到你疑似被诈骗或者其他原因」。
+ * 横幅只有一行字的空间，说不清"发生了什么"；弹窗有，所以把判断依据放在这里，
+ * 让玩家知道**为什么**会突然被提醒 —— 而不是看到一条莫名其妙的标语。
+ */
+export const REMINDER_HEADLINE = '检测到你疑似正在被诈骗'
+
 /** 取某关某节点对应的提醒正文；无则返回 null。 */
 export function reminderFor(levelId: string, node: NodeId): string | null {
   const level = getPlayableLevel(levelId)

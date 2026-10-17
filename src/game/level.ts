@@ -261,6 +261,14 @@ export interface PlayableLevel<TNode extends string = string, TOption extends st
   debriefActions: string[]
   /** 节点 → 反诈提醒正文（≤70 字，无网址、无号码）。 */
   reminders: Partial<Record<TNode, string>>
+  /**
+   * 这些节点的反诈提醒**用弹窗**而不是顶部横幅（2026-10-17 新增）。
+   *
+   * 为什么不把所有提醒都改成弹窗：弹窗会打断操作。满屏打断的结果是玩家开始
+   * 无脑点「知道了」，反而更不看。所以只把「真的可能正在被骗」的那几个节点
+   * 挑出来弹窗，其余仍在顶部横幅里轻声提示。
+   */
+  popupReminders?: readonly TNode[]
   /** 界面文案。 */
   copy: LevelCopy
   /** 钱包收支记录（完全由状态推导，不单独存储）。 */
@@ -511,6 +519,18 @@ export function validateLevel(level: PlayableLevel): string[] {
     if (!level.reminders[ending]) problems.push(`结局「${ending}」没有反诈提醒`)
   }
 
+  /*
+   * 10b) 弹窗提醒的节点必须真实存在、且**确实有提醒正文** ——
+   * 否则会出现「弹出一个空弹窗」，比不弹更糟。
+   */
+  for (const node of level.popupReminders ?? []) {
+    if (!nodeIds.includes(node)) {
+      problems.push(`popupReminders 里有未知节点「${node}」`)
+    } else if (!level.reminders[node]) {
+      problems.push(`popupReminders 里的「${node}」没有提醒正文，弹窗会是空的`)
+    }
+  }
+
   // 11) 会话引用完整性。
   const sessionIds = new Set(level.chat.sessions.map((s) => s.id))
   const refs: [string, string | undefined][] = [
@@ -702,6 +722,14 @@ export function codeGateFor<TNode extends string, TOption extends string>(
 ): CodeGate<TOption> | null {
   const gate = level.codeGate?.[node as TNode]
   return gate ?? null
+}
+
+/** 该节点的反诈提醒是否应该用**弹窗**呈现（而不是顶部横幅）。 */
+export function wantsReminderPopup<TNode extends string, TOption extends string>(
+  level: PlayableLevel<TNode, TOption>,
+  node: NodeId,
+): boolean {
+  return (level.popupReminders ?? []).includes(node as TNode)
 }
 
 /** 由状态取当前关卡要用的界面文案（找不到时回退到兜底文案）。 */

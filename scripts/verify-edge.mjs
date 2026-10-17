@@ -1318,6 +1318,42 @@ async function main() {
     )
 
     /*
+     * 关键节点会弹「国家反诈中心」弹窗（模态）。
+     *
+     * 这是把「页面上的退款进度不是你的余额。验证码给出去，等于把账户交出去。」
+     * 这类宣导式提示从聊天气泡搬进弹窗后的验收：弹窗要在、第一行要说明原因、
+     * 判断依据在弹窗里、聊天里不再重复；点「我知道了」之后才回到可操作状态。
+     */
+    const afDialog = await cdp.eval(`
+      const el = document.querySelector('.af');
+      const chat = document.querySelector('.chat__list');
+      const norm = (s) => (s || '').replace(/\\s+/g, ' ').trim();
+      return {
+        open: !!el,
+        text: el ? norm(el.textContent) : '',
+        hasHeadline: !!document.querySelector('.af__headline'),
+        chatHasHint: norm(chat && chat.textContent).includes('验证码给出去'),
+      };
+    `)
+    record(
+      '关键节点弹出「国家反诈中心」弹窗',
+      afDialog.open && afDialog.hasHeadline,
+      afDialog.open ? `文案=${afDialog.text.slice(0, 40)}` : '没有弹窗',
+    )
+    await cdp.screenshot(path.join(shotsDir, '12-antifraud-dialog.png'))
+    record('弹窗第一行说明原因（检测到你疑似被诈骗）', afDialog.text.includes('检测到你疑似'))
+    record(
+      '判断依据搬进了弹窗：聊天里不再重复这条宣导',
+      afDialog.text.includes('验证码给出去') && !afDialog.chatHasHint,
+      `弹窗含依据=${afDialog.text.includes('验证码给出去')} 聊天仍重复=${afDialog.chatHasHint}`,
+    )
+
+    await cdp.click('我知道了')
+    await sleep(300)
+    const afClosed = await cdp.eval(`return !document.querySelector('.af')`)
+    record('点「我知道了」后弹窗关闭，回到可操作状态', afClosed)
+
+    /*
      * 模拟验证码（真实浏览器里的一条独立断言）。
      *
      * 与真人完全一样的路径：从屏幕上那条短信里读出 6 位码，填进输入框提交。

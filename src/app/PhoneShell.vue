@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import AntiFraudDialog from '@/components/AntiFraudDialog.vue'
 import BottomNav from '@/components/BottomNav.vue'
 import NotificationBanner from '@/components/NotificationBanner.vue'
 import OverlaySheet from '@/components/OverlaySheet.vue'
@@ -30,9 +31,9 @@ import { resetChatReveal } from '@/app/chatReveal'
 import { codeMatches, generateCode, renderSms } from '@/app/smsCode'
 import { playSound, setSoundEnabled } from '@/app/sound'
 import { useGame } from '@/app/useGame'
-import { REMINDER_TITLE, reminderFor } from '@/data/antifraud'
+import { REMINDER_HEADLINE, REMINDER_TITLE, reminderFor } from '@/data/antifraud'
 import { BRAND } from '@/data/levels/shared'
-import { codeGateFor } from '@/game/level'
+import { codeGateFor, wantsReminderPopup } from '@/game/level'
 import type { PlayableLevel } from '@/game/level'
 import type { OptionId } from '@/game/types'
 
@@ -167,13 +168,41 @@ const waitingCount = computed(() => notices.waitingCount.value)
 const noticeLeaving = computed(() => notices.leaving.value)
 
 /**
+ * 当前展示的「国家反诈中心」弹窗正文（null = 不显示）。
+ *
+ * 只有关卡数据 `popupReminders` 里列出的节点才会用弹窗，其余节点仍是横幅。
+ * 弹窗是模态的、必须点一下才能继续 —— 所以绝不能每个节点都弹，
+ * 否则玩家会开始无脑点「知道了」，等于没弹。
+ */
+const antifraudDialog = ref<{ body: string } | null>(null)
+
+/** 关闭弹窗：玩家已读完。 */
+function closeAntifraudDialog(): void {
+  antifraudDialog.value = null
+}
+
+/**
  * 推送反诈预警。
- * 是否弹出横幅由设置控制；无论是否弹出，都会进入通知中心。
+ *
+ * 两种呈现，由关卡数据决定：
+ * - 普通节点 → 顶部横幅，轻提示、不打断操作；
+ * - `popupReminders` 里列出的关键节点 → **国家反诈中心弹窗**，
+ *   必须点一下才能继续。这类节点是「真的可能正在被骗」的分水岭。
+ *
+ * 无论哪种都记进通知中心，方便回看；是否弹出仍受「顶部弹出通知」开关控制。
  */
 function pushAntifraud(node = state.value.node): void {
   const body = reminderFor(props.level.meta.id, node)
   if (!body) return
   const item = { kind: 'antifraud' as const, title: REMINDER_TITLE, body }
+
+  if (wantsReminderPopup(props.level, node)) {
+    // 只记录 + 弹窗，不进横幅队列 —— 同一条内容不该在两个地方各说一遍。
+    notices.record(item)
+    if (settings.value.banner) antifraudDialog.value = { body }
+    return
+  }
+
   if (!settings.value.banner) {
     // 关闭弹出时只记录，不进入展示队列，避免不可见的通知占用队列与定时器。
     notices.record(item)
@@ -750,6 +779,18 @@ onBeforeUnmount(() => {
       :queued="waitingCount"
       @open="openBanner"
       @dismiss="closeBanner"
+    />
+
+    <!--
+      「国家反诈中心」弹窗：只在关键节点弹（关卡数据 popupReminders）。
+      模态、必须点一下才能继续 —— 这一步是「真的可能正在被骗」的分水岭。
+    -->
+    <AntiFraudDialog
+      v-if="antifraudDialog"
+      :title="REMINDER_TITLE"
+      :headline="REMINDER_HEADLINE"
+      :body="antifraudDialog.body"
+      @close="closeAntifraudDialog"
     />
 
     <main ref="mainRef" class="phone__viewport" tabindex="-1">

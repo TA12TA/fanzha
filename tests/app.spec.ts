@@ -118,6 +118,21 @@ async function enterCode(wrapper: VueWrapper, code: string): Promise<void> {
 }
 
 /**
+ * 如果弹出了「国家反诈中心」弹窗，就点「我知道了」关掉。
+ *
+ * **必须真的点**：jsdom 里 `setValue` 与 `trigger('click')` 都不做命中测试，
+ * 弹窗盖在上面也照样"成功"—— 用例会假绿。真人点不到被遮住的按钮，
+ * 所以这里要把这一步补上，否则测出来的流程根本走不通。
+ */
+async function dismissAntifraud(wrapper: VueWrapper): Promise<boolean> {
+  const ok = wrapper.findAll('button').find((btn) => btn.text().trim() === '我知道了')
+  if (!ok) return false
+  await ok.trigger('click')
+  await flush()
+  return true
+}
+
+/**
  * 构造指针事件。
  * jsdom 的 `clientY` 是只读 getter，无法通过 test-utils 的 trigger 选项赋值，
  * 因此手动创建事件并用 defineProperty 注入坐标。
@@ -1864,6 +1879,7 @@ describe('Y. 关卡大厅（轮播选关）', () => {
     expect(wrapper.text()).toContain('200')
     await click(wrapper, '确认转出 200 元')
     await flush()
+    await dismissAntifraud(wrapper)
     expect(readSave('level-02')?.balance, '确认 200 后余额应为 600').toBe(600)
     expect(wrapper.text(), '退款 199 只是平台数字').toContain('199')
     expect(readSave('level-02')?.balance, '199 不得计入余额').not.toBe(799)
@@ -1902,6 +1918,7 @@ describe('Y. 关卡大厅（轮播选关）', () => {
     await click(wrapper, '按他说的做')
     await click(wrapper, '确认转出 200 元')
     await flush()
+    await dismissAntifraud(wrapper)
     expect(readSave('level-02')?.balance, '第二关应为 600').toBe(600)
     // 第一关的存档没被动过
     expect(readSave('level-01')?.balance, '第一关必须保持 700').toBe(700)
@@ -2002,6 +2019,7 @@ describe('Y. 关卡大厅（轮播选关）', () => {
     await click(wrapper, '按他说的做')
     await click(wrapper, '确认转出 200 元')
     await flush()
+    await dismissAntifraud(wrapper)
     expect(readSave('level-01')).not.toBeNull()
     expect(readSave('level-02')).not.toBeNull()
 
@@ -2057,6 +2075,12 @@ describe('Y. 关卡大厅（轮播选关）', () => {
 
     // 到了索要验证码这一步：出现输入框，且「继续按他说的做」不再渲染成按钮
     expect(wrapper.find('.gate__input').exists(), '应出现验证码输入框').toBe(true)
+
+    /*
+     * 这一步会弹出「国家反诈中心」弹窗（该节点在关卡的 `popupReminders` 里），
+     * 模态的，必须先点掉 —— 真人在弹窗盖着的时候点不到下面的按钮。
+     */
+    expect(await dismissAntifraud(wrapper), '索要验证码时应弹出国家反诈中心弹窗').toBe(true)
     expect(
       findButton(wrapper, '继续按他说的做'),
       '这一步不能再用一个「继续」按钮糊过去，必须真的填码',
@@ -2096,6 +2120,7 @@ describe('Y. 关卡大厅（轮播选关）', () => {
     await flush()
     await click(wrapper, '确认转出 200 元')
     await flush()
+    await dismissAntifraud(wrapper)
 
     const before = await waitForSmsCode(wrapper)
     await click(wrapper, '重新发一条')
@@ -2103,6 +2128,46 @@ describe('Y. 关卡大厅（轮播选关）', () => {
     const after = await waitForSmsCode(wrapper)
     expect(after, '重发应换一个新验证码').not.toBe(before)
     expect(readSave('level-02')?.balance, '重发短信不该动钱').toBe(600)
+  })
+
+  /**
+   * 反诈提示搬到弹窗里（用户要求）。
+   *
+   * 「页面上的退款进度不是你的余额。验证码给出去，等于把账户交出去。」这种
+   * **宣导式**提示原本是聊天里的一条系统气泡，现在改成「国家反诈中心」弹窗，
+   * 并且第一行要说明原因（检测到你疑似被诈骗）。
+   */
+  it('Y21 关键节点弹「国家反诈中心」弹窗，说明原因并给出判断依据', async () => {
+    const wrapper = await mountApp({ atDesk: true })
+    await tapPhone(wrapper, 1)
+    await swipeUnlock(wrapper)
+    await clickDesktopApp(wrapper, '青讯')
+    await click(wrapper, '按他说的做')
+    await flush()
+    await click(wrapper, '确认转出 200 元')
+    await flush()
+
+    const dialog = wrapper.find('.af')
+    expect(dialog.exists(), '索要验证码这一步应弹出国家反诈中心弹窗').toBe(true)
+    expect(dialog.text(), '应有「国家反诈中心」标题').toContain('国家反诈中心')
+    expect(dialog.text(), '第一行应说明原因').toContain('检测到你疑似')
+    expect(dialog.text(), '弹窗里要给出判断依据').toContain('验证码给出去')
+    expect(dialog.text(), '也要点出页面数字不是余额').toContain('不是你的余额')
+
+    // 同一条内容不再在聊天里重复一遍：判断依据集中在弹窗
+    const chatList = wrapper.find('.chat__list')
+    expect(chatList.exists()).toBe(true)
+    expect(chatList.text(), '聊天里不该再重复这条宣导').not.toContain('验证码给出去')
+
+    // 关掉弹窗才轮到验证码输入
+    expect(await dismissAntifraud(wrapper), '弹窗上应有「我知道了」').toBe(true)
+    expect(wrapper.find('.af').exists(), '关闭后弹窗应消失').toBe(false)
+    expect(wrapper.find('.gate__input').exists(), '关掉弹窗后才是填验证码').toBe(true)
+
+    // 内容仍记进通知中心，可回看
+    await click(wrapper, '桌面')
+    await clickDesktopApp(wrapper, '通知')
+    expect(wrapper.text(), '通知中心应保留这条预警').toContain('验证码给出去')
   })
 })
 
