@@ -29,12 +29,12 @@ const labels = computed(() => riskLabelsOf(props.state))
 
 <template>
   <section class="review" aria-label="反诈复盘">
-    <AppHeader
-      :title="`${BRAND.manual} · 复盘`"
-      :subtitle="`${level.meta.ordinal}「${level.meta.title}」· 按你这局实际遇到的`"
-      show-back
-      @back="emit('back')"
-    />
+    <!--
+      这里原来还有一行副标题「第N关「…」· 按你这局实际遇到的」。
+      按用户要求整行去掉：复盘本身已经按经历生成，再挂一句"按你这局实际遇到的"
+      属于解释界面的元叙述，念起来也啰嗦。
+    -->
+    <AppHeader :title="`${BRAND.manual} · 复盘`" show-back @back="emit('back')" />
 
     <div class="review__body">
       <article class="summary">
