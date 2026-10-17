@@ -2040,8 +2040,14 @@ describe('Y. 关卡大厅（轮播选关）', () => {
    * 输错了对方会要求重新输入，但**语气不能突兀**。
    */
   it('Y19 验证码：短信弹出、输错会换新码并要求重输、输对才继续', async () => {
-    const wrapper = await mountApp({ atDesk: true })
-    await tapPhone(wrapper, 1)
+    const wrapper = await mountApp()
+    await swipeUnlock(wrapper)
+    await openHall(wrapper)
+    await wrapper.find('.hall__arrow[aria-label="下一个关卡"]').trigger('click')
+    await flush()
+    await click(wrapper, '进入第二关')
+    await flush()
+
     await swipeUnlock(wrapper)
     await clickDesktopApp(wrapper, '青讯')
     await click(wrapper, '按他说的做')
@@ -2076,8 +2082,14 @@ describe('Y. 关卡大厅（轮播选关）', () => {
   })
 
   it('Y20 验证码：可以要求重新发一条（换新码），且不改变剧情与余额', async () => {
-    const wrapper = await mountApp({ atDesk: true })
-    await tapPhone(wrapper, 1)
+    const wrapper = await mountApp()
+    await swipeUnlock(wrapper)
+    await openHall(wrapper)
+    await wrapper.find('.hall__arrow[aria-label="下一个关卡"]').trigger('click')
+    await flush()
+    await click(wrapper, '进入第二关')
+    await flush()
+
     await swipeUnlock(wrapper)
     await clickDesktopApp(wrapper, '青讯')
     await click(wrapper, '按他说的做')
