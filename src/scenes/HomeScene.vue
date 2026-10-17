@@ -41,7 +41,6 @@ const emit = defineEmits<{
   (e: 'open-chat'): void
   (e: 'open-wallet'): void
   (e: 'open-manual'): void
-  (e: 'open-levels'): void
   (e: 'open-app', app: 'photos' | 'notifications'): void
   (e: 'open-settings'): void
   (e: 'resume'): void
@@ -51,7 +50,7 @@ const emit = defineEmits<{
 /**
  * 图标分两处摆放（模仿真实手机的程序坞）：
  * Dock 放剧情推进最常用的三个，网格区放其余。
- * `id` 集合必须仍然覆盖全部应用（测试与剧情入口都依赖这一点）。
+ * 关卡进行中没有「关卡」入口：大厅只在首屏与结局/复盘页出现。
  */
 const dockApps = [
   { id: 'chat', label: BRAND.chat, hint: '打开消息应用' },
@@ -59,8 +58,11 @@ const dockApps = [
   { id: 'manual', label: BRAND.manual, hint: '打开国家反诈中心' },
 ] as const
 
+/*
+ * 关卡大厅只在首屏与结局/复盘页出现；关卡进行中不再提供「关卡」入口，
+ * 避免玩到一半误触切关。
+ */
 const gridApps = [
-  { id: 'levels', label: BRAND.levels, hint: '打开关卡大厅' },
   { id: 'photos', label: '相册', hint: '打开相册' },
   { id: 'notifications', label: '通知', hint: '打开通知' },
   { id: 'settings', label: '设置', hint: '打开设置' },
@@ -73,7 +75,6 @@ function onAppClick(id: (typeof allApps)[number]['id']): void {
   if (id === 'chat') emit('open-chat')
   else if (id === 'wallet') emit('open-wallet')
   else if (id === 'manual') emit('open-manual')
-  else if (id === 'levels') emit('open-levels')
   else if (id === 'settings') emit('open-settings')
   else emit('open-app', id)
 }
@@ -361,7 +362,8 @@ function badgeAria(id: string, badge: string): string {
 
 .apps {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  /* 去掉「关卡」入口后只剩三个：三等分比四列留一个空位更稳 */
+  grid-template-columns: repeat(3, 1fr);
   gap: var(--space-4) var(--space-2);
   margin: 0;
   padding: 0;

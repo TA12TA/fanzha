@@ -6,7 +6,7 @@ import { getLevel } from '@/data/levels'
 import type { LevelId } from '@/game/types'
 
 /**
- * 设置：真实可用的开关（音效、顶部提醒、壁纸主题）+ 关卡与本局操作。
+ * 设置：真实可用的开关（音效、顶部提醒、壁纸主题）+ 本局操作。
  *
  * 列表统一使用全项目共用的 `.rows` / `.row` 样式，
  * 不再让每个页面各写一套行样式（真机上同一个系统里的列表长得一样）。
@@ -19,7 +19,6 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'back'): void
   (e: 'request-restart'): void
-  (e: 'open-levels'): void
   (e: 'request-clear-all'): void
 }>()
 
@@ -58,12 +57,6 @@ function chooseTheme(mode: ThemeMode): void {
 function requestRestart(): void {
   playSound('tap')
   emit('request-restart')
-}
-
-/** 打开关卡大厅（不改变任何进度）。 */
-function openLevels(): void {
-  playSound('tap')
-  emit('open-levels')
 }
 
 /** 清空全部关卡进度：同样先走二次确认。 */
@@ -166,16 +159,6 @@ function requestClearAll(): void {
       <section aria-label="关卡">
         <h2 class="groupcard__title">关卡</h2>
         <ul class="rows">
-          <li>
-            <button type="button" class="row row--action" @click="openLevels">
-              <span class="row__main">
-                <span class="row__label">关卡大厅</span>
-                <span class="row__hint">换一关挑战；每关的进度各自保留</span>
-              </span>
-              <span class="row__value">{{ currentLevelTitle }}</span>
-              <span class="row__chev" aria-hidden="true"></span>
-            </button>
-          </li>
           <li>
             <button type="button" class="row row--action" @click="requestRestart">
               <span class="row__main">

@@ -32,7 +32,7 @@ const mounted: VueWrapper[] = []
  * 断言读到的还是书桌（`.deskphone` 还在、锁屏还没出现）。
  */
 async function mountApp(
-  options: { keepSave?: boolean; atDesk?: boolean; attach?: boolean } = {},
+  options: { keepSave?: boolean; atDesk?: boolean; attach?: boolean; resetReveal?: boolean } = {},
 ): Promise<VueWrapper> {
   if (!options.keepSave) globalThis.localStorage.clear()
   /*
@@ -41,7 +41,7 @@ async function mountApp(
    * 真实场景中刷新页面等于新开局、这份内存记忆会一起重置，所以这里也重置，
    * 让每个用例都从「第一次进入会话」开始。
    */
-  resetChatReveal()
+  if (options.resetReveal !== false) resetChatReveal()
   /*
    * `attach`：默认挂载到游离容器（更快，也够用于大多数断言）。
    * 但**键盘焦点**相关用例必须挂到 document 上 —— 游离元素调 `.focus()`
@@ -54,6 +54,16 @@ async function mountApp(
     await tapPhone(wrapper, 0)
   }
   return wrapper
+}
+
+/**
+ * 模拟「刷新回大厅」：关卡进行中不再有关卡入口，切关只能刷新页面后在大厅重选。
+ * 卸载当前实例（保留存档），重新挂到书桌，返回新实例。
+ */
+async function remountAtDesk(wrapper: VueWrapper, resetReveal = true): Promise<VueWrapper> {
+  wrapper.unmount()
+  mounted.pop()
+  return mountApp({ keepSave: true, atDesk: true, resetReveal })
 }
 
 /**
@@ -1131,9 +1141,9 @@ describe('M. 音效覆盖：没有静音按钮', () => {
     expect(audio.count(), '解锁应出声').toBeGreaterThan(before)
   })
 
-  it('M02 桌面七个入口每一个都有音效', async () => {
-    // 七个入口点击后都会切视图，因此每个都用全新挂载，避免互相影响
-    for (const label of ['青讯', '安心钱包', '国家反诈中心', '关卡', '相册', '通知', '设置']) {
+  it('M02 桌面六个入口每一个都有音效', async () => {
+    // 六个入口点击后都会切视图，因此每个都用全新挂载，避免互相影响
+    for (const label of ['青讯', '安心钱包', '国家反诈中心', '相册', '通知', '设置']) {
       const wrapper = await mountApp()
       await swipeUnlock(wrapper)
       const before = audio.count()
@@ -1239,22 +1249,23 @@ describe('M. 音效覆盖：没有静音按钮', () => {
  */
 describe('N. 桌面外观（真实手机样式）', () => {
   const dockLabels = ['青讯', '安心钱包', '国家反诈中心']
-  const gridLabels = ['关卡', '相册', '通知', '设置']
+  const gridLabels = ['相册', '通知', '设置']
 
-  it('N01 图标分布在程序坞与网格区，七个入口一个不少', async () => {
+  it('N01 图标分布在程序坞与网格区，六个入口一个不少', async () => {
     const wrapper = await mountApp()
     await swipeUnlock(wrapper)
 
     const dock = wrapper.findAll('.dock .app')
     const grid = wrapper.findAll('.apps .app')
     expect(dock.length, '程序坞应有 3 个应用').toBe(3)
-    expect(grid.length, '网格区应有 4 个入口（含关卡）').toBe(4)
+    expect(grid.length, '网格区应有 3 个入口').toBe(3)
 
-    // 七个入口恰好各出现一次，没有重复也没有遗漏
+    // 六个入口恰好各出现一次，没有重复也没有遗漏
     const labels = [...dock, ...grid].map((b) => b.text().replace(/\s+/g, ''))
     for (const label of [...dockLabels, ...gridLabels]) {
       expect(labels.filter((l) => l.includes(label)), `「${label}」应恰好出现一次`).toHaveLength(1)
     }
+    expect(labels.some((l) => l.includes('关卡')), '关卡进行中不应再有「关卡」入口').toBe(false)
   })
 
   it('N02 图标本体不含卡片容器（真实手机桌面图标是裸浮的）', async () => {
@@ -1262,7 +1273,7 @@ describe('N. 桌面外观（真实手机样式）', () => {
     await swipeUnlock(wrapper)
 
     const buttons = wrapper.findAll('.home .app')
-    expect(buttons.length).toBe(7)
+    expect(buttons.length).toBe(6)
     for (const btn of buttons) {
       // 图标容器只包含「图标 + 标签（+ 角标）」，不应再有卡片式的额外结构
       const classes = btn.classes()
@@ -1828,7 +1839,7 @@ describe('W. 会话逐条出现只播一次', () => {
      *
      * 这条用例就是那个命名空间的回归：把键改回纯 sessionId 时它会变红。
      */
-    const wrapper = await mountApp()
+    let wrapper = await mountApp()
     await swipeUnlock(wrapper)
 
     // 第一关：把妈妈会话看完（写入 level-01:mom 的进度）
@@ -1839,10 +1850,9 @@ describe('W. 会话逐条出现只播一次', () => {
     const l1Count = wrapper.findAll('.chat__list .row').length
     expect(l1Count, '第一关妈妈会话应有消息').toBeGreaterThan(0)
 
-    // 切到第二关（同名 mom 会话，但还没有任何已读进度）
-    await click(wrapper, '回到桌面')
-    await clickDesktopApp(wrapper, '关卡')
-    await flush()
+    // 切到第二关（同名 mom 会话，但还没有任何已读进度）。
+    // 关卡内不再有关卡入口，切关 = 刷新回大厅；这里保留已读进度，只重挂大厅。
+    wrapper = await remountAtDesk(wrapper, false)
     await tapPhone(wrapper, 1)
     await swipeUnlock(wrapper)
     await clickDesktopApp(wrapper, '青讯')
@@ -1872,12 +1882,6 @@ describe('W. 会话逐条出现只播一次', () => {
  * 5. 换关确实换了「一部手机」，且两关进度各自保留。
  */
 describe('Y. 关卡大厅（书桌选关）', () => {
-  /** 从手机桌面进入关卡大厅（书桌）。 */
-  async function openDesk(wrapper: VueWrapper): Promise<void> {
-    await clickDesktopApp(wrapper, '关卡')
-    await flush()
-  }
-
   it('Y01 首屏是书桌：三部手机、没有手机外框', async () => {
     const wrapper = await mountApp({ atDesk: true })
 
@@ -2122,7 +2126,7 @@ describe('Y. 关卡大厅（书桌选关）', () => {
   })
 
   it('Y13 两关进度各自保留：切关回来仍是原来的余额与节点', async () => {
-    const wrapper = await mountApp()
+    let wrapper = await mountApp()
     await swipeUnlock(wrapper)
 
     // 第一关：付掉 100
@@ -2134,9 +2138,8 @@ describe('Y. 关卡大厅（书桌选关）', () => {
     await flush()
     expect(readSave('level-01')?.balance, '第一关应为 700').toBe(700)
 
-    // 切到第二关：付掉 200
-    await click(wrapper, '回到桌面')
-    await openDesk(wrapper)
+    // 切到第二关：刷新回大厅再选第二部手机，付掉 200
+    wrapper = await remountAtDesk(wrapper)
     await tapPhone(wrapper, 1)
     await swipeUnlock(wrapper)
     await clickDesktopApp(wrapper, '青讯')
@@ -2148,9 +2151,8 @@ describe('Y. 关卡大厅（书桌选关）', () => {
     // 第一关的存档没被动过
     expect(readSave('level-01')?.balance, '第一关必须保持 700').toBe(700)
 
-    // 切回第一关：已有存档，因此**直接回到桌面**（不回锁屏），进度仍是 700
-    await click(wrapper, '回到桌面')
-    await openDesk(wrapper)
+    // 切回第一关：刷新回大厅再选第一部手机；已有存档，因此**直接回到桌面**（不回锁屏），进度仍是 700
+    wrapper = await remountAtDesk(wrapper)
     await tapPhone(wrapper, 0)
     expect(
       wrapper.find('.lock__surface').exists(),
@@ -2172,8 +2174,8 @@ describe('Y. 关卡大厅（书桌选关）', () => {
     await click(wrapper, '拒绝并举报')
     await flush()
 
-    await click(wrapper, '回到桌面')
-    await openDesk(wrapper)
+    await click(wrapper, '返回关卡大厅')
+    await flush()
 
     const phones = wrapper.findAll('.deskphone')
     const firstText = phones[0].text()
@@ -2203,13 +2205,13 @@ describe('Y. 关卡大厅（书桌选关）', () => {
     expect(readSave('level-01')?.ending, '来回切界面不得改变剧情').toBe('end-clear')
   })
 
-  it('Y16 设置页可进大厅、可重新开始本局，且清空全部关卡需二次确认', async () => {
+  it('Y16 设置页不再有大厅入口，可重新开始本局，且清空全部关卡需二次确认', async () => {
     const wrapper = await mountApp()
     await swipeUnlock(wrapper)
     await clickDesktopApp(wrapper, '设置')
 
-    expect(wrapper.text(), '设置页应有「关卡」分组').toContain('关卡大厅')
     expect(wrapper.text(), '设置页应写明当前关卡').toContain('刷单返利')
+    expect(wrapper.text(), '关卡进行中不应再有「关卡大厅」入口').not.toContain('关卡大厅')
 
     // 重新开始本局仍需二次确认（文案保持原样）
     await click(wrapper, '重新开始本局')
@@ -2224,14 +2226,13 @@ describe('Y. 关卡大厅（书桌选关）', () => {
   })
 
   it('Y17 清空全部关卡：所有存档清掉并回到大厅', async () => {
-    const wrapper = await mountApp()
+    let wrapper = await mountApp()
     await swipeUnlock(wrapper)
 
-    // 两关都留点进度
+    // 两关都留点进度：第一关进群，再刷新回大厅进第二关
     await clickDesktopApp(wrapper, '青讯')
     await click(wrapper, '进群看看')
-    await click(wrapper, '回到桌面')
-    await openDesk(wrapper)
+    wrapper = await remountAtDesk(wrapper)
     await tapPhone(wrapper, 1)
     await swipeUnlock(wrapper)
     await clickDesktopApp(wrapper, '青讯')
@@ -2254,13 +2255,13 @@ describe('Y. 关卡大厅（书桌选关）', () => {
     expect(wrapper.find('.desk').exists(), '清完应回到大厅重新挑').toBe(true)
   })
 
-  it('Y18 切关后不会残留上一关的通知与已读进度', async () => {
-    const wrapper = await mountApp()
+  it('Y18 刷新回大厅切关后不会残留上一关的通知', async () => {
+    let wrapper = await mountApp()
     await swipeUnlockAndWaitNotices(wrapper)
     // 第一关的通知已经弹出过
     expect(wrapper.find('.banner').exists()).toBe(true)
 
-    await openDesk(wrapper)
+    wrapper = await remountAtDesk(wrapper)
     await tapPhone(wrapper, 1)
 
     // 换了一部手机：书桌/新手机里不该还压着第一关的横幅
@@ -2414,16 +2415,14 @@ describe('Z. 两级菜单：先选关再进锁屏', () => {
       '首屏还没选过关，不该有「返回当前关卡」',
     ).toBe(false)
 
-    // 进关之后从桌面打开大厅，这时才应该有
+    // 进关之后：桌面不再有「关卡」入口，也不会出现「返回当前关卡」
     await tapPhone(wrapper, 0)
     await swipeUnlock(wrapper)
-    await clickDesktopApp(wrapper, '关卡')
-    await flush()
-    expect(wrapper.find('.desk').exists(), '手机内应能打开大厅').toBe(true)
+    expect(wrapper.find('.desk').exists(), '关卡进行中不应再进入大厅').toBe(false)
     expect(
-      wrapper.findAll('button').some((b) => b.text().includes('返回当前关卡')),
-      '从手机内打开大厅时应能返回当前关卡',
-    ).toBe(true)
+      wrapper.findAll('.home .app').some((b) => b.text().includes('关卡')),
+      '关卡进行中不应再有「关卡」入口',
+    ).toBe(false)
   })
 
   it('Z04 结局页可直接返回关卡大厅（一级菜单）', async () => {

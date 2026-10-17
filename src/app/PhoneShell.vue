@@ -824,7 +824,6 @@ onBeforeUnmount(() => {
           @open-chat="openChat"
           @open-wallet="openWallet"
           @open-manual="openManual"
-          @open-levels="openLevels"
           @open-app="openPlain"
           @open-settings="openSettings"
           @resume="resume"
@@ -893,7 +892,6 @@ onBeforeUnmount(() => {
           :level-id="level.meta.id"
           @back="goBack"
           @request-restart="requestRestart"
-          @open-levels="openLevels"
           @request-clear-all="requestClearAll"
         />
 

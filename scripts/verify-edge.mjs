@@ -1276,7 +1276,7 @@ async function main() {
       `延迟期角标数=${badgesDuringDelay}`,
     )
 
-    // 图标风格统一：七个入口（网格区 + 程序坞）尺寸与圆角一致
+    // 图标风格统一：六个入口（网格区 + 程序坞）尺寸与圆角一致
     const iconStyles = await cdp.eval(`
       const list = [...document.querySelectorAll('.home .app .app__glyph')].map(g => {
         const cs = getComputedStyle(g);
@@ -1286,10 +1286,10 @@ async function main() {
       return list;
     `)
     const uniformIcons =
-      iconStyles.length === 7 &&
+      iconStyles.length === 6 &&
       iconStyles.every((s) => s.size === iconStyles[0].size && s.radius === iconStyles[0].radius)
     record(
-      '七个桌面入口尺寸与圆角统一（含程序坞）',
+      '六个桌面入口尺寸与圆角统一（含程序坞）',
       uniformIcons,
       `共 ${iconStyles.length} 个，首个=${JSON.stringify(iconStyles[0])}`,
     )
@@ -1347,7 +1347,7 @@ async function main() {
       return list;
     `)
     const allBare =
-      iconNoCard.length === 7 &&
+      iconNoCard.length === 6 &&
       iconNoCard.every(
         (s) => s.border === 'none' && s.bg === 'rgba(0, 0, 0, 0)' && s.pad === '0px',
       )
@@ -1394,18 +1394,24 @@ async function main() {
     )
 
     /*
-     * 关卡大厅（书桌版），从手机桌面上的「关卡」图标进入。
+     * 关卡大厅（书桌版）。
      *
-     * 这里验证的是**真实浏览器里的布局与交互**，jsdom 里量不出来的部分：
-     * 桌上三部手机各自的倾斜与手机外观、锁定手机不可进入、
-     * 点手机后的旋转放大转场，以及切关后确实换了一部手机。
+     * 关卡进行中不再提供「关卡」入口；切关 = 刷新回大厅。
+     * 这里先确认桌面六个入口里没有「关卡」，再重新导航回大厅，
+     * 验证真实浏览器里的书桌布局、点手机转场，以及切关后确实换了一部手机。
      */
-    await cdp.eval(`
-      const b = [...document.querySelectorAll('.home .app')].find(x => (x.textContent||'').includes('关卡'));
-      if (b) b.click();
-      return true;
+    const desktopEntries = await cdp.eval(`
+      const labels = [...document.querySelectorAll('.home .app')].map(x => (x.textContent || '').trim());
+      return { count: labels.length, labels, hasLevels: labels.some(x => x.includes('关卡')) };
     `)
-    await sleep(500)
+    record(
+      '关卡进行中不再显示「关卡」入口',
+      desktopEntries.count === 6 && desktopEntries.hasLevels === false,
+      `入口=${desktopEntries.labels.join(' / ')}`,
+    )
+
+    await cdp.send('Page.navigate', { url: BASE })
+    await sleep(1200)
     const hallInfo = await cdp.eval(`
       const phones = [...document.querySelectorAll('.deskphone')];
       const locked = document.querySelector('.deskphone--locked');
@@ -1424,14 +1430,14 @@ async function main() {
         docOverflow: document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1,
       };
     `)
-    record('桌面「关卡」入口可回到关卡大厅（书桌）', hallInfo.onDesk && hallInfo.title)
+    record('刷新回大厅仍停留在书桌（书桌版）', hallInfo.onDesk && hallInfo.title)
     record(
       '桌上三部手机都有手机样式（迷你状态栏 + 迷你图标）',
       hallInfo.phoneCount === 3 && hallInfo.miniStatusbars === 3 && hallInfo.miniIcons === 3,
       `手机=${hallInfo.phoneCount} 状态栏=${hallInfo.miniStatusbars} 图标区=${hallInfo.miniIcons}`,
     )
     record(
-      '从手机回到大厅时仍没有手机外框',
+      '刷新回大厅时仍没有手机外框',
       hallInfo.hasStatusbar === false && hallInfo.hasNavKeys === 0,
       `状态栏=${hallInfo.hasStatusbar} 导航键=${hallInfo.hasNavKeys}`,
     )
@@ -1445,10 +1451,10 @@ async function main() {
       hallInfo.lockedDisabled === 'true',
       `aria-disabled=${hallInfo.lockedDisabled}`,
     )
-    record('从手机内打开大厅时能返回当前关卡', hallInfo.hasReturn === true)
+    record('刷新回大厅不显示「返回当前关卡」', hallInfo.hasReturn === false)
     record('书桌版大厅不产生整页横向溢出', hallInfo.docOverflow)
 
-    await cdp.screenshot(path.join(shotsDir, '10-level-desk-from-phone.png'))
+    await cdp.screenshot(path.join(shotsDir, '10-level-desk-reload.png'))
 
     // 点第二部手机进入第二关：应当走完转场并换了一部手机
     await cdp.eval(`
