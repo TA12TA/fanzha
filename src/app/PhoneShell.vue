@@ -68,6 +68,11 @@ const props = defineProps<{
    *   「从手机退回大厅」时把根壳需要的属性一并摘掉。
    */
   theme: 'day' | 'night'
+  /**
+   * 是否显示进入关卡时的壁纸交接层。
+   * 由根壳在飞行转场结束后打开，等这层新手机完成挂载再淡出。
+   */
+  handoff?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -1035,6 +1040,18 @@ onBeforeUnmount(() => {
         </button>
       </template>
     </OverlaySheet>
+
+    <!--
+      进入关卡的交接层：用与锁屏同源的壁纸盖住 PhoneShell 挂载的第一帧，
+      然后淡出。它只负责消除飞行层结束后的一帧闪烁，不参与交互。
+    -->
+    <div v-if="handoff" class="handoff" aria-hidden="true">
+      <div class="wall">
+        <div class="wall__sky"></div>
+        <div class="wall__hills"></div>
+        <div class="wall__glow"></div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -1098,6 +1115,37 @@ onBeforeUnmount(() => {
   font-size: var(--font-sm);
   line-height: 1.6;
   color: var(--c-text-soft);
+}
+
+/* 进入关卡的壁纸交接层：覆盖挂载空档，再淡出到锁屏/桌面 */
+.handoff {
+  position: absolute;
+  inset: 0;
+  z-index: 90;
+  overflow: hidden;
+  pointer-events: none;
+  background: var(--c-desktop-2);
+  animation: handoff-fade 280ms ease forwards;
+}
+
+.handoff .wall {
+  position: absolute;
+  inset: 0;
+}
+
+@keyframes handoff-fade {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .handoff {
+    animation-duration: 1ms;
+  }
 }
 
 /* 通知中心 */

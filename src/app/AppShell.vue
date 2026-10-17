@@ -72,6 +72,16 @@ const activeLevel = computed(() => getPlayableLevel(activeLevelId.value) ?? play
 /** 手机挂载钥匙：切关时 +1，强制整部手机重挂载。 */
 const phoneKey = ref(0)
 
+/**
+ * 进入关卡时的壁纸交接层。
+ *
+ * 飞行层结束 → LevelDesk 卸载 → PhoneShell 挂载，中间只要有一帧空档，
+ * 全屏壁纸上就会闪一下深色/白色底。交接层由 PhoneShell 用同源壁纸画在最上层，
+ * 等新手机完成挂载后淡出，避免“铺开全屏后闪一下”。
+ */
+const handoff = ref(false)
+let handoffTimer: ReturnType<typeof setTimeout> | null = null
+
 /** 打开大厅（书桌）。 */
 function openHall(): void {
   refreshSlots()
@@ -98,7 +108,13 @@ function enterLevel(levelId: LevelId): void {
     resetChatReveal(levelId)
   }
   refreshSlots()
+  handoff.value = true
   screen.value = 'phone'
+  if (handoffTimer) clearTimeout(handoffTimer)
+  handoffTimer = setTimeout(() => {
+    handoff.value = false
+    handoffTimer = null
+  }, 360)
 }
 
 /** 清空全部关卡进度（在设置页确认后由手机层发出）。 */
@@ -139,6 +155,8 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   globalThis.removeEventListener('popstate', onPopState)
+  if (handoffTimer) clearTimeout(handoffTimer)
+  handoffTimer = null
   hallGuardActive = false
 })
 
@@ -167,6 +185,7 @@ watch(screen, (value) => {
       class="phone__frame"
       :level="activeLevel"
       :theme="theme"
+      :handoff="handoff"
       @open-levels="openHall"
       @clear-all="clearAll"
     />

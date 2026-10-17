@@ -2167,6 +2167,7 @@ describe('Y. 关卡大厅（书桌选关）', () => {
     expect(wrapper.find('.desk').exists(), '转场结束后应离开书桌').toBe(false)
     expect(wrapper.find('.desk__fly').exists(), '飞行层应被撤掉').toBe(false)
     expect(wrapper.find('.lock__surface').exists(), '应落在这一关的锁屏').toBe(true)
+    expect(wrapper.find('.handoff').exists(), '应由同源壁纸交接层遮住挂载空档').toBe(true)
     expect(wrapper.text()).toContain('上滑解锁')
   })
 
