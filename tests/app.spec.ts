@@ -2125,6 +2125,7 @@ describe('Y. 关卡大厅（书桌选关）', () => {
       expect(phone.find('.deskphone__body').exists(), '应有手机机身').toBe(true)
       expect(phone.find('.deskphone__screen').exists(), '机身里应有屏幕').toBe(true)
       expect(phone.find('.deskphone__statusbar').exists(), '屏幕里应有迷你状态栏').toBe(true)
+      expect(phone.find('.deskphone__clock').text(), '迷你状态栏应显示实时北京时间').toMatch(/^\d{2}:\d{2}$/)
       expect(phone.find('.deskphone__icons').exists(), '屏幕里应有迷你图标').toBe(true)
       // 屏幕用的是真机那张共用壁纸（飞行层放大后与锁屏同源）
       expect(phone.find('.deskphone__screen .wall').exists(), '屏幕应是同一张壁纸').toBe(true)
@@ -2397,6 +2398,10 @@ describe('Y. 关卡大厅（书桌选关）', () => {
     const firstText = phones[0].text()
     expect(firstText, '第一关已完成，状态行应显示结局').toContain('已完成')
     expect(firstText).toContain('提前识破')
+    expect(
+      phones[0].find('.deskphone__live').text(),
+      '已完成关卡的迷你屏幕应实时显示余额',
+    ).toContain('800')
     expect(phones[1].text(), '第二关还没开始').toContain('还没开始')
     expect(phones[2].text(), '第三关锁定').toContain('正在制作')
   })

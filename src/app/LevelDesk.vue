@@ -2,6 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import DeskPhone from '@/app/DeskPhone.vue'
 import { playSound } from '@/app/sound'
+import { useBeijingClock } from '@/app/clock'
 import { LEVELS, getPlayableLevel } from '@/data/levels'
 import { isPlayable } from '@/game/level'
 import type { LevelEntry } from '@/game/level'
@@ -48,6 +49,12 @@ const EMPTY_SLOT: LevelSlotSummary = {
 }
 
 const entries = computed<LevelEntry[]>(() => LEVELS)
+
+/**
+ * 桌上每部手机的迷你状态栏会显示真实北京时间（分钟级刷新），
+ * 而不是固定写死的 9:41；三块屏幕共用同一个时钟。
+ */
+const { time: clock } = useBeijingClock()
 
 /**
  * 每部手机的倾斜角。
@@ -328,7 +335,7 @@ const canReturn = computed(() => props.showReturn && currentTitle.value !== '')
 </script>
 
 <template>
-  <div ref="rootRef" class="desk" aria-label="关卡大厅">
+  <div ref="rootRef" class="desk" :class="{ 'desk--flying': flying }" aria-label="关卡大厅">
     <!-- 桌面纹理：纯 CSS，不引入图片 -->
     <div class="desk__surface" aria-hidden="true"></div>
 
@@ -345,6 +352,7 @@ const canReturn = computed(() => props.showReturn && currentTitle.value !== '')
         :entry="entry"
         :slot="slotOf(entry)"
         :tilt="tiltOf(index)"
+        :clock="clock"
         @select="onSelect(index)"
       />
     </div>
@@ -375,13 +383,16 @@ const canReturn = computed(() => props.showReturn && currentTitle.value !== '')
       aria-hidden="true"
       @transitionend="onTransitionEnd"
     >
-      <DeskPhone variant="screen" :entry="flying.entry" :slot="EMPTY_SLOT" />
+      <div class="desk__fly-lift">
+        <DeskPhone variant="screen" :entry="flying.entry" :slot="EMPTY_SLOT" />
+      </div>
     </div>
   </div>
 </template>
 
 <style scoped>
 .desk {
+  --desk-accent: #d8a45f;
   position: relative;
   display: flex;
   flex-direction: column;
@@ -419,23 +430,47 @@ const canReturn = computed(() => props.showReturn && currentTitle.value !== '')
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background-color: #2e2015;
+  background-color: #1f1713;
   background-image:
     /* 细密纹理：压深 */
-      repeating-linear-gradient(93deg, rgb(0 0 0 / 6%) 0 1px, transparent 1px 7px),
-    /* 细密纹理：提亮（与上一层的角度错开一点，避免摩尔纹那种呆板感） */
-      repeating-linear-gradient(99deg, rgb(255 240 214 / 4%) 0 1px, transparent 1px 15px),
-    /* 顶部柔光 */
-      radial-gradient(120% 52% at 50% -14%, rgb(255 236 200 / 20%), transparent 66%),
-    /* 暗角：收住四边，固定深色，两个主题都压暗。
-       只压到 26%：再深一点画面两侧的机身会被吞进暗角里 */
-      radial-gradient(ellipse 88% 62% at 50% 44%, transparent 46%, rgb(0 0 0 / 26%));
+      repeating-linear-gradient(93deg, rgb(0 0 0 / 8%) 0 1px, transparent 1px 7px),
+    /* 细密纹理：提亮（角度错开，避免摩尔纹） */
+      repeating-linear-gradient(99deg, rgb(255 228 186 / 5%) 0 1px, transparent 1px 15px),
+    /* 左上方暖色台灯 */
+      radial-gradient(110% 58% at 18% -12%, rgb(255 187 111 / 24%), transparent 63%),
+    /* 右下角冷色环境光，和暖木色拉开层次 */
+      radial-gradient(90% 62% at 104% 104%, rgb(69 104 133 / 20%), transparent 64%),
+    /* 暗角：固定深色，两个主题都压暗 */
+      radial-gradient(ellipse 88% 62% at 50% 44%, transparent 42%, rgb(0 0 0 / 34%));
+  transition:
+    filter 240ms ease,
+    transform 240ms ease;
 }
 
-/* 白天主题下换成浅色木头，文字仍用同一套 on-wall 变量（自动转深）
-   取值让「深色标题 / 浅色木头」的对比度有富余（约 5.5:1，不是刚过 4.5） */
+/* 白天主题下换成浅橡木；文字仍用 on-wall 变量自动转深 */
+[data-theme='day'] .desk {
+  --desk-accent: #8a5b2e;
+}
+
 [data-theme='day'] .desk__surface {
-  background-color: #b8925f;
+  background-color: #c9a272;
+  background-image:
+    repeating-linear-gradient(93deg, rgb(87 52 28 / 6%) 0 1px, transparent 1px 7px),
+    repeating-linear-gradient(99deg, rgb(255 250 234 / 9%) 0 1px, transparent 1px 15px),
+    radial-gradient(110% 58% at 18% -12%, rgb(255 250 231 / 42%), transparent 63%),
+    radial-gradient(90% 62% at 104% 104%, rgb(118 86 56 / 13%), transparent 64%),
+    radial-gradient(ellipse 88% 62% at 50% 44%, transparent 44%, rgb(80 50 28 / 20%));
+}
+
+/* 转场时桌面被压暗、标题和底部提示退场，让手机“飞起来”更突出 */
+.desk--flying .desk__surface {
+  filter: brightness(0.66) saturate(0.9);
+  transform: scale(1.015);
+}
+
+.desk--flying .desk__head,
+.desk--flying .desk__foot {
+  opacity: 0;
 }
 
 .desk__head {
@@ -444,6 +479,19 @@ const canReturn = computed(() => props.showReturn && currentTitle.value !== '')
   /* 顶部多留一点：标题紧贴状态栏会显得压抑 */
   padding: var(--space-4) var(--space-2) var(--space-3);
   text-align: center;
+  transition: opacity 180ms ease;
+}
+
+/* 标题下方的暖色细线：在深木色上给标题一个视觉锚点 */
+.desk__head::after {
+  content: '';
+  display: block;
+  width: 46px;
+  height: 2px;
+  margin: 9px auto 0;
+  border-radius: 2px;
+  background: linear-gradient(90deg, transparent, var(--desk-accent), transparent);
+  opacity: 0.85;
 }
 
 .desk__title {
@@ -476,16 +524,16 @@ const canReturn = computed(() => props.showReturn && currentTitle.value !== '')
  * 的宽高比拉坏。
  */
 .desk__stage {
-  --phone-max-w: 124px;
+  --phone-max-w: 116px;
 
   position: relative;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   align-items: start;
-  gap: var(--space-4) var(--space-2);
+  gap: var(--space-3) var(--space-2);
   flex: 1;
   min-height: 0;
-  padding: var(--space-4) var(--space-3) var(--space-5);
+  padding: var(--space-3) var(--space-3) var(--space-3);
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   transition: opacity 200ms ease;
@@ -522,6 +570,7 @@ const canReturn = computed(() => props.showReturn && currentTitle.value !== '')
   gap: var(--space-2);
   flex: none;
   padding: var(--space-3) var(--space-4) calc(var(--space-3) + var(--safe-bottom));
+  transition: opacity 180ms ease;
 }
 
 .desk__hint {
@@ -565,15 +614,39 @@ const canReturn = computed(() => props.showReturn && currentTitle.value !== '')
   pointer-events: none;
   opacity: 0;
   --fly-dur: 520ms;
+  filter: drop-shadow(0 18px 26px rgb(0 0 0 / 34%));
   transform: translate(var(--fly-tx, 0px), var(--fly-ty, 0px)) scale(var(--fly-sx, 1), var(--fly-sy, 1))
     rotate(var(--fly-rot, 0deg));
   transition:
-    transform var(--fly-dur) cubic-bezier(0.22, 0.61, 0.36, 1),
-    opacity 150ms ease-out;
+    transform var(--fly-dur) cubic-bezier(0.16, 0.84, 0.24, 1),
+    opacity 150ms ease-out,
+    filter var(--fly-dur) ease-out;
+}
+
+.desk__fly-lift {
+  height: 100%;
+  animation: desk-phone-lift var(--fly-dur) cubic-bezier(0.16, 0.84, 0.24, 1) both;
+}
+
+/*
+ * 抬起弧线：手机从桌面位置先向上“离开桌面”，再边转边铺满全屏。
+ * 只作用在飞行层内部的包装元素上，不改 FLIP 的起点/终点矩形。
+ */
+@keyframes desk-phone-lift {
+  0% {
+    transform: translateY(0);
+  }
+  32% {
+    transform: translateY(-16px);
+  }
+  100% {
+    transform: translateY(0);
+  }
 }
 
 .desk__fly--go {
   opacity: 1;
+  filter: drop-shadow(0 0 0 transparent);
   transform: translate(0, 0) scale(1, 1) rotate(0deg);
 }
 
@@ -598,8 +671,15 @@ const canReturn = computed(() => props.showReturn && currentTitle.value !== '')
 
 @media (prefers-reduced-motion: reduce) {
   .desk__stage,
+  .desk__head,
+  .desk__foot,
+  .desk__surface,
   .desk__fly {
     transition: none;
+  }
+
+  .desk__fly-lift {
+    animation: none;
   }
 }
 </style>

@@ -32,8 +32,10 @@ const props = withDefaults(
     tilt?: number
     /** `card` = 桌面卡片；`screen` = 只给飞行层用。 */
     variant?: 'card' | 'screen'
+    /** 迷你状态栏显示的实时北京时间；由大厅统一传入。 */
+    clock?: string
   }>(),
-  { tilt: 0, variant: 'card' },
+  { tilt: 0, variant: 'card', clock: '9:41' },
 )
 
 const emit = defineEmits<{ (e: 'select'): void }>()
@@ -96,7 +98,7 @@ const miniApps = [
 
       <span class="deskphone__screen">
         <span class="deskphone__statusbar" aria-hidden="true">
-          <span class="deskphone__clock">9:41</span>
+          <span class="deskphone__clock">{{ clock }}</span>
           <span class="deskphone__battery">78%</span>
         </span>
 
@@ -108,6 +110,11 @@ const miniApps = [
 
         <span class="deskphone__icons" aria-hidden="true">
           <AppIcon v-for="app in miniApps" :key="app.id" :id="app.id" :size="24" />
+        </span>
+
+        <!-- 实时预览：这部手机里当前可支配的模拟余额（未开始时不显示） -->
+        <span v-if="slot.started && slot.balance !== null" class="deskphone__live" aria-hidden="true">
+          ¥{{ slot.balance }}
         </span>
 
         <span v-if="locked" class="deskphone__lock" aria-hidden="true">
@@ -315,6 +322,23 @@ const miniApps = [
   grid-template-columns: repeat(2, 1fr);
   gap: 10px;
   justify-items: center;
+}
+
+/* 桌面上的实时余额小标签：只做“这块屏幕在反映存档状态”的提示 */
+.deskphone__live {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  z-index: 2;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: rgb(6 12 22 / 48%);
+  color: #fff;
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
 }
 
 .deskphone__lock {
