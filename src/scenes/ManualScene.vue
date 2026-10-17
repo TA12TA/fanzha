@@ -57,7 +57,11 @@ const emit = defineEmits<{
         </li>
       </ul>
 
-      <p class="manual__disclaimer">{{ MANUAL_GENERAL.disclaimer }}</p>
+      <!--
+        这里**故意不放页脚免责声明**（用户要求去掉「以上是通用提醒…」那句话，
+        以及类似的"不构成法律建议"式套话）。边界由文案本身承担，
+        「剧情演示 · 不涉及真实资金」那套模拟标记另有组件持续显示。
+      -->
 
       <!-- 已产生结局时，应用提供再次进入本局结果与复盘的入口 -->
       <button
@@ -185,11 +189,6 @@ const emit = defineEmits<{
 .manual__itemtext {
   font-size: var(--font-sm);
   line-height: 1.6;
-  color: var(--c-text-soft);
-}
-
-.manual__disclaimer {
-  font-size: var(--font-xs);
   color: var(--c-text-soft);
 }
 
