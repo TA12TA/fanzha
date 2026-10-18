@@ -36,6 +36,11 @@ const props = defineProps<{
    * 角标必须等横幅先出现，避免「横幅还在延迟、角标先亮」的时序倒置。
    */
   noticeShown?: boolean
+  /**
+   * 玩家是否已经进入过当前事项（点击通知或从桌面进入过剧情），
+   * 并在之后回到了桌面。「继续当前事项」只在满足这一条件后出现。
+   */
+  resumeReady?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -98,7 +103,9 @@ const resumeText = computed(() => resumeLabel(props.level, props.state.node))
  */
 const { time: clockTime, date: clockDate } = useBeijingClock()
 
-const showResume = computed(() => props.state.node !== props.level.startNode)
+const showResume = computed(
+  () => props.resumeReady === true && props.state.node !== props.level.startNode,
+)
 
 const pending = computed(() => pendingAmount(props.level, props.state.node))
 

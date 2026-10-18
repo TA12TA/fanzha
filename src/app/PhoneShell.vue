@@ -113,6 +113,14 @@ watch(
 )
 
 const view = ref<ViewId>(state.value.node === props.level.startNode ? 'intro' : 'home')
+/**
+ * 「继续当前事项」的解锁状态。
+ *
+ * 初始为 false：刚解锁、通知刚弹出时桌面上不显示这个入口，避免玩家
+ * 还没看过剧情就先看到「继续」。玩家进入过消息/钱包/结局/复盘后，
+ * 再回到桌面，才允许显示；点通知进入和从图标进入都算进入过事项。
+ */
+const resumeReady = ref(state.value.node !== props.level.startNode)
 const profileOpen = ref(false)
 const confirmRestart = ref(false)
 const confirmClearAll = ref(false)
@@ -403,6 +411,10 @@ watch(
 
 /** 切换视图时丢弃仍在展示的通知，避免过期横幅压住新页面内容。 */
 watch(view, (next) => {
+  // 进入过剧情（包括点击通知）后再回到桌面，才出现「继续当前事项」。
+  if (next === 'chat' || next === 'wallet' || next === 'result' || next === 'review') {
+    resumeReady.value = true
+  }
   if (next === 'notifications' || next === 'settings' || next === 'review') {
     notices.dropCurrent()
   }
@@ -628,6 +640,7 @@ function requestRestart(): void {
 function doRestart(): void {
   playSound('cancel')
   game.restart()
+  resumeReady.value = false
   // 新的一局应当重新逐条播放每个会话，清掉这一关「看过哪些消息」的记忆
   resetChatReveal(props.level.meta.id)
   /*
@@ -856,6 +869,7 @@ onBeforeUnmount(() => {
           :has-unread="hasUnreadNotices"
           :unread-count="unreadCount"
           :notice-shown="notices.hasShownAny.value"
+          :resume-ready="resumeReady"
           @open-chat="openChat"
           @open-wallet="openWallet"
           @open-manual="openManual"

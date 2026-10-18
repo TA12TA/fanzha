@@ -369,6 +369,10 @@ describe('E. 整部手机的交互（B01–B14）', () => {
 
     const viaResume = await mountApp()
     await swipeUnlock(viaResume)
+    expect(viaResume.find('.resume').exists(), '还没进入剧情前不应显示「继续当前事项」').toBe(false)
+    await clickDesktopApp(viaResume, '青讯')
+    await click(viaResume, '桌面')
+    expect(viaResume.find('.resume').exists(), '进入剧情再回桌面后才显示「继续当前事项」').toBe(true)
     await click(viaResume, '继续当前事项')
     expect(viaResume.text()).toContain('拒绝并举报')
   })
@@ -633,7 +637,7 @@ describe('E. 整部手机的交互（B01–B14）', () => {
 
     // 回到桌面并推进剧情：不应再弹任何横幅
     await click(wrapper, '桌面')
-    await click(wrapper, '继续当前事项')
+    await clickDesktopApp(wrapper, '青讯')
     await click(wrapper, '进群看看')
     await flush()
     expect(wrapper.find('.banner').exists()).toBe(false)

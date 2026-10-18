@@ -1840,12 +1840,16 @@ async function main() {
     `)
     record('桌面上不再有邀请卡片', desktopCard === false)
 
-    // 但「继续当前事项」入口仍在
+    // 通知刚弹出、尚未进入剧情时，不应提前露出「继续当前事项」
     const resumeEntry = await cdp.eval(`
       const el = document.querySelector('.resume');
       return el ? el.textContent : '';
     `)
-    record('桌面仍有「继续当前事项」入口', resumeEntry.includes('继续当前事项'), resumeEntry.trim().slice(0, 40))
+    record(
+      '通知刚弹出时桌面不显示「继续当前事项」',
+      !resumeEntry.includes('继续当前事项'),
+      resumeEntry.trim().slice(0, 40) || '未显示',
+    )
 
     // 预警播完后，学姐邀请横幅自动接上
     // 时序：延迟 3s -> 预警展示 6s -> 退场 0.2s -> 邀请展示
