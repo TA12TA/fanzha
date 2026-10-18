@@ -56,7 +56,7 @@ npm run dev                          # 开发服务器 http://127.0.0.1:5173
 npm run build                        # 产物到 dist/（已 gitignore）
 npm run preview                      # 预览构建 http://127.0.0.1:4173
 npm run typecheck                    # vue-tsc --noEmit -p tsconfig.app.json
-npm test                             # vitest run，14 个 spec / 261 个用例（主要是 app.spec，全量约 50 秒）
+npm test                             # vitest run，14 个 spec / 262 个用例（主要是 app.spec，全量约 50 秒）
 npx vitest run tests/levels.spec.ts tests/engine.spec.ts  # 改关卡/引擎时先跑针对性用例
 npm run verify                       # Edge/Chrome headless 跑三关入口与两关主线 + 320/375/390px 无横向溢出 + 截图到 .verify/
 npm run smoke:public -- https://<url>/   # 发布到公网后的冒烟测试

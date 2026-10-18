@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import DeskPhone from '@/app/DeskPhone.vue'
+import WorkIntro from '@/app/WorkIntro.vue'
 import { playSound } from '@/app/sound'
 import { useBeijingClock } from '@/app/clock'
 import { LEVELS, getPlayableLevel } from '@/data/levels'
@@ -49,6 +50,30 @@ const EMPTY_SLOT: LevelSlotSummary = {
 }
 
 const entries = computed<LevelEntry[]>(() => LEVELS)
+
+/**
+ * 作品封面只出现一次：玩家点「进入作品」或直接点手机后记为看过。
+ * 这是首屏的「作品感」引导，不是免责声明，也不挡之后的书桌操作。
+ */
+const WORK_INTRO_KEY = 'fj-juzhongju:work-intro:v1'
+function hasSeenWorkIntro(): boolean {
+  try {
+    return globalThis.localStorage?.getItem(WORK_INTRO_KEY) === 'seen'
+  } catch {
+    return false
+  }
+}
+const introOpen = ref(!hasSeenWorkIntro())
+
+function closeIntro(): void {
+  if (!introOpen.value) return
+  introOpen.value = false
+  try {
+    globalThis.localStorage?.setItem(WORK_INTRO_KEY, 'seen')
+  } catch {
+    // localStorage 不可用时只影响下次是否再展示，不影响进入。
+  }
+}
 
 /**
  * 桌上每部手机的迷你状态栏会显示真实北京时间（分钟级刷新），
@@ -110,6 +135,8 @@ function tiltOf(index: number): number {
 function onSelect(index: number): void {
   const entry = entries.value[index]
   if (!entry) return
+  // 从封面直接点手机的程序化路径（含自动化）也视为「进入作品」。
+  closeIntro()
 
   // 转场期间忽略后续点击：避免连点导致重复进入 / 重复写存档
   if (flying.value) return
@@ -338,6 +365,8 @@ const canReturn = computed(() => props.showReturn && currentTitle.value !== '')
   <div ref="rootRef" class="desk" :class="{ 'desk--flying': flying }" aria-label="关卡大厅">
     <!-- 桌面纹理：纯 CSS，不引入图片 -->
     <div class="desk__surface" aria-hidden="true"></div>
+
+    <WorkIntro v-if="introOpen" @close="closeIntro" />
 
     <header class="desk__head">
       <p class="desk__work">反诈局中局：你的手机</p>

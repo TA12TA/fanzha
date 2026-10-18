@@ -32,7 +32,13 @@ const mounted: VueWrapper[] = []
  * 断言读到的还是书桌（`.deskphone` 还在、锁屏还没出现）。
  */
 async function mountApp(
-  options: { keepSave?: boolean; atDesk?: boolean; attach?: boolean; resetReveal?: boolean } = {},
+  options: {
+    keepSave?: boolean
+    atDesk?: boolean
+    attach?: boolean
+    resetReveal?: boolean
+    keepIntro?: boolean
+  } = {},
 ): Promise<VueWrapper> {
   if (!options.keepSave) globalThis.localStorage.clear()
   /*
@@ -49,6 +55,12 @@ async function mountApp(
    */
   const wrapper = mount(AppShell, options.attach ? { attachTo: document.body } : undefined)
   mounted.push(wrapper)
+
+  // 作品封面是首屏引导；除专门测试它的用例外，测试统一先进入作品。
+  if (!options.keepIntro && wrapper.find('.work-intro').exists()) {
+    await wrapper.find('.work-intro__start').trigger('click')
+    await wrapper.vm.$nextTick()
+  }
 
   if (!options.atDesk) {
     await tapPhone(wrapper, 0)
@@ -2102,6 +2114,21 @@ describe('P. 常用生活应用', () => {
  * 5. 换关确实换了「一部手机」，且两关进度各自保留。
  */
 describe('Y. 关卡大厅（书桌选关）', () => {
+  it('Y00 首屏是作品封面：作品名、简介与进入入口', async () => {
+    const wrapper = await mountApp({ atDesk: true, keepIntro: true })
+
+    expect(wrapper.find('.work-intro').exists(), '首屏应有作品封面').toBe(true)
+    expect(wrapper.text(), '封面应出现网络文化节作品信息').toContain('2026 网络文化节')
+    expect(wrapper.text()).toContain('反诈局中局')
+    expect(wrapper.text()).toContain('你的手机')
+    expect(wrapper.text()).toContain('进入作品')
+
+    await click(wrapper, '进入作品')
+    expect(wrapper.find('.work-intro').exists(), '进入作品后封面应关闭').toBe(false)
+    expect(wrapper.find('.desk').exists()).toBe(true)
+    expect(wrapper.text()).toContain('关卡大厅')
+  })
+
   it('Y01 首屏是书桌：三部手机、没有手机外框', async () => {
     const wrapper = await mountApp({ atDesk: true })
 
