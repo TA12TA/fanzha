@@ -203,6 +203,10 @@ export const level03 = defineLevel<L3Node, L3Option>({
     blurb: '「你涉嫌一起案件」的电话，下一步会要你把钱转到「安全账户」。',
     goal: '公检法不会打电话让你转账，也没有所谓的安全账户。',
     accent: ['#8c3b32', '#5a211d'],
+    miniPreview: {
+      caption: '未知来电 · 公安',
+      glyphs: ['phone', 'sms', 'wallet', 'manual'],
+    },
     startNotice: '一个自称公安的号码加了你，说要核实案件',
   },
 

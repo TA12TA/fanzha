@@ -2158,12 +2158,24 @@ describe('Y. 关卡大厅（书桌选关）', () => {
       expect(phone.find('.deskphone__statusbar').exists(), '屏幕里应有迷你状态栏').toBe(true)
       expect(phone.find('.deskphone__clock').text(), '迷你状态栏应显示实时北京时间').toMatch(/^\d{2}:\d{2}$/)
       expect(phone.find('.deskphone__icons').exists(), '屏幕里应有迷你图标').toBe(true)
+      expect(phone.find('.deskphone__mini').exists(), '屏幕里应有该关的预览文案').toBe(true)
       // 屏幕用的是真机那张共用壁纸（飞行层放大后与锁屏同源）
       expect(phone.find('.deskphone__screen .wall').exists(), '屏幕应是同一张壁纸').toBe(true)
       // 信息与行动条在手机下方
       expect(phone.find('.deskphone__info').exists()).toBe(true)
       expect(phone.find('.deskphone__cta').exists()).toBe(true)
     }
+
+    const phones = wrapper.findAll('.deskphone')
+    const captions = phones.map((phone) => phone.find('.deskphone__mini').text())
+    expect(new Set(captions).size, '三部手机的迷你屏幕文案应各不相同').toBe(3)
+    const glyphSets = phones.map((phone) =>
+      phone
+        .findAll('.app__glyph')
+        .map((icon) => icon.classes().find((name) => name.startsWith('app__glyph--')))
+        .join(','),
+    )
+    expect(new Set(glyphSets).size, '三部手机的迷你图标组合应各不相同').toBe(3)
   })
 
   it('Y03 三部手机被摆成不同角度（固定值，不是随机）', async () => {

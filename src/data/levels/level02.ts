@@ -222,6 +222,10 @@ export const level02 = defineLevel<L2Node, L2Option>({
     blurb: '「客服」说你订单重复扣款要退款，但要你先转一笔验证金。',
     goal: '退款不需要你先转钱，也不需要你的短信验证码。',
     accent: ['#3f7f6b', '#255446'],
+    miniPreview: {
+      caption: '青集商城 · 客服',
+      glyphs: ['shop', 'sms', 'wallet', 'manual'],
+    },
     startNotice: '「青集商城客服」说你的订单重复扣款',
   },
 

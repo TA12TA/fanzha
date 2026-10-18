@@ -25,7 +25,7 @@
 
 ## 关卡大厅（书桌版）
 
-当前主版本采用书桌场景：整屏墨绿桌垫，三部手机平放（机身用关卡主色、屏幕用真机那张共用壁纸、各自倾斜角不同）。直接点那部手机 → **旋转 + 放大**转场，最终完全覆盖视口 → 落到该关锁屏。
+当前主版本采用书桌场景：整屏墨绿桌垫，三部手机平放（机身用关卡主色、屏幕用真机那张共用壁纸、各自倾斜角不同；屏幕里分别显示兼职群 / 商城客服 / 未知来电三套迷你预览，不再共用同一组图标）。直接点那部手机 → **旋转 + 放大**转场，最终完全覆盖视口 → 落到该关锁屏。
 
 轮播版（手机画面内横向轮播卡片）曾作为第一版开发，现已由书桌版取代，文件不再保留；需要时可在 git 历史中查看。书桌版的有意偏差（大厅没有手机外框）记录在下方「已知问题与未完成项」。
 
@@ -383,7 +383,7 @@ cherry-pick 到 `hall-desk` 分支为 `a680717`），大厅最终采用书桌版
 | `npm run preview`   | 成功，`http://127.0.0.1:4173/` 返回构建产物（引用 hashed 资源）                                                                  |
 | `npm run typecheck` | 通过，无错误                                                                                                            |
 | `npm test`          | **262 项全部通过**（engine 17 / storage 22 / debrief 17 / levels 25 / clock 5 / unlock 6 / settings 14 / notifications 14 / app 110 / levelCardText 7 / tokens 4 / random 8 / classNews 6 / smsCode 7） |
-| `npm run build`     | 成功，`dist/assets/index-*.js` 240.64 kB（gzip 83.25 kB）                                                              |
+| `npm run build`     | 成功，`dist/assets/index-*.js` 241.16 kB（gzip 83.33 kB）                                                              |
 | `npm run verify`    | **139 项全部通过**（Edge 155.0.4283.45 headless）                                                                        |
 | `npm run smoke:public` | **15 项全部通过**（对本机预览与公网隧道地址各实跑一次）                                                                          |
 

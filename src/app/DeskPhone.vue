@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import AppIcon from '@/components/AppIcon.vue'
 import { levelCardAriaLabel, levelCtaText, levelStatusText, isLevelLocked } from '@/app/levelCardText'
-import type { LevelEntry } from '@/game/level'
+import type { LevelEntry, LevelPreviewGlyph } from '@/game/level'
 import type { LevelSlotSummary } from '@/game/storage'
 
 /**
@@ -53,13 +53,12 @@ const style = computed(() => ({
   '--accent-b': props.entry.meta.accent[1],
 }))
 
-/** 迷你应用图标（纯装饰，不进无障碍树）。 */
-const miniApps = [
-  { id: 'chat' as const },
-  { id: 'wallet' as const },
-  { id: 'manual' as const },
-  { id: 'levels' as const },
-]
+/** 迷你应用图标与屏幕文案由关卡数据提供；缺省时使用中性图标。 */
+const defaultMiniApps: LevelPreviewGlyph[] = ['chat', 'wallet', 'manual', 'levels']
+const miniApps = computed<LevelPreviewGlyph[]>(
+  () => props.entry.meta.miniPreview?.glyphs ?? defaultMiniApps,
+)
+const previewCaption = computed(() => props.entry.meta.miniPreview?.caption ?? '')
 </script>
 
 <template>
@@ -108,8 +107,16 @@ const miniApps = [
           <span class="wall__glow"></span>
         </span>
 
+        <!-- 每关一层很淡的关卡色，让同一张壁纸在屏幕里呈现不同气质 -->
+        <span class="deskphone__tint" aria-hidden="true"></span>
+
+        <span v-if="previewCaption" class="deskphone__mini" aria-hidden="true">
+          <span class="deskphone__mini-dot"></span>
+          {{ previewCaption }}
+        </span>
+
         <span class="deskphone__icons" aria-hidden="true">
-          <AppIcon v-for="app in miniApps" :key="app.id" :id="app.id" :size="24" />
+          <AppIcon v-for="id in miniApps" :key="id" :id="id" :size="24" />
         </span>
 
         <!-- 实时预览：这部手机里当前可支配的模拟余额（未开始时不显示） -->
@@ -314,10 +321,52 @@ const miniApps = [
   font-weight: 600;
 }
 
+.deskphone__tint {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(160deg, var(--accent-a), transparent 64%);
+  opacity: 0.26;
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+
+.deskphone__mini {
+  position: absolute;
+  top: 22px;
+  left: 8px;
+  right: 8px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 5px;
+  border-radius: 5px;
+  background: rgb(6 12 22 / 48%);
+  color: #f7f0e2;
+  font-size: 7px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+
+.deskphone__mini-dot {
+  flex: none;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--accent-a);
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 32%);
+}
+
 .deskphone__icons {
   position: absolute;
   z-index: 2;
-  inset: 34% 14% auto 14%;
+  inset: 38% 14% auto 14%;
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 10px;

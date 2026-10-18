@@ -372,7 +372,6 @@ const canReturn = computed(() => props.showReturn && currentTitle.value !== '')
       <p class="desk__work">反诈局中局：你的手机</p>
       <h1 class="desk__title">关卡大厅</h1>
       <p class="desk__subtitle">选一部手机开始挑战</p>
-      <p class="desk__meta">一部虚构手机 · 三场骗局 · 约 8 分钟</p>
     </header>
 
     <div ref="stageRef" class="desk__stage" :class="{ 'desk__stage--flying': flying }">
@@ -508,7 +507,7 @@ const canReturn = computed(() => props.showReturn && currentTitle.value !== '')
   position: relative;
   flex: none;
   /* 顶部多留一点：标题紧贴状态栏会显得压抑 */
-  padding: var(--space-4) var(--space-2) var(--space-3);
+  padding: var(--space-3) var(--space-2) var(--space-2);
   text-align: center;
   transition: opacity 180ms ease;
 }
@@ -519,7 +518,7 @@ const canReturn = computed(() => props.showReturn && currentTitle.value !== '')
   display: block;
   width: 46px;
   height: 2px;
-  margin: 9px auto 0;
+  margin: 7px auto 0;
   border-radius: 2px;
   background: linear-gradient(90deg, transparent, var(--desk-accent), transparent);
   opacity: 0.85;
@@ -572,16 +571,16 @@ const canReturn = computed(() => props.showReturn && currentTitle.value !== '')
  * 的宽高比拉坏。
  */
 .desk__stage {
-  --phone-max-w: 116px;
+  --phone-max-w: 110px;
 
   position: relative;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   align-items: start;
-  gap: var(--space-3) var(--space-2);
+  gap: var(--space-2) var(--space-2);
   flex: 1;
   min-height: 0;
-  padding: var(--space-3) var(--space-3) var(--space-3);
+  padding: var(--space-2) var(--space-3) var(--space-2);
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   transition: opacity 200ms ease;
@@ -617,7 +616,7 @@ const canReturn = computed(() => props.showReturn && currentTitle.value !== '')
   align-items: center;
   gap: var(--space-2);
   flex: none;
-  padding: var(--space-3) var(--space-4) calc(var(--space-3) + var(--safe-bottom));
+  padding: var(--space-2) var(--space-4) calc(var(--space-2) + var(--safe-bottom));
   transition: opacity 180ms ease;
 }
 

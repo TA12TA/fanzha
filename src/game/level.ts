@@ -163,6 +163,29 @@ export interface LevelChatSpec<TNode extends string = string, TOption extends st
 
 /* ============================ 关卡元数据 ============================ */
 
+/** 关卡卡片迷你屏幕上可用的图标（与 IconId 的可用集合保持一致）。 */
+export type LevelPreviewGlyph =
+  | 'chat'
+  | 'wallet'
+  | 'manual'
+  | 'shop'
+  | 'music'
+  | 'video'
+  | 'photos'
+  | 'notifications'
+  | 'settings'
+  | 'phone'
+  | 'sms'
+  | 'levels'
+
+/** 关卡卡片上的迷你屏幕预览（让三部手机一眼能看出不是同一部）。 */
+export interface LevelMiniPreview {
+  /** 屏幕顶部的一行状态/对象，例如「兼职群 · 128 人」。 */
+  caption: string
+  /** 2×2 迷你图标；由关卡自己声明，场景不按关卡 id 写死。 */
+  glyphs: LevelPreviewGlyph[]
+}
+
 /** 关卡元数据（大厅卡片、锁屏副标题、手册都要用）。 */
 export interface LevelMeta {
   id: LevelId
@@ -180,6 +203,8 @@ export interface LevelMeta {
   goal: string
   /** 大厅卡片的渐变主色（取自现有色板，不新增色系）。 */
   accent: [string, string]
+  /** 大厅迷你屏幕的差异化预览；省略时用中性的默认图标。 */
+  miniPreview?: LevelMiniPreview
   /**
    * 开局时推送的消息类通知正文（点开进消息应用）。
    * 省略时不推消息通知 —— 但只推反诈预警，避免「一进桌面就有东西在等」的错觉。
