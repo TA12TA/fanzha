@@ -385,7 +385,7 @@ cherry-pick 到 `hall-desk` 分支为 `a680717`），大厅最终采用书桌版
 | `npm run preview`   | 成功，`http://127.0.0.1:4173/` 返回构建产物（引用 hashed 资源）                                                                  |
 | `npm run typecheck` | 通过，无错误                                                                                                            |
 | `npm test`          | **252 项全部通过**（engine 17 / storage 22 / debrief 17 / levels 18 / clock 5 / unlock 6 / settings 14 / notifications 14 / app 107 / levelCardText 7 / tokens 4 / random 8 / classNews 6 / smsCode 7） |
-| `npm run build`     | 成功，`dist/assets/index-*.js` 223.50 kB（gzip 79.18 kB）                                                              |
+| `npm run build`     | 成功，`dist/assets/index-*.js` 223.37 kB（gzip 79.08 kB）                                                              |
 | `npm run verify`    | **139 项全部通过**（Edge 155.0.4283.45 headless）                                                                        |
 | `npm run smoke:public` | **15 项全部通过**（对本机预览与公网隧道地址各实跑一次）                                                                          |
 
