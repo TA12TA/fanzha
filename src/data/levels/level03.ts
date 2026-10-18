@@ -207,7 +207,7 @@ export const level03 = defineLevel<L3Node, L3Option>({
       caption: '未知来电 · 公安',
       glyphs: ['phone', 'sms', 'wallet', 'manual'],
     },
-    startNotice: '一个自称公安的号码加了你，说要核实案件',
+    startNotice: '来电：一个自称青屏市公安局刑侦支队的号码',
   },
 
   nodes: {
@@ -532,6 +532,8 @@ export const level03 = defineLevel<L3Node, L3Option>({
   },
 
   popupReminders: ['l3-call', 'l3-transfer-1', 'l3-transfer-2'],
+  // 来电提醒不在解锁后立刻弹：先让玩家看到来电通知，点进会话再提醒。
+  deferredPopupNodes: ['l3-call'],
   popupCountdowns: {
     'l3-transfer-1': 3,
     'l3-transfer-2': 3,

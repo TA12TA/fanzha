@@ -172,6 +172,8 @@ scripts/smoke-public.mjs # 公网地址冒烟测试（隧道/静态托管发布�
 - **不是所有节点都弹窗**：由关卡数据 `popupReminders` 声明。目前第一关的三个**掏钱时刻**
   （首次垫付 / 解冻费 / 追加垫付）、第二关的**索要验证码**，以及第三关的首次联系和两笔转账。
   弹窗会打断操作，每个节点都弹，玩家就开始无脑点「知道了」，等于没弹 —— 其余节点仍是顶部横幅。
+  第三关首次联系的弹窗由 `deferredPopupNodes` 延迟到玩家点开来电通知/进入会话后才出现，
+  不会在刚解锁桌面时提前弹。
 - **转账弹窗有倒计时**：第三关的两笔转账提醒由 `popupCountdowns` 声明 3 秒倒计时，
   倒计时结束前「知道了」是 disabled 的，避免玩家条件反射地点掉；写法见 `LEVELS.md`。
 - 无论弹窗还是横幅，都会记进通知中心，随时回看；仍受「顶部弹出通知」开关控制。
@@ -384,7 +386,7 @@ cherry-pick 到 `hall-desk` 分支为 `a680717`），大厅最终采用书桌版
 | `npm run preview`   | 成功，`http://127.0.0.1:4173/` 返回构建产物（引用 hashed 资源）                                                                  |
 | `npm run typecheck` | 通过，无错误                                                                                                            |
 | `npm test`          | **262 项全部通过**（engine 17 / storage 22 / debrief 17 / levels 25 / clock 5 / unlock 6 / settings 14 / notifications 14 / app 110 / levelCardText 7 / tokens 4 / random 8 / classNews 6 / smsCode 7） |
-| `npm run build`     | 成功，`dist/assets/index-*.js` 242.03 kB（gzip 83.58 kB）                                                              |
+| `npm run build`     | 成功，`dist/assets/index-*.js` 242.26 kB（gzip 83.68 kB）                                                              |
 | `npm run verify`    | **139 项全部通过**（Edge 155.0.4283.45 headless）                                                                        |
 | `npm run smoke:public` | **15 项全部通过**（对本机预览与公网隧道地址各实跑一次）                                                                          |
 

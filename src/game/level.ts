@@ -309,6 +309,11 @@ export interface PlayableLevel<TNode extends string = string, TOption extends st
    */
   popupReminders?: readonly TNode[]
   /**
+   * 这些节点的弹窗**等到玩家打开对应会话时**再弹，而不是一进入
+   * 桌面就弹（例如第三关的来电提醒：先看到来电通知，点开后再提醒）。
+   */
+  deferredPopupNodes?: readonly TNode[]
+  /**
    * 需要先等待几秒才能关闭的弹窗提醒（节点 → 秒数）。
    * 只允许用在 popupReminders 里的节点；转账环节用它强迫玩家停一下。
    */
@@ -572,6 +577,13 @@ export function validateLevel(level: PlayableLevel): string[] {
       problems.push(`popupReminders 里有未知节点「${node}」`)
     } else if (!level.reminders[node]) {
       problems.push(`popupReminders 里的「${node}」没有提醒正文，弹窗会是空的`)
+    }
+  }
+  for (const node of level.deferredPopupNodes ?? []) {
+    if (!nodeIds.includes(node)) {
+      problems.push(`deferredPopupNodes 里有未知节点「${node}」`)
+    } else if (!(level.popupReminders ?? []).includes(node)) {
+      problems.push(`节点「${node}」延迟弹窗，但不在 popupReminders 里`)
     }
   }
   for (const [node, seconds] of Object.entries(level.popupCountdowns ?? {})) {

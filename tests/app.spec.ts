@@ -2312,9 +2312,10 @@ describe('Y. 关卡大厅（书桌选关）', () => {
     const wrapper = await mountApp({ atDesk: true })
     await tapPhone(wrapper, 2)
     await swipeUnlock(wrapper)
-    expect(wrapper.find('.af').text(), '进入第三关应先弹冒充公检法预警').toContain('冒充公检法诈骗')
-    await dismissAntifraud(wrapper)
+    expect(wrapper.find('.af').exists(), '刚解锁、来电通知阶段不应提前弹').toBe(false)
     await clickDesktopApp(wrapper, '青讯')
+    expect(wrapper.find('.af').text(), '进入来电会话后才弹冒充公检法预警').toContain('冒充公检法诈骗')
+    await dismissAntifraud(wrapper)
     // 第三关的 preferredSession 会直接把青讯定位到“陈警官”会话。
     await click(wrapper, '挂断，自己去核实')
     await flush()
@@ -2328,8 +2329,8 @@ describe('Y. 关卡大厅（书桌选关）', () => {
     const wrapper = await mountApp({ atDesk: true })
     await tapPhone(wrapper, 2)
     await swipeUnlock(wrapper)
-    await dismissAntifraud(wrapper)
     await clickDesktopApp(wrapper, '青讯')
+    await dismissAntifraud(wrapper)
     await click(wrapper, '显示全部')
     await flush()
 

@@ -215,6 +215,13 @@ const noticeLeaving = computed(() => notices.leaving.value)
  */
 const antifraudDialog = ref<{ body: string; countdownSeconds: number } | null>(null)
 
+/**
+ * 延迟弹窗：例如第三关先看到「来电」通知，点进会话后才弹反诈预警。
+ * 只对关卡数据里 deferredPopupNodes 列出的节点生效，且每个节点只弹一次。
+ */
+const deferredPopupNodes = computed(() => new Set(props.level.deferredPopupNodes ?? []))
+const shownDeferredPopups = new Set<string>()
+
 /** 关闭弹窗：玩家已读完。 */
 function closeAntifraudDialog(): void {
   antifraudDialog.value = null
@@ -230,9 +237,11 @@ function closeAntifraudDialog(): void {
  *
  * 无论哪种都记进通知中心，方便回看；是否弹出仍受「顶部弹出通知」开关控制。
  */
-function pushAntifraud(node = state.value.node): void {
+function pushAntifraud(node = state.value.node, force = false): void {
   const body = reminderFor(props.level.meta.id, node)
   if (!body) return
+  // 延迟弹窗节点在“来电/通知”阶段只记录，不立刻打断桌面。
+  if (!force && deferredPopupNodes.value.has(node)) return
   const item = { kind: 'antifraud' as const, title: REMINDER_TITLE, body }
 
   if (wantsReminderPopup(props.level, node)) {
@@ -414,11 +423,23 @@ watch(
   },
 )
 
+function seenDeferredPopup(node: string): boolean {
+  return shownDeferredPopups.has(node)
+}
+
 /** 切换视图时丢弃仍在展示的通知，避免过期横幅压住新页面内容。 */
 watch(view, (next) => {
   // 进入过剧情（包括点击通知）后再回到桌面，才出现「继续当前事项」。
   if (next === 'chat' || next === 'wallet' || next === 'result' || next === 'review') {
     resumeReady.value = true
+  }
+  // 延迟弹窗节点：点开来电通知/进入对应会话后，才真正弹出反诈提醒。
+  if (next === 'chat') {
+    const node = state.value.node
+    if (!seenDeferredPopup(node)) {
+      shownDeferredPopups.add(node)
+      pushAntifraud(node, true)
+    }
   }
   if (next === 'notifications' || next === 'settings' || next === 'review') {
     notices.dropCurrent()
@@ -646,6 +667,7 @@ function doRestart(): void {
   playSound('cancel')
   game.restart()
   resumeReady.value = false
+  shownDeferredPopups.clear()
   // 新的一局应当重新逐条播放每个会话，清掉这一关「看过哪些消息」的记忆
   resetChatReveal(props.level.meta.id)
   /*
