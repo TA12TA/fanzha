@@ -213,8 +213,8 @@ watch(screen, (value) => {
 @media (min-width: 480px) {
   .phone {
     background:
-      radial-gradient(ellipse 70% 55% at 50% 38%, rgb(38 66 108 / 55%), transparent 72%),
-      radial-gradient(ellipse 120% 90% at 50% 50%, transparent 45%, rgb(0 0 0 / 42%)),
+      radial-gradient(ellipse 70% 55% at 50% 38%, rgb(34 66 52 / 58%), transparent 72%),
+      radial-gradient(ellipse 120% 90% at 50% 50%, transparent 45%, rgb(0 0 0 / 48%)),
       var(--c-bg-outer);
   }
 }
@@ -235,7 +235,7 @@ watch(screen, (value) => {
   padding-top: var(--safe-top);
   overflow: hidden;
   background: var(--c-desktop-2);
-  box-shadow: 0 0 0 1px rgb(255 255 255 / 6%);
+  box-shadow: 0 0 0 1px rgb(247 240 226 / 8%);
 }
 
 /* 桌面预览时居中展示手机尺寸画面；移动端铺满可见区域 */
@@ -248,9 +248,9 @@ watch(screen, (value) => {
      * 这两层只在宽屏预览时加，手机端铺满时加了也看不见。
      */
     box-shadow:
-      0 0 0 1px rgb(255 255 255 / 9%),
-      0 0 60px rgb(96 148 214 / 16%),
-      0 24px 60px rgb(0 0 0 / 46%);
+      0 0 0 1px rgb(247 240 226 / 10%),
+      0 0 60px rgb(78 126 102 / 17%),
+      0 24px 60px rgb(0 0 0 / 50%);
   }
 }
 

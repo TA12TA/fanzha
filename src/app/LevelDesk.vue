@@ -340,6 +340,7 @@ const canReturn = computed(() => props.showReturn && currentTitle.value !== '')
     <div class="desk__surface" aria-hidden="true"></div>
 
     <header class="desk__head">
+      <span class="desk__seal" aria-hidden="true">青屏</span>
       <h1 class="desk__title">关卡大厅</h1>
       <p class="desk__subtitle">选一部手机开始挑战</p>
     </header>
@@ -392,7 +393,7 @@ const canReturn = computed(() => props.showReturn && currentTitle.value !== '')
 
 <style scoped>
 .desk {
-  --desk-accent: #d8a45f;
+  --desk-accent: #c8a064;
   position: relative;
   display: flex;
   flex-direction: column;
@@ -413,7 +414,7 @@ const canReturn = computed(() => props.showReturn && currentTitle.value !== '')
 }
 
 /*
- * 木纹桌面：底色 + 双向细纹理 + 顶部柔光 + 暗角。
+ * 墨绿桌垫：底色 + 细织纹 + 左上暖色台灯 + 右下青玉环境光 + 暗角。
  *
  * 底色用 `background-color` 而不是渐变，是为了让自动化能用
  * `getComputedStyle(...).backgroundColor` **可靠地**量到它 ——
@@ -430,18 +431,18 @@ const canReturn = computed(() => props.showReturn && currentTitle.value !== '')
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background-color: #1f1713;
+  background-color: #0d1915;
   background-image:
-    /* 细密纹理：压深 */
-      repeating-linear-gradient(93deg, rgb(0 0 0 / 8%) 0 1px, transparent 1px 7px),
-    /* 细密纹理：提亮（角度错开，避免摩尔纹） */
-      repeating-linear-gradient(99deg, rgb(255 228 186 / 5%) 0 1px, transparent 1px 15px),
-    /* 左上方暖色台灯 */
-      radial-gradient(110% 58% at 18% -12%, rgb(255 187 111 / 24%), transparent 63%),
-    /* 右下角冷色环境光，和暖木色拉开层次 */
-      radial-gradient(90% 62% at 104% 104%, rgb(69 104 133 / 20%), transparent 64%),
+    /* 横向织纹：压深 */
+      repeating-linear-gradient(0deg, rgb(0 0 0 / 7%) 0 1px, transparent 1px 4px),
+    /* 纵向织纹：提亮 */
+      repeating-linear-gradient(90deg, rgb(255 246 226 / 3%) 0 1px, transparent 1px 5px),
+    /* 左上方黄铜台灯 */
+      radial-gradient(110% 58% at 18% -12%, rgb(207 160 94 / 20%), transparent 63%),
+    /* 右下角青玉环境光 */
+      radial-gradient(90% 62% at 104% 104%, rgb(55 112 89 / 20%), transparent 64%),
     /* 暗角：固定深色，两个主题都压暗 */
-      radial-gradient(ellipse 88% 62% at 50% 44%, transparent 42%, rgb(0 0 0 / 34%));
+      radial-gradient(ellipse 88% 62% at 50% 44%, transparent 42%, rgb(0 0 0 / 40%));
   transition:
     filter 240ms ease,
     transform 240ms ease;
@@ -449,17 +450,17 @@ const canReturn = computed(() => props.showReturn && currentTitle.value !== '')
 
 /* 白天主题下换成浅橡木；文字仍用 on-wall 变量自动转深 */
 [data-theme='day'] .desk {
-  --desk-accent: #8a5b2e;
+  --desk-accent: #84633a;
 }
 
 [data-theme='day'] .desk__surface {
-  background-color: #c9a272;
+  background-color: #9eaa91;
   background-image:
-    repeating-linear-gradient(93deg, rgb(87 52 28 / 6%) 0 1px, transparent 1px 7px),
-    repeating-linear-gradient(99deg, rgb(255 250 234 / 9%) 0 1px, transparent 1px 15px),
-    radial-gradient(110% 58% at 18% -12%, rgb(255 250 231 / 42%), transparent 63%),
-    radial-gradient(90% 62% at 104% 104%, rgb(118 86 56 / 13%), transparent 64%),
-    radial-gradient(ellipse 88% 62% at 50% 44%, transparent 44%, rgb(80 50 28 / 20%));
+    repeating-linear-gradient(0deg, rgb(38 54 43 / 6%) 0 1px, transparent 1px 4px),
+    repeating-linear-gradient(90deg, rgb(255 252 242 / 8%) 0 1px, transparent 1px 5px),
+    radial-gradient(110% 58% at 18% -12%, rgb(255 250 232 / 34%), transparent 63%),
+    radial-gradient(90% 62% at 104% 104%, rgb(54 85 64 / 12%), transparent 64%),
+    radial-gradient(ellipse 88% 62% at 50% 44%, transparent 44%, rgb(42 58 45 / 18%));
 }
 
 /* 转场时桌面被压暗、标题和底部提示退场，让手机“飞起来”更突出 */
@@ -495,11 +496,37 @@ const canReturn = computed(() => props.showReturn && currentTitle.value !== '')
 }
 
 .desk__title {
-  font-size: var(--font-xl);
-  font-weight: 800;
-  line-height: 1.2;
+  font-family: var(--font-display);
+  font-size: 27px;
+  font-weight: 700;
+  line-height: 1.22;
   letter-spacing: 0.08em;
   text-shadow: 0 2px 10px rgb(0 0 0 / 22%);
+}
+
+/* 一枚小小的「青屏」印记，让大厅像一张有出处的纸，而不是通用选关页 */
+.desk__seal {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1.5px solid #c25a45;
+  border-radius: 4px;
+  color: #c25a45;
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  transform: rotate(-4deg);
+  opacity: 0.9;
+}
+
+[data-theme='day'] .desk__seal {
+  border-color: #9e3f2f;
+  color: #9e3f2f;
 }
 
 .desk__subtitle {

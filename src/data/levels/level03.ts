@@ -17,7 +17,7 @@ export const level03: ComingSoonLevel = {
     category: '冒充公检法',
     blurb: '「你涉嫌一起案件」的电话，下一步会要你把钱转到「安全账户」。',
     goal: '公检法不会打电话让你转账，也没有所谓的安全账户。',
-    accent: ['#e0483a', '#a8271b'],
+    accent: ['#8c3b32', '#5a211d'],
   },
   note: '正在制作，敬请期待',
 }

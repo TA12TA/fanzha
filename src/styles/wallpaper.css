@@ -6,8 +6,8 @@
  * 解锁时背景会跳一下。
  *
  * 主题由 `<html data-theme="day|night">` 决定（见 `app/theme.ts`）：
- * - 夜间：深蓝夜空 + 星点 + 三层山峦剪影；
- * - 白天：晨光天空 + 云带 + 三层远山。
+ * - 夜间：墨绿夜空 + 星点 + 三层山峦剪影；
+ * - 白天：米纸天空 + 朱砂日 + 三层墨绿远山。
  *
  * 全部是纯 CSS 渐变，不引入任何图片资源。
  *
@@ -40,11 +40,11 @@
 .wall {
   background: linear-gradient(
     178deg,
-    #16263f 0%,
-    #101d33 34%,
-    #0a1424 62%,
-    #070d1a 82%,
-    #060b16 100%
+    #14261f 0%,
+    #0e1e18 36%,
+    #091611 64%,
+    #06110c 84%,
+    #040b08 100%
   );
 }
 
@@ -77,12 +77,12 @@
     radial-gradient(circle 1px at 68% 39%, rgb(255 255 255 / 20%) 0 1px, transparent 1.1px),
     radial-gradient(circle 1px at 4% 44%, rgb(255 255 255 / 18%) 0 1px, transparent 1.1px),
     /* 月光：内核 + 光晕 + 大范围散射（三层，替代原来的硬圆） */
-      radial-gradient(circle 17px at 76% 14%, rgb(240 246 255 / 92%) 0 13px, transparent 17px),
-    radial-gradient(circle at 76% 14%, rgb(214 230 255 / 30%) 0%, transparent 26%),
-    radial-gradient(circle at 76% 14%, rgb(180 205 250 / 14%) 0%, transparent 52%),
-    /* 城市天光（左右各一抹，让天空有冷暖对比） */
-      radial-gradient(circle at 10% 20%, rgb(120 90 220 / 20%), transparent 44%),
-    radial-gradient(circle at 92% 42%, rgb(52 120 200 / 14%), transparent 40%);
+      radial-gradient(circle 17px at 78% 62%, rgb(255 242 211 / 92%) 0 13px, transparent 17px),
+    radial-gradient(circle at 78% 62%, rgb(231 193 128 / 30%) 0%, transparent 26%),
+    radial-gradient(circle at 78% 62%, rgb(187 142 76 / 16%) 0%, transparent 52%),
+    /* 两侧天光：左边偏青玉，右边偏黄铜，和墨绿夜空拉开冷暖 */
+      radial-gradient(circle at 10% 20%, rgb(58 120 96 / 18%), transparent 44%),
+    radial-gradient(circle at 92% 42%, rgb(166 124 68 / 13%), transparent 40%);
   transition: opacity 600ms ease;
 }
 
@@ -99,14 +99,14 @@
   inset: 0;
   background:
     /* 远山：淡 */
-      radial-gradient(ellipse 108% 16% at 18% 76%, rgb(40 76 122 / 54%), transparent 72%),
-    radial-gradient(ellipse 96% 14% at 76% 74%, rgb(35 68 110 / 48%), transparent 74%),
+      radial-gradient(ellipse 108% 16% at 18% 76%, rgb(46 91 72 / 54%), transparent 72%),
+    radial-gradient(ellipse 96% 14% at 76% 74%, rgb(38 78 62 / 48%), transparent 74%),
     /* 中山 */
-      radial-gradient(ellipse 122% 21% at 30% 84%, rgb(19 50 90 / 80%), transparent 74%),
-    radial-gradient(ellipse 110% 18% at 96% 86%, rgb(16 44 82 / 74%), transparent 76%),
+      radial-gradient(ellipse 122% 21% at 30% 84%, rgb(25 58 45 / 80%), transparent 74%),
+    radial-gradient(ellipse 110% 18% at 96% 86%, rgb(19 48 37 / 74%), transparent 76%),
     /* 近山：最深，压在最低处 */
-      radial-gradient(ellipse 140% 17% at 44% 94%, rgb(8 24 46 / 93%), transparent 72%),
-    radial-gradient(ellipse 130% 14% at 86% 96%, rgb(6 19 38 / 90%), transparent 74%);
+      radial-gradient(ellipse 140% 17% at 44% 94%, rgb(8 27 20 / 93%), transparent 72%),
+    radial-gradient(ellipse 130% 14% at 86% 96%, rgb(6 22 17 / 90%), transparent 74%);
 }
 
 /* 地平线暖光 + 一层薄雾 + 暗角：让剪影有层次，不是一块死黑 */
@@ -114,16 +114,16 @@
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(ellipse 64% 10% at 70% 78%, rgb(96 150 226 / 30%), transparent 70%),
+    radial-gradient(ellipse 64% 10% at 70% 78%, rgb(198 154 88 / 26%), transparent 70%),
     linear-gradient(
       180deg,
       transparent 76%,
-      rgb(120 168 236 / 10%) 84%,
-      rgb(150 195 245 / 14%) 90%,
+      rgb(198 174 132 / 10%) 84%,
+      rgb(226 204 164 / 14%) 90%,
       transparent 96%
     ),
     /* 暗角：收住四边，避免画面边缘「没画完」 */
-      radial-gradient(ellipse 92% 62% at 50% 46%, transparent 58%, rgb(4 10 22 / 42%));
+      radial-gradient(ellipse 92% 62% at 50% 46%, transparent 58%, rgb(3 8 5 / 44%));
 }
 
 /* ============ 白天 ============ */
@@ -132,11 +132,11 @@
 [data-theme='day'] .wall {
   background: linear-gradient(
     178deg,
-    #74a9e0 0%,
-    #97c4ec 28%,
-    #bcdcf5 54%,
-    #d3e9f8 78%,
-    #e2f1fc 100%
+    #f6efe1 0%,
+    #f3ead9 28%,
+    #efe3cf 54%,
+    #ebddc5 78%,
+    #e7d7bd 100%
   );
 }
 
@@ -144,17 +144,15 @@
   /* 白天没有星点：换成云带 + 暖阳（三层）+ 大气散射 */
   background:
     /* 云带：5 条，越靠下越大越淡 */
-      radial-gradient(ellipse 30% 7% at 22% 17%, rgb(255 255 255 / 74%), transparent 70%),
-    radial-gradient(ellipse 22% 5% at 44% 11%, rgb(255 255 255 / 58%), transparent 70%),
-    radial-gradient(ellipse 34% 8% at 74% 24%, rgb(255 255 255 / 56%), transparent 70%),
-    radial-gradient(ellipse 26% 6% at 56% 31%, rgb(255 255 255 / 44%), transparent 70%),
-    radial-gradient(ellipse 46% 9% at 26% 39%, rgb(255 255 255 / 34%), transparent 72%),
-    /* 太阳：内核 + 光晕 + 散射（原来是硬边圆盘） */
-      radial-gradient(circle 15px at 80% 15%, rgb(255 252 235 / 96%) 0 11px, transparent 15px),
-    radial-gradient(circle at 80% 15%, rgb(255 242 196 / 46%) 0%, transparent 22%),
-    radial-gradient(circle at 80% 15%, rgb(255 238 186 / 22%) 0%, transparent 48%),
+      radial-gradient(ellipse 30% 7% at 22% 17%, rgb(255 252 244 / 76%), transparent 70%),
+    radial-gradient(ellipse 22% 5% at 44% 11%, rgb(255 252 244 / 58%), transparent 70%),
+    radial-gradient(ellipse 34% 8% at 74% 24%, rgb(255 250 238 / 56%), transparent 70%),
+    radial-gradient(ellipse 26% 6% at 56% 31%, rgb(255 250 238 / 42%), transparent 70%),
+    radial-gradient(ellipse 46% 9% at 26% 39%, rgb(255 246 230 / 34%), transparent 72%),
+    /* 米纸天不画硬边日轮：红色只留给印章与警示，天空保持安静 */
+      radial-gradient(ellipse 44% 22% at 80% 62%, rgb(231 156 112 / 18%), transparent 70%),
     /* 左侧天光，避免整片天空单向平涂 */
-      radial-gradient(circle at 8% 14%, rgb(255 255 255 / 40%), transparent 42%);
+      radial-gradient(circle at 8% 14%, rgb(255 252 244 / 44%), transparent 42%);
 }
 
 [data-theme='day'] .wall__hills {
@@ -164,12 +162,12 @@
    * 而不是全挤在最低的 10% 里 —— 挤在底部时桌面下半部就是一片空白。
    */
   background:
-    radial-gradient(ellipse 104% 16% at 16% 76%, rgb(120 160 198 / 54%), transparent 72%),
-    radial-gradient(ellipse 92% 14% at 78% 74%, rgb(104 148 190 / 48%), transparent 74%),
-    radial-gradient(ellipse 118% 21% at 28% 84%, rgb(76 126 168 / 72%), transparent 74%),
-    radial-gradient(ellipse 106% 18% at 98% 86%, rgb(64 114 158 / 66%), transparent 76%),
-    radial-gradient(ellipse 138% 17% at 42% 94%, rgb(44 94 136 / 88%), transparent 72%),
-    radial-gradient(ellipse 128% 14% at 88% 96%, rgb(38 84 126 / 84%), transparent 74%);
+    radial-gradient(ellipse 104% 16% at 16% 76%, rgb(97 126 105 / 46%), transparent 72%),
+    radial-gradient(ellipse 92% 14% at 78% 74%, rgb(82 113 94 / 42%), transparent 74%),
+    radial-gradient(ellipse 118% 21% at 28% 84%, rgb(61 96 76 / 68%), transparent 74%),
+    radial-gradient(ellipse 106% 18% at 98% 86%, rgb(52 86 68 / 62%), transparent 76%),
+    radial-gradient(ellipse 138% 17% at 42% 94%, rgb(38 67 51 / 86%), transparent 72%),
+    radial-gradient(ellipse 128% 14% at 88% 96%, rgb(32 58 44 / 82%), transparent 74%);
 }
 
 /*
@@ -183,11 +181,11 @@
     linear-gradient(
       180deg,
       transparent 80%,
-      rgb(255 255 255 / 22%) 88%,
-      rgb(255 255 255 / 28%) 93%,
+      rgb(255 250 238 / 22%) 88%,
+      rgb(255 248 232 / 28%) 93%,
       transparent 99%
     ),
-    radial-gradient(ellipse 96% 66% at 50% 44%, transparent 64%, rgb(74 118 168 / 20%));
+    radial-gradient(ellipse 96% 66% at 50% 44%, transparent 64%, rgb(85 66 44 / 18%));
 }
 
 @media (prefers-reduced-motion: reduce) {

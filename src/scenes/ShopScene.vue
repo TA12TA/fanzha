@@ -525,8 +525,10 @@ onBeforeUnmount(() => globalThis.removeEventListener('keydown', closeOnEscape))
 }
 
 .sectionhead h2 {
-  font-size: var(--font-md);
-  font-weight: 800;
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
 }
 
 .sectionhead span {
@@ -582,8 +584,8 @@ onBeforeUnmount(() => globalThis.removeEventListener('keydown', closeOnEscape))
   left: 8px;
   padding: 2px 7px;
   border-radius: 999px;
-  background: rgb(255 255 255 / 86%);
-  color: #263244;
+  background: rgb(250 245 235 / 92%);
+  color: var(--c-text);
   font-size: 10px;
   font-weight: 700;
 }

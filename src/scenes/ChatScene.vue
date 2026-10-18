@@ -579,7 +579,7 @@ const detail = computed(() => {
   height: 19px;
   padding: 0 5px;
   border-radius: 999px;
-  background: #e0483a;
+  background: var(--c-danger);
   color: #fff;
   font-size: 11px;
   font-weight: 700;
@@ -746,7 +746,7 @@ const detail = computed(() => {
   z-index: 40;
   display: flex;
   align-items: flex-end;
-  background: rgb(8 14 24 / 48%);
+  background: rgb(3 8 5 / 52%);
 }
 
 .profilesheet__panel {

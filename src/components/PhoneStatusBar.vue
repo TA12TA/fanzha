@@ -152,14 +152,14 @@ const tag = computed(() => (props.expanded ? '收起通知' : '打开通知'))
 
 /* 桌面/锁屏：深色状态栏，浅色图标 */
 .statusbar--dark {
-  background: rgb(10 18 30 / 88%);
+  background: rgb(7 15 12 / 88%);
   color: var(--c-text-invert);
 }
 
 /* 浅色应用页：浅色状态栏，深色图标（真机状态栏会跟着页面变） */
 .statusbar--light {
-  background: rgb(247 247 249 / 92%);
-  color: #2b3340;
+  background: rgb(250 245 235 / 94%);
+  color: var(--c-text);
   border-bottom: 1px solid var(--c-line);
 }
 

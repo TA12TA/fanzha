@@ -105,11 +105,11 @@ const emit = defineEmits<{
    * 看起来像布局崩了。改成半透明 + 强模糊之后，页头会隐约透出来，
    * 「这是盖在上面的一条通知」这层语义就成立了。
    */
-  background: rgb(255 255 255 / 80%);
+  background: rgb(250 245 235 / 94%);
   color: var(--c-text);
   box-shadow:
-    0 10px 30px rgb(4 10 20 / 22%),
-    inset 0 1px 0 rgb(255 255 255 / 70%);
+    0 10px 30px rgb(3 8 5 / 24%),
+    inset 0 1px 0 rgb(255 255 255 / 62%);
   backdrop-filter: blur(22px) saturate(180%);
   -webkit-backdrop-filter: blur(22px) saturate(180%);
   animation: banner-in var(--dur-base) ease-out;
@@ -117,7 +117,7 @@ const emit = defineEmits<{
 
 /* 强调色只在左边框与图标上体现类型差异 */
 .banner--antifraud {
-  border-left-color: #4084e0;
+  border-left-color: var(--c-primary);
 }
 
 .banner--message {
@@ -153,11 +153,11 @@ const emit = defineEmits<{
 
 .banner--antifraud .banner__icon {
   background: var(--c-primary-soft);
-  color: #2b6fd4;
+  color: var(--c-primary);
 }
 
 .banner--message .banner__icon {
-  background: #e2f4ee;
+  background: #f1e4cc;
   color: var(--c-accent);
 }
 
@@ -199,7 +199,7 @@ const emit = defineEmits<{
   margin-top: 1px;
   padding: 1px 7px;
   border-radius: 999px;
-  background: rgb(22 32 46 / 8%);
+  background: rgb(29 42 37 / 8%);
   color: var(--c-text-soft);
   font-size: var(--font-xs);
   font-weight: 600;

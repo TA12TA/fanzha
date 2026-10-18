@@ -97,7 +97,7 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
   padding: var(--space-5);
-  background: rgb(8 14 24 / 52%);
+  background: rgb(3 8 5 / 56%);
   animation: af-fade var(--dur-fast) ease-out;
 }
 
@@ -105,6 +105,7 @@ onBeforeUnmount(() => {
   width: 100%;
   max-width: 320px;
   padding: var(--space-4);
+  border: 1px solid var(--c-line);
   border-radius: var(--radius-lg);
   background: var(--c-surface);
   box-shadow: var(--shadow-sheet);
@@ -126,7 +127,7 @@ onBeforeUnmount(() => {
   height: 28px;
   border-radius: 8px;
   background: var(--c-primary-soft);
-  color: #2b6fd4;
+  color: var(--c-primary);
 }
 
 .af__app {
@@ -139,8 +140,10 @@ onBeforeUnmount(() => {
 /* 第一行就是「检测到你疑似正在被诈骗」：先给判断，再给依据 */
 .af__headline {
   margin-bottom: var(--space-2);
-  font-size: var(--font-md);
-  font-weight: 800;
+  font-family: var(--font-display);
+  font-size: var(--font-lg);
+  font-weight: 700;
+  letter-spacing: 0.02em;
   line-height: 1.35;
   color: var(--c-text);
 }

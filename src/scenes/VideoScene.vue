@@ -314,8 +314,8 @@ onBeforeUnmount(() => {
   flex: 1;
   min-height: 0;
   overflow: hidden;
-  background: #05070b;
-  color: #f5f8ff;
+  background: #060b08;
+  color: #f7f0e2;
 }
 
 /* 顶部悬浮栏 */
@@ -401,7 +401,7 @@ onBeforeUnmount(() => {
   height: 100%;
   overflow: hidden;
   scroll-snap-align: start;
-  background: #05070b;
+  background: #060b08;
 }
 
 .clip__image {
@@ -458,7 +458,7 @@ onBeforeUnmount(() => {
   height: 42px;
   border: 2px solid #fff;
   border-radius: 50%;
-  background: #3f6f8e;
+  background: #3f6f5c;
   color: #fff;
   font-size: var(--font-sm);
   font-weight: 700;
@@ -473,7 +473,7 @@ onBeforeUnmount(() => {
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: #e0483a;
+  background: var(--c-danger);
   color: #fff;
   font-size: 12px;
   line-height: 1;
@@ -501,7 +501,7 @@ onBeforeUnmount(() => {
 }
 
 .rail__btn--on > :first-child {
-  color: #ff5b7f;
+  color: #e3a477;
 }
 
 /* 左下文案 */
@@ -530,13 +530,13 @@ onBeforeUnmount(() => {
 
 .clip__title span {
   font-weight: 400;
-  color: rgb(245 248 255 / 76%);
+  color: rgb(247 240 226 / 76%);
 }
 
 .clip__blurb {
   font-size: var(--font-xs);
   line-height: 1.5;
-  color: rgb(245 248 255 / 76%);
+  color: rgb(247 240 226 / 76%);
 }
 
 .clip__music {
@@ -547,7 +547,7 @@ onBeforeUnmount(() => {
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 11px;
-  color: rgb(245 248 255 / 82%);
+  color: rgb(247 240 226 / 82%);
 }
 
 .clip__progress {
@@ -576,8 +576,8 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
   gap: var(--space-3);
-  background: #05070b;
-  color: rgb(245 248 255 / 70%);
+  background: #060b08;
+  color: rgb(247 240 226 / 70%);
   font-size: var(--font-sm);
 }
 
@@ -603,8 +603,8 @@ onBeforeUnmount(() => {
   max-height: 62%;
   padding: var(--space-3) var(--space-4) calc(var(--space-4) + var(--safe-bottom));
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-  background: #171d28;
-  color: #f5f8ff;
+  background: #0d1713;
+  color: #f7f0e2;
   box-shadow: 0 -8px 28px rgb(0 0 0 / 40%);
   animation: sheet-in var(--dur-base) ease both;
 }

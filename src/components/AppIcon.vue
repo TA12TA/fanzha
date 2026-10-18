@@ -195,7 +195,7 @@ const style = computed(() => ({
 
 <style scoped>
 /*
- * 图标底板：每个应用一块彩色渐变方，外加白色图形。
+ * 图标底板：每个应用一块哑光色方，外加米白图形；不使用高光渐变。
  * 「国家反诈中心」用官方 logo 图片，不再叠底板。
  */
 .app__glyph {
@@ -206,9 +206,11 @@ const style = computed(() => ({
   width: var(--glyph-size, 58px);
   height: var(--glyph-size, 58px);
   border-radius: calc(var(--glyph-size, 58px) * 0.2414);
-  color: #ffffff;
-  background: linear-gradient(150deg, #5a7ea8, #3d5a7d);
-  box-shadow: 0 4px 12px rgb(4 10 20 / 30%);
+  color: #f7f0e2;
+  background: #42584d;
+  box-shadow:
+    inset 0 0 0 1px rgb(255 255 255 / 14%),
+    0 3px 8px rgb(3 8 5 / 24%);
 }
 
 .app__glyph svg {
@@ -217,48 +219,48 @@ const style = computed(() => ({
 }
 
 .app__glyph--chat {
-  background: linear-gradient(150deg, #3f9bf5, #1f6fd0);
+  background: #2f6b58;
 }
 
 .app__glyph--wallet {
-  background: linear-gradient(150deg, #35b98a, #178a63);
+  background: #9a7440;
 }
 
 .app__glyph--photos {
-  background: linear-gradient(150deg, #f0885a, #d15f36);
+  background: #a9663f;
 }
 
 .app__glyph--phone {
-  background: linear-gradient(150deg, #4bcb8d, #1f9f68);
+  background: #36775c;
 }
 
 .app__glyph--sms {
-  background: linear-gradient(150deg, #4fb6d8, #2b76b8);
+  background: #3f6f82;
 }
 
 .app__glyph--shop {
-  background: linear-gradient(150deg, #f1785f, #c94a45);
+  background: #a24d3e;
 }
 
 .app__glyph--music {
-  background: linear-gradient(150deg, #a77bf3, #6d45c9);
+  background: #6a516f;
 }
 
 .app__glyph--video {
-  background: linear-gradient(150deg, #38bcc9, #137c99);
+  background: #3f5d75;
 }
 
 /* 关卡入口：用紫罗兰色与六个应用区分开（它不是一个「应用」） */
 .app__glyph--levels {
-  background: linear-gradient(150deg, #8b7ae0, #5f4fc0);
+  background: #6f5a3e;
 }
 
 .app__glyph--notifications {
-  background: linear-gradient(150deg, #f0b73f, #d18f1c);
+  background: #b07b3a;
 }
 
 .app__glyph--settings {
-  background: linear-gradient(150deg, #8a93a6, #5f6a7e);
+  background: #5e675f;
 }
 
 .app__glyph--brand {

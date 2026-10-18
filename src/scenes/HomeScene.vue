@@ -279,8 +279,9 @@ function badgeAria(id: string, badge: string): string {
 .widget {
   border: 1px solid var(--c-wall-border);
   border-radius: var(--radius-lg);
-  /* 磨砂玻璃：真实手机的 Widget 都是半透明磨砂底 */
+  /* 墨绿玻璃：比纯白磨砂更接近这台虚构手机的夜色 */
   background: var(--c-wall-surface);
+  box-shadow: var(--shadow-on-wall);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
 }
@@ -294,10 +295,11 @@ function badgeAria(id: string, badge: string): string {
 }
 
 .clock__time {
+  font-family: var(--font-display);
   font-size: 34px;
-  font-weight: 300;
-  line-height: 1.05;
-  letter-spacing: 0.5px;
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: 0.02em;
   font-variant-numeric: tabular-nums;
 }
 
@@ -324,9 +326,10 @@ function badgeAria(id: string, badge: string): string {
 }
 
 .walletcard__amount {
-  font-size: 26px;
+  font-family: var(--font-display);
+  font-size: 27px;
   font-weight: 700;
-  line-height: 1.1;
+  line-height: 1.15;
   font-variant-numeric: tabular-nums;
 }
 
@@ -352,6 +355,7 @@ function badgeAria(id: string, badge: string): string {
   text-align: left;
   border-color: var(--c-wall-chip-border);
   background: var(--c-wall-chip);
+  box-shadow: var(--shadow-on-wall);
 }
 
 .resume__label {
@@ -434,10 +438,10 @@ function badgeAria(id: string, badge: string): string {
   min-width: 19px;
   height: 19px;
   padding: 0 5px;
-  border: 1.5px solid rgb(13 22 38 / 90%);
+  border: 1.5px solid rgb(8 18 15 / 90%);
   border-radius: 999px;
-  background: #e0483a;
-  color: #fff;
+  background: #b43c2c;
+  color: #fff8ee;
   font-size: 11px;
   font-weight: 700;
   line-height: 17px;
@@ -468,7 +472,7 @@ function badgeAria(id: string, badge: string): string {
   min-height: var(--tap-min);
   padding: 0 var(--space-5);
   border: 1px solid var(--c-wall-border);
-  border-radius: 999px;
+  border-radius: var(--radius-sm);
   background: var(--c-wall-surface);
   color: var(--c-on-wall-dim);
   font-size: var(--font-sm);
@@ -499,7 +503,7 @@ function badgeAria(id: string, badge: string): string {
   margin: 0 var(--space-3) calc(var(--space-3) + var(--safe-bottom, 0px));
   padding: var(--space-2) var(--space-2) calc(var(--space-2));
   border: 1px solid var(--c-wall-dock-border);
-  border-radius: 28px;
+  border-radius: 22px;
   background: var(--c-wall-dock);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);

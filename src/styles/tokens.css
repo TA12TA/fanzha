@@ -3,12 +3,30 @@
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --phone-max-width: 430px;
-  --radius-sm: 8px;
-  --radius-md: 14px;
-  --radius-lg: 20px;
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
   --tap-min: 44px;
   /* 列表行最小高度（共用 .row 样式用） */
   --row-min: 52px;
+
+  /* 字体：正文用系统无衬线，标题用中文宋体，做「纸与墨」的编辑感 */
+  --font-sans:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    'PingFang SC',
+    'Hiragino Sans GB',
+    'Microsoft YaHei',
+    'Noto Sans SC',
+    sans-serif;
+  --font-display:
+    'Songti SC',
+    'STSong',
+    'Noto Serif CJK SC',
+    'Source Han Serif SC',
+    'SimSun',
+    serif;
 
   /* 字号 */
   --font-xs: 12px;
@@ -26,26 +44,30 @@
   --space-5: 20px;
   --space-6: 28px;
 
-  /* 颜色：桌面深色 / 消息浅色 / 钱包冷色 / 风险暖色 */
-  --c-bg-outer: #0b1017;
-  --c-desktop-1: #16233a;
-  --c-desktop-2: #0d1626;
-  --c-surface: #ffffff;
-  --c-surface-2: #f4f6fa;
-  --c-chat-bg: #eef1f6;
-  --c-wallet-bg: #eaf1f8;
-  --c-manual-bg: #f3f1ea;
-  --c-line: #dbe1ea;
-  --c-text: #16202e;
-  --c-text-soft: #55637a;
-  --c-text-invert: #f7fafc;
-  --c-primary: #1f6feb;
-  --c-primary-soft: #e4eefc;
-  --c-accent: #0f9d7a;
-  --c-danger: #c2412f;
-  --c-warn-bg: #fdf2e3;
-  --c-warn-line: #e8b877;
-  --c-warn-text: #7a4a12;
+  /*
+   * 颜色：青屏 · 墨与灯。
+   * 深墨绿是手机外部的夜色，米纸是应用内部的纸面；主色取青玉，
+   * 朱砂只留给危险/警示，黄铜只做细节，不再使用 SaaS 蓝。
+   */
+  --c-bg-outer: #080d0b;
+  --c-desktop-1: #122019;
+  --c-desktop-2: #08120f;
+  --c-surface: #faf5eb;
+  --c-surface-2: #f0e7d8;
+  --c-chat-bg: #ece3d4;
+  --c-wallet-bg: #e8efe7;
+  --c-manual-bg: #f2e8d7;
+  --c-line: #d7c9b4;
+  --c-text: #1d2a25;
+  --c-text-soft: #58645b;
+  --c-text-invert: #f7f0e2;
+  --c-primary: #245b4a;
+  --c-primary-soft: #dbe8df;
+  --c-accent: #a57b43;
+  --c-danger: #a83c2c;
+  --c-warn-bg: #f7ead2;
+  --c-warn-line: #d9b67f;
+  --c-warn-text: #6f4819;
   /* 原 --c-sim-bg / --c-sim-text 是「剧情模拟」标记用的，随标记一起删除 */
   /*
    * 文字层级（2026-10-14 新增，同日修正过一次）。
@@ -65,7 +87,7 @@
    * 下面的别名，全项目只保留一档「次要信息」。
    */
   --c-text-secondary: var(--c-text-soft);
-  --c-text-tertiary: #8494a8;
+  --c-text-tertiary: #8a9189;
 
   /*
    * 「壁纸上的内容」用色（2026-10-14 新增）。
@@ -74,25 +96,25 @@
    * 夜间壁纸深 → 文字浅；白天壁纸浅 → 文字深。
    * 下面这组默认值对应夜间，白天主题在 [data-theme='day'] 里覆盖。
    */
-  --c-on-wall: #f7fafc;
-  --c-on-wall-soft: #c3d0e2;
-  --c-on-wall-dim: #93a5bd;
-  /* 强调色（「继续当前事项」里的待付金额）：夜间暖黄 */
-  --c-on-wall-accent: #ffd9a8;
+  --c-on-wall: #f8f1e4;
+  --c-on-wall-soft: #d3c6b4;
+  --c-on-wall-dim: #a99b89;
+  /* 强调色（「继续当前事项」里的待付金额）：黄铜 */
+  --c-on-wall-accent: #e6c087;
   /* 上滑解锁提示条：轨道（填充用 --c-on-wall） */
-  --c-wall-hint-track: rgb(255 255 255 / 26%);
-  --c-wall-surface: rgb(255 255 255 / 10%);
-  --c-wall-border: rgb(255 255 255 / 16%);
-  --c-wall-dock: rgb(255 255 255 / 12%);
-  --c-wall-dock-border: rgb(255 255 255 / 18%);
-  --shadow-on-wall: 0 4px 12px rgb(4 10 20 / 30%);
-  --shadow-dock: 0 8px 28px rgb(4 10 20 / 34%);
-  --wall-vignette: rgb(4 10 20 / 30%);
-  --c-wall-chip: rgb(31 111 235 / 24%);
-  --c-wall-chip-border: rgb(56 128 235 / 55%);
+  --c-wall-hint-track: rgb(248 241 228 / 26%);
+  --c-wall-surface: rgb(248 241 228 / 9%);
+  --c-wall-border: rgb(248 241 228 / 17%);
+  --c-wall-dock: rgb(9 18 14 / 54%);
+  --c-wall-dock-border: rgb(226 201 163 / 20%);
+  --shadow-on-wall: 0 4px 14px rgb(3 8 5 / 38%);
+  --shadow-dock: 0 10px 30px rgb(3 8 5 / 40%);
+  --wall-vignette: rgb(3 8 5 / 38%);
+  --c-wall-chip: rgb(168 60 44 / 24%);
+  --c-wall-chip-border: rgb(206 108 82 / 46%);
 
-  --shadow-card: 0 2px 10px rgb(16 30 54 / 10%);
-  --shadow-sheet: 0 -6px 24px rgb(10 20 36 / 22%);
+  --shadow-card: 0 0 0 1px rgb(29 42 37 / 7%), 0 2px 8px rgb(29 42 37 / 7%);
+  --shadow-sheet: 0 -8px 30px rgb(9 18 14 / 28%);
   --dur-fast: 140ms;
   --dur-base: 220ms;
   --dur-slow: 300ms;
@@ -116,18 +138,18 @@
  * 因为浅色壁纸的局部亮度比深色壁纸更难预测。
  */
 [data-theme='day'] {
-  --c-on-wall: #10233c;
-  --c-on-wall-soft: #2f4a6d;
-  --c-on-wall-dim: #4a6382;
-  --c-on-wall-accent: #8a4b06;
-  --c-wall-hint-track: rgb(16 35 60 / 20%);
-  --c-wall-surface: rgb(255 255 255 / 62%);
-  --c-wall-border: rgb(255 255 255 / 72%);
-  --c-wall-dock: rgb(255 255 255 / 58%);
-  --c-wall-dock-border: rgb(255 255 255 / 76%);
-  --shadow-on-wall: 0 3px 10px rgb(30 60 100 / 18%);
-  --shadow-dock: 0 8px 24px rgb(30 60 100 / 20%);
-  --wall-vignette: rgb(255 255 255 / 18%);
-  --c-wall-chip: rgb(31 111 235 / 16%);
-  --c-wall-chip-border: rgb(31 111 235 / 42%);
+  --c-on-wall: #15231f;
+  --c-on-wall-soft: #3f544b;
+  --c-on-wall-dim: #5d7268;
+  --c-on-wall-accent: #7d4a12;
+  --c-wall-hint-track: rgb(21 35 31 / 20%);
+  --c-wall-surface: rgb(250 245 235 / 82%);
+  --c-wall-border: rgb(21 35 31 / 14%);
+  --c-wall-dock: rgb(250 245 235 / 78%);
+  --c-wall-dock-border: rgb(21 35 31 / 12%);
+  --shadow-on-wall: 0 3px 12px rgb(60 48 30 / 18%);
+  --shadow-dock: 0 10px 26px rgb(60 48 30 / 20%);
+  --wall-vignette: rgb(255 250 240 / 20%);
+  --c-wall-chip: rgb(168 60 44 / 14%);
+  --c-wall-chip-border: rgb(168 60 44 / 36%);
 }

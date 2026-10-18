@@ -223,7 +223,7 @@ export const level01 = defineLevel<L1Node, L1Option>({
     category: '网络兼职',
     blurb: '有人拉你进兼职群：先垫 100，做完平台显示返 130。',
     goal: '让你先垫钱的兼职，直接退出并举报。',
-    accent: ['#3f9bf5', '#1f6fd0'],
+    accent: ['#b8864e', '#7d5731'],
     startNotice: '一位学姐邀请你加入兼职群',
   },
 

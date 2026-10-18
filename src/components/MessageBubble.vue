@@ -94,9 +94,9 @@ defineProps<{
 }
 
 .msg--failed {
-  background: #fdeceb;
-  border: 1px solid #e6a99f;
-  color: #7c2418;
+  background: #f7e2dd;
+  border: 1px solid #d9a79b;
+  color: #74291e;
 }
 
 /*
@@ -107,9 +107,10 @@ defineProps<{
   min-width: 180px;
   padding: var(--space-3);
   border-radius: var(--radius-md);
-  background: linear-gradient(150deg, #f7b955, #ef9d2b);
-  color: #fff;
-  box-shadow: 0 3px 10px rgb(160 100 20 / 26%);
+  border: 1px solid #c9a86b;
+  background: linear-gradient(150deg, #ead2a3, #d6b273);
+  color: #2b2113;
+  box-shadow: 0 3px 10px rgb(80 55 20 / 18%);
 }
 
 /*
@@ -201,7 +202,7 @@ defineProps<{
 .transfer__status {
   margin-top: var(--space-2);
   padding-top: var(--space-1);
-  border-top: 1px solid rgb(255 255 255 / 34%);
+  border-top: 1px solid rgb(43 33 19 / 18%);
   font-size: var(--font-xs);
 }
 
@@ -224,7 +225,7 @@ defineProps<{
 }
 
 .msg--failed .msg__text {
-  color: #7c2418;
+  color: #74291e;
 }
 
 .msg__note {

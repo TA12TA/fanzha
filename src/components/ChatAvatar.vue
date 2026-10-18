@@ -93,26 +93,26 @@ const style = computed(() => ({ '--avatar-size': `${props.size}px` }))
 }
 
 .avatar__tone--blue {
-  background: linear-gradient(150deg, #4a90e2, #2a6fbf);
+  background: linear-gradient(150deg, #3f6f82, #2c5364);
 }
 
 .avatar__tone--green {
-  background: linear-gradient(150deg, #3fb98a, #1d8a63);
+  background: linear-gradient(150deg, #3f7f6b, #285446);
 }
 
 .avatar__tone--amber {
-  background: linear-gradient(150deg, #e8a13a, #c07a1c);
+  background: linear-gradient(150deg, #a57b43, #7d5731);
 }
 
 .avatar__tone--violet {
-  background: linear-gradient(150deg, #8b7ae0, #5f4fc0);
+  background: linear-gradient(150deg, #6a516f, #48384d);
 }
 
 .avatar__tone--slate {
-  background: linear-gradient(150deg, #8a93a6, #5f6a7e);
+  background: linear-gradient(150deg, #5e675f, #424a44);
 }
 
 .avatar__tone--rose {
-  background: linear-gradient(150deg, #e0738a, #bb4a63);
+  background: linear-gradient(150deg, #9e5b55, #733d39);
 }
 </style>

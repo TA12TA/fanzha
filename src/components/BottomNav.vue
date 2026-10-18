@@ -76,19 +76,19 @@ const emit = defineEmits<{
 }
 
 .nav--dark {
-  background: rgb(12 20 32 / 78%);
+  background: rgb(7 15 12 / 86%);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border-top-color: rgb(255 255 255 / 10%);
+  border-top-color: rgb(226 201 163 / 16%);
   color: var(--c-text-invert);
 }
 
 .nav--light {
-  background: rgb(247 247 249 / 92%);
+  background: rgb(250 245 235 / 94%);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-top-color: var(--c-line);
-  color: #333a46;
+  color: var(--c-text);
 }
 
 .nav__btn {

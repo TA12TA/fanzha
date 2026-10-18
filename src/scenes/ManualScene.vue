@@ -115,8 +115,9 @@ const emit = defineEmits<{
   gap: var(--space-3);
   padding: var(--space-3);
   border-radius: var(--radius-md);
-  background: linear-gradient(135deg, #1b4f8f, #163d70);
-  color: #fff;
+  border: 1px solid rgb(226 201 163 / 20%);
+  background: linear-gradient(135deg, #1d3b30, #132a22);
+  color: #f8f1e4;
   box-shadow: var(--shadow-card);
 }
 
@@ -152,7 +153,7 @@ const emit = defineEmits<{
 
 .appbrand__desc {
   font-size: var(--font-xs);
-  color: #bcd2ec;
+  color: #c8b99f;
 }
 
 /* 本关正确做法 */
@@ -173,14 +174,18 @@ const emit = defineEmits<{
 }
 
 .goal__text {
-  font-size: var(--font-base);
+  font-family: var(--font-display);
+  font-size: 16px;
   font-weight: 700;
-  line-height: 1.5;
+  line-height: 1.55;
+  letter-spacing: 0.02em;
 }
 
 .manual__title {
-  font-size: var(--font-md);
+  font-family: var(--font-display);
+  font-size: 17px;
   font-weight: 700;
+  letter-spacing: 0.03em;
 }
 
 .manual__list {

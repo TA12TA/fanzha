@@ -97,8 +97,10 @@ const emit = defineEmits<{
 }
 
 .appbar__title {
-  font-size: var(--font-md);
+  font-family: var(--font-display);
+  font-size: 17px;
   font-weight: 700;
+  letter-spacing: 0.03em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

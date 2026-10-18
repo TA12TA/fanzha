@@ -171,17 +171,17 @@ const records = computed(() => props.level.walletRecords(props.state))
   gap: var(--space-1);
   padding: var(--space-4);
   border-radius: var(--radius-md);
-  background: linear-gradient(150deg, #21589c, #163d70 78%);
-  color: #fff;
+  border: 1px solid rgb(226 201 163 / 22%);
+  background: linear-gradient(150deg, #285d4b, #163a2e 80%);
+  color: #f8f1e4;
   box-shadow:
-    /* 顶部一道极淡内高光：深色卡片没有它就像一块平色块 */
-    inset 0 1px 0 rgb(255 255 255 / 14%),
+    inset 0 1px 0 rgb(255 255 255 / 13%),
     var(--shadow-card);
 }
 
 .balance__label {
   font-size: var(--font-xs);
-  color: #bcd2ec;
+  color: #c8d6cc;
 }
 
 .balance__amount {
@@ -198,7 +198,7 @@ const records = computed(() => props.level.walletRecords(props.state))
 
 .balance__note {
   font-size: var(--font-xs);
-  color: #bcd2ec;
+  color: #c8d6cc;
 }
 
 .platform {
@@ -284,8 +284,10 @@ const records = computed(() => props.level.walletRecords(props.state))
 }
 
 .account__head h2 {
-  font-size: var(--font-sm);
+  font-family: var(--font-display);
+  font-size: 15px;
   font-weight: 700;
+  letter-spacing: 0.03em;
 }
 
 .account__head span {
