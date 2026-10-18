@@ -67,8 +67,9 @@ import antifraudLogo from '@/assets/antifraud-logo.png'
 | `shop/lamp.jpg` | `https://images.unsplash.com/photo-1507473885765-e6ed057f782c` |
 | `shop/bottle.jpg` | `https://images.unsplash.com/photo-1523362628745-0c100150b504` |
 
-> 用户明确要求「不用考虑侵权」；以上来源仅作为素材追溯，未做商用授权审核。
-> 图片中如出现品牌元素，应在上线前替换为无品牌素材。
+> 用户已明确决定保留官方反诈 App 的 logo；其余照片按上述来源追溯，提交前请按 Picsum / Unsplash / Pexels 的许可条款复核。
+> 图片不刻意包含品牌标识；如发现品牌元素或赛事要求更严格的书面授权，应替换为自有或 CC0 素材。
+> 本目录不把“已记录来源”等同于“已完成商用授权审核”。
 
 ## 合规说明
 

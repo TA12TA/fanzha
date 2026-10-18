@@ -56,6 +56,19 @@ defineProps<{
       <p class="refund__note">平台内显示 · 未到账</p>
     </template>
 
+    <!-- 对方发来的“通知”卡：只渲染文字字段，不复制任何官方标识或真实文书 -->
+    <template v-else-if="message.variant === 'notice'">
+      <p class="card__label">对方发来的文件</p>
+      <p class="card__title">{{ message.noticeTitle }}</p>
+      <dl v-if="message.noticeFields?.length" class="notice__fields">
+        <div v-for="field in message.noticeFields" :key="field.label">
+          <dt>{{ field.label }}</dt>
+          <dd>{{ field.value }}</dd>
+        </div>
+      </dl>
+      <p v-if="message.noticeNote" class="card__status">{{ message.noticeNote }}</p>
+    </template>
+
     <template v-else>
       <!--
         气泡只负责内容；「谁说的」由外层消息行决定
@@ -128,12 +141,44 @@ defineProps<{
   box-shadow: var(--shadow-card);
 }
 
-.msg--refund {
+.msg--refund,
+.msg--notice {
   min-width: 190px;
   padding: var(--space-3);
   border-radius: var(--radius-md);
   background: var(--c-warn-bg);
   border: 1px dashed var(--c-warn-line);
+}
+
+.msg--notice .card__label,
+.msg--notice .card__status {
+  color: var(--c-warn-text);
+}
+
+.notice__fields {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: var(--space-2) 0 0;
+}
+
+.notice__fields div {
+  display: flex;
+  gap: var(--space-2);
+  font-size: var(--font-xs);
+  line-height: 1.45;
+}
+
+.notice__fields dt {
+  flex: none;
+  width: 5.2em;
+  color: var(--c-warn-text);
+  opacity: 0.78;
+}
+
+.notice__fields dd {
+  margin: 0;
+  color: var(--c-text);
 }
 
 .card__label {

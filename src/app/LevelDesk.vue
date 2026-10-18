@@ -340,8 +340,10 @@ const canReturn = computed(() => props.showReturn && currentTitle.value !== '')
     <div class="desk__surface" aria-hidden="true"></div>
 
     <header class="desk__head">
+      <p class="desk__work">反诈局中局：你的手机</p>
       <h1 class="desk__title">关卡大厅</h1>
       <p class="desk__subtitle">选一部手机开始挑战</p>
+      <p class="desk__meta">一部虚构手机 · 三场骗局 · 约 8 分钟</p>
     </header>
 
     <div ref="stageRef" class="desk__stage" :class="{ 'desk__stage--flying': flying }">
@@ -492,6 +494,22 @@ const canReturn = computed(() => props.showReturn && currentTitle.value !== '')
   border-radius: 2px;
   background: linear-gradient(90deg, transparent, var(--desk-accent), transparent);
   opacity: 0.85;
+}
+
+.desk__work {
+  margin-bottom: 2px;
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: var(--c-on-wall-soft);
+}
+
+.desk__meta {
+  margin-top: 3px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--c-on-wall-dim);
 }
 
 .desk__title {

@@ -1461,6 +1461,7 @@ async function main() {
         miniStatusbars: document.querySelectorAll('.deskphone__statusbar').length,
         miniIcons: document.querySelectorAll('.deskphone__icons').length,
         lockedDisabled: locked ? locked.getAttribute('aria-disabled') : null,
+        thirdText: phones[2] ? phones[2].textContent.trim() : '',
         // 书桌版不该有手机外框
         hasStatusbar: !!document.querySelector('.statusbar'),
         hasNavKeys: document.querySelectorAll('.nav__btn').length,
@@ -1486,9 +1487,9 @@ async function main() {
       `倾斜=[${hallInfo.tilts.join(', ')}]`,
     )
     record(
-      '锁定关卡标记为不可进入',
-      hallInfo.lockedDisabled === 'true',
-      `aria-disabled=${hallInfo.lockedDisabled}`,
+      '第三关已开放（不再有锁定卡）',
+      hallInfo.lockedDisabled === null && hallInfo.thirdText.includes('冒充公检法'),
+      `aria-disabled=${hallInfo.lockedDisabled} 第三关=${hallInfo.thirdText.slice(0, 20)}`,
     )
     record('刷新回大厅不显示「返回当前关卡」', hallInfo.hasReturn === false)
     record('书桌版大厅不产生整页横向溢出', hallInfo.docOverflow)

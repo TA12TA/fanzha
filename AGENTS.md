@@ -1,6 +1,6 @@
 # 《反诈局中局：你的手机》协作规约
 
-适用范围：本仓库全部文件。接手开发的模型/开发者先读 `README.md`、`LEVELS.md`、`LEVEL-01.md`、`LEVEL-02.md`、`DEVELOPMENT.md`、`SCENES.md`、`ACCEPTANCE.md`、`CASES.md`，再修改项目。当前状态：**多关卡结构** —— 第一关「刷单返利」与第二关「冒充客服退款」可玩，第三关「冒充公检法」仅有元数据（大厅里是锁定卡，无剧情）。此文件是开发约束，不是已完成的功能声明。
+适用范围：本仓库全部文件。接手开发的模型/开发者先读 `README.md`、`LEVELS.md`、`LEVEL-01.md`、`LEVEL-02.md`、`LEVEL-03.md`、`DEVELOPMENT.md`、`SCENES.md`、`ACCEPTANCE.md`、`CASES.md`，再修改项目。当前状态：**多关卡结构，三关可玩** —— 第一关「刷单返利」、第二关「冒充客服退款」、第三关「冒充公检法」。此文件是开发约束，不是已完成的功能声明。
 
 ## 1. 产品边界（必须遵守，任何关卡都不例外）
 
@@ -25,7 +25,7 @@
 
 入口链：`index.html` → `src/main.ts` → `src/App.vue` → `src/app/AppShell.vue`。别名 `@` = `src/`。
 
-- `src/data/levels/`：剧情与文案的唯一来源。`level01.ts`（刷单返利）、`level02.ts`（冒充客服退款）可玩；`level03.ts` 只有 `coming-soon` 元数据（**有意不写剧情**：半成品话术比「正在制作」更容易误导，且「安全账户」写成可读剧本接近可复用诈骗素材；不要单独补写，要补就整关连转移、复盘、守卫一起补）；`index.ts` 是唯一注册表（`LEVELS`、`DEFAULT_LEVEL_ID`、`getLevel`、`getPlayableLevel`、`playableLevels`、`requireLevel`）；`shared.ts` 是两关共用的虚构世界（品牌、妈妈转账、班级群）。`src/data/shop.ts` / `music.ts` / `video.ts` / `photos.ts` / `phone.ts` / `sms.ts` / `antifraud.ts` 是桌面生活、相册与反诈提示的虚构数据；`CASES.md` 记录真实案例来源。
+- `src/data/levels/`：剧情与文案的唯一来源。`level01.ts`（刷单返利）、`level02.ts`（冒充客服退款）、`level03.ts`（冒充公检法）可玩；`level03` 的设计稿见 `LEVEL-03.md`；`index.ts` 是唯一注册表（`LEVELS`、`DEFAULT_LEVEL_ID`、`getLevel`、`getPlayableLevel`、`playableLevels`、`requireLevel`）；`shared.ts` 是两关共用的虚构世界（品牌、妈妈转账、班级群）。`src/data/shop.ts` / `music.ts` / `video.ts` / `photos.ts` / `phone.ts` / `sms.ts` / `antifraud.ts` 是桌面生活、相册与反诈提示的虚构数据；`CASES.md` 记录真实案例来源。
 - `src/game/level.ts`：关卡契约 `defineLevel`（节点、转移、会话规格、金额口径 `validBalances` / `platformRequiresPaid`、复盘、提醒）。新增关卡只实现这个契约，引擎和场景不认具体关卡。
 - `src/game/engine.ts`：纯状态机。`createInitialState` / `choose` / `isStateConsistent`；所有金额变化只在 `applyEffect` 内发生一次。`STATE_VERSION` 必须与 `src/game/storage.ts` 的 `SAVE_VERSION` 锁步。
 - `src/game/storage.ts`：版本化 localStorage，**每关一个槽** `fj-juzhongju:save:v2:<levelId>`；`parseSave` 逐字段校验节点/选项/金额不变式，坏档只清该关并回退开场。
@@ -56,9 +56,9 @@ npm run dev                          # 开发服务器 http://127.0.0.1:5173
 npm run build                        # 产物到 dist/（已 gitignore）
 npm run preview                      # 预览构建 http://127.0.0.1:4173
 npm run typecheck                    # vue-tsc --noEmit -p tsconfig.app.json
-npm test                             # vitest run，14 个 spec / 252 个用例（主要是 app.spec，全量约 50 秒）
+npm test                             # vitest run，14 个 spec / 261 个用例（主要是 app.spec，全量约 50 秒）
 npx vitest run tests/levels.spec.ts tests/engine.spec.ts  # 改关卡/引擎时先跑针对性用例
-npm run verify                       # Edge/Chrome headless 跑两关主线（第一关三条结局 + 第二关到复盘）+ 320/375/390px 无横向溢出 + 截图到 .verify/
+npm run verify                       # Edge/Chrome headless 跑三关入口与两关主线 + 320/375/390px 无横向溢出 + 截图到 .verify/
 npm run smoke:public -- https://<url>/   # 发布到公网后的冒烟测试
 ```
 

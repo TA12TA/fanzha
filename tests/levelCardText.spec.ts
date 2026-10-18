@@ -20,7 +20,7 @@ import type { LevelSlotSummary } from '@/game/storage'
  */
 
 const playable = getPlayableLevel('level-01') as LevelEntry
-const locked = level03 as LevelEntry
+const locked = { kind: 'coming-soon', meta: level03.meta, note: '正在制作，敬请期待' } as LevelEntry
 
 /** 造一个存档摘要。 */
 function slot(patch: Partial<LevelSlotSummary> = {}): LevelSlotSummary {
@@ -74,7 +74,7 @@ describe('L. 关卡卡片文案', () => {
   })
 
   it('可玩关卡都不会被判成锁定', () => {
-    for (const id of ['level-01', 'level-02']) {
+    for (const id of ['level-01', 'level-02', 'level-03']) {
       const entry = getPlayableLevel(id) as LevelEntry
       expect(isLevelLocked(entry), `${id} 不应是锁定关卡`).toBe(false)
     }

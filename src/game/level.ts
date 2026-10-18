@@ -42,8 +42,9 @@ export interface ChatMessage {
    * - `transfer` 转账卡片（妈妈转来的生活费）
    * - `order`    订单卡（第二关：购物订单）
    * - `refund`   退款进度卡（第二关：平台内未兑现数字）
+   * - `notice`   对方发来的“通知/进度”卡片（第三关：冒充公检法）
    */
-  variant?: 'text' | 'claim' | 'risk' | 'failed' | 'transfer' | 'order' | 'refund'
+  variant?: 'text' | 'claim' | 'risk' | 'failed' | 'transfer' | 'order' | 'refund' | 'notice'
   /** 转账金额（仅 transfer 变体）。 */
   amount?: number
   /** 转账状态（仅 transfer 变体）。 */
@@ -60,6 +61,12 @@ export interface ChatMessage {
   refundAmount?: number
   /** 退款进度文案（仅 refund 变体）。 */
   refundStatus?: string
+  /** 对方发来的通知标题（仅 notice 变体）。 */
+  noticeTitle?: string
+  /** 对方发来的通知字段（仅 notice 变体）。 */
+  noticeFields?: { label: string; value: string }[]
+  /** 对这张通知的核验说明（仅 notice 变体）。 */
+  noticeNote?: string
 }
 
 /**

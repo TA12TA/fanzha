@@ -2106,7 +2106,7 @@ describe('Y. 关卡大厅（书桌选关）', () => {
     expect(wrapper.text()).toContain('选一部手机开始挑战')
 
     const phones = wrapper.findAll('.deskphone')
-    expect(phones.length, '三关应有三部手机（两关可玩 + 一关锁定）').toBe(3)
+    expect(phones.length, '三关应有三部手机（三关都可玩）').toBe(3)
 
     // 关键：这一版**没有**状态栏与底部导航 —— 整屏就是一张桌子
     expect(wrapper.find('.statusbar').exists(), '书桌版不该有手机状态栏').toBe(false)
@@ -2245,21 +2245,56 @@ describe('Y. 关卡大厅（书桌选关）', () => {
     expect(readSave('level-01'), '取消转场不该写存档').toBeNull()
   })
 
-  it('Y09 锁定关卡：标为不可进入、点了给提示、不进入、不写存档', async () => {
+  it('Y09 第三关已开放：可以进入冒充公检法关卡', async () => {
     const wrapper = await mountApp({ atDesk: true })
 
-    const locked = wrapper.findAll('.deskphone')[2]
-    expect(locked.attributes('aria-disabled'), '锁定手机应标为不可进入').toBe('true')
-    expect(locked.text(), '锁定手机应写明正在制作').toContain('敬请期待')
+    const third = wrapper.findAll('.deskphone')[2]
+    expect(third.attributes('aria-disabled'), '第三关不应再标记为锁定').toBeUndefined()
+    expect(third.text()).toContain('冒充公检法')
+    expect(third.text(), '第三关应有开始/继续入口').toMatch(/开始|继续/)
 
-    await locked.trigger('click')
+    await tapPhone(wrapper, 2)
+    expect(wrapper.find('.lock__surface').exists(), '第三关应落在锁屏').toBe(true)
+    expect(wrapper.text()).toContain('冒充公检法')
+  })
+
+  it('Y09b 第三关：挂断核实 → 提前识破且不扣款', async () => {
+    const wrapper = await mountApp({ atDesk: true })
+    await tapPhone(wrapper, 2)
+    await swipeUnlock(wrapper)
+    await clickDesktopApp(wrapper, '青讯')
+    // 第三关的 preferredSession 会直接把青讯定位到“陈警官”会话。
+    await click(wrapper, '挂断，自己去核实')
     await flush()
 
-    expect(wrapper.find('.desk').exists(), '不应进入锁定关卡').toBe(true)
-    expect(wrapper.find('.desk__lock').exists(), '应给出「正在制作」的提示').toBe(true)
-    expect(wrapper.text()).toContain('正在制作')
-    expect(wrapper.find('.desk__fly').exists(), '锁定关卡不该有转场').toBe(false)
-    expect(readSave('level-03' as LevelId), '锁定关卡不该产生存档').toBeNull()
+    expect(wrapper.text()).toContain('提前识破')
+    expect(readSave('level-03' as LevelId)?.balance, '提前识破不应扣款').toBe(800)
+    expect(readSave('level-03' as LevelId)?.ending, '应记录第三关结局').toBe('l3-end-clear')
+  })
+
+  it('Y09c 第三关：协查通知、屏幕共享与付款前停手', async () => {
+    const wrapper = await mountApp({ atDesk: true })
+    await tapPhone(wrapper, 2)
+    await swipeUnlock(wrapper)
+    await clickDesktopApp(wrapper, '青讯')
+    await click(wrapper, '显示全部')
+    await flush()
+
+    expect(wrapper.text(), '应看到对方发来的协查通知').toContain('协查通知（对方发来的文件）')
+    expect(wrapper.text(), '通知里应写出可疑要求').toContain('安全账户')
+
+    await click(wrapper, '继续听他说')
+    await click(wrapper, '按他说的共享屏幕')
+    await dismissAntifraud(wrapper)
+    expect(wrapper.find('.wallet').exists(), '应进入第三关钱包待确认页').toBe(true)
+    expect(wrapper.text()).toContain('500')
+    await click(wrapper, '取消，不再操作')
+    await flush()
+
+    expect(wrapper.text()).toContain('及时止损')
+    expect(readSave('level-03' as LevelId)?.balance, '取消后不应扣款').toBe(800)
+    expect(readSave('level-03' as LevelId)?.paidTotal, '取消后累计转出应为 0').toBe(0)
+    expect(readSave('level-03' as LevelId)?.ending).toBe('l3-end-stop')
   })
 
   it('Y10 手机是真实 button，方向键可在手机之间移动焦点', async () => {
@@ -2404,7 +2439,7 @@ describe('Y. 关卡大厅（书桌选关）', () => {
       '已完成关卡的迷你屏幕应实时显示余额',
     ).toContain('800')
     expect(phones[1].text(), '第二关还没开始').toContain('还没开始')
-    expect(phones[2].text(), '第三关锁定').toContain('正在制作')
+    expect(phones[2].text(), '第三关还没开始').toContain('还没开始')
   })
 
   it('Y15 复盘页可返回关卡大厅', async () => {

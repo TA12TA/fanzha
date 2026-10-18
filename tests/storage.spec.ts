@@ -256,9 +256,9 @@ describe('C2. 多关卡存档（每关一个槽位）', () => {
     expect(loadActiveLevel(storage), '没记录时回退第一关').toBe('level-01')
     saveActiveLevel('level-02', storage)
     expect(loadActiveLevel(storage)).toBe('level-02')
-    // 非法/锁定关卡不接受
-    saveActiveLevel('level-03' as LevelId, storage)
-    expect(loadActiveLevel(storage), '锁定关卡不该被记住').toBe('level-02')
+    // 未知关卡不接受
+    saveActiveLevel('level-99' as LevelId, storage)
+    expect(loadActiveLevel(storage), '未知关卡不该被记住').toBe('level-02')
     storage.setItem(ACTIVE_LEVEL_KEY, 'nonsense')
     expect(loadActiveLevel(storage)).toBe('level-01')
   })

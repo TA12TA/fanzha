@@ -110,6 +110,7 @@ function previewOf(id: string): string {
   if (last.variant === 'transfer') return `[转账] ${last.transferNote ?? ''}`
   if (last.variant === 'order') return `[订单] ${last.orderTitle ?? ''}`
   if (last.variant === 'refund') return `[退款进度] ¥${last.refundAmount ?? ''}`
+  if (last.variant === 'notice') return `[通知] ${last.noticeTitle ?? ''}`
   return last.text
 }
 

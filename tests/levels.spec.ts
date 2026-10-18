@@ -84,9 +84,8 @@ describe('X. 关卡数据守卫（所有可玩关卡）', () => {
     expect(isPlayableLevelId(DEFAULT_LEVEL_ID)).toBe(true)
   })
 
-  it('X02 锁定关卡只登记元数据，不含任何剧情', () => {
+  it('X02 锁定关卡如果存在，只登记元数据，不含任何剧情', () => {
     const locked = LEVELS.filter((entry) => !isPlayable(entry))
-    expect(locked.length, '应有一个锁定关卡（第三关）').toBeGreaterThan(0)
     for (const entry of locked) {
       expect(entry.meta.title.length).toBeGreaterThan(0)
       expect(entry.meta.goal.length).toBeGreaterThan(0)
