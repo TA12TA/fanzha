@@ -15,6 +15,9 @@ import type { AppId } from '@/app/navigation'
  * 根元素沿用 `app__glyph` / `app__glyph--{id}` 类名：
  * 自动化验证（verify-edge）会读这两个类名下的计算尺寸与圆角。
  * 「国家反诈中心」使用官方 logo 图片，其余为自绘 SVG，不套底板。
+ *
+ * 所有自绘 SVG 统一 24×24 viewBox、1.7px 线性描边，底板与 SVG 都用等宽高，
+ * 不允许非等比缩放；`display: block` 避免 inline SVG 的基线偏移造成视觉变形。
  */
 export type IconId = AppId | 'levels'
 
@@ -63,10 +66,12 @@ const style = computed(() => ({
       fill="none"
       stroke="currentColor"
       stroke-width="1.7"
+      stroke-linecap="round"
+      stroke-linejoin="round"
     >
-      <path d="M3.5 7.2h17v11H3.5Z" stroke-linejoin="round" />
-      <path d="M3.5 7.2 15.5 3.8v3.4" stroke-linejoin="round" />
-      <circle cx="16.8" cy="12.7" r="1.2" fill="currentColor" stroke="none" />
+      <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" />
+      <path d="M3 5v14a2 2 0 0 0 2 2h16v-5" />
+      <path d="M18 12a2 2 0 0 0 0 4h4v-4Z" />
     </svg>
 
     <svg
@@ -90,7 +95,7 @@ const style = computed(() => ({
       stroke-linecap="round"
       stroke-linejoin="round"
     >
-      <path d="M7.2 3.8 10 4.6l1.3 4.2-2.1 1.6a13 13 0 0 0 4.4 4.4l1.6-2.1 4.2 1.3.8 2.8c.1.5-.3 1-.8 1-9 0-16-7-16-16 0-.5.5-.9.9-.8Z" />
+      <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2Z" />
     </svg>
 
     <svg
@@ -214,6 +219,7 @@ const style = computed(() => ({
 }
 
 .app__glyph svg {
+  display: block;
   width: var(--glyph-inner, 34px);
   height: var(--glyph-inner, 34px);
 }

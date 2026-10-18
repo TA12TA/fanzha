@@ -340,7 +340,6 @@ const canReturn = computed(() => props.showReturn && currentTitle.value !== '')
     <div class="desk__surface" aria-hidden="true"></div>
 
     <header class="desk__head">
-      <span class="desk__seal" aria-hidden="true">青屏</span>
       <h1 class="desk__title">关卡大厅</h1>
       <p class="desk__subtitle">选一部手机开始挑战</p>
     </header>
@@ -502,31 +501,6 @@ const canReturn = computed(() => props.showReturn && currentTitle.value !== '')
   line-height: 1.22;
   letter-spacing: 0.08em;
   text-shadow: 0 2px 10px rgb(0 0 0 / 22%);
-}
-
-/* 一枚小小的「青屏」印记，让大厅像一张有出处的纸，而不是通用选关页 */
-.desk__seal {
-  position: absolute;
-  top: var(--space-3);
-  right: var(--space-3);
-  display: grid;
-  place-items: center;
-  width: 34px;
-  height: 34px;
-  border: 1.5px solid #c25a45;
-  border-radius: 4px;
-  color: #c25a45;
-  font-family: var(--font-display);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  transform: rotate(-4deg);
-  opacity: 0.9;
-}
-
-[data-theme='day'] .desk__seal {
-  border-color: #9e3f2f;
-  color: #9e3f2f;
 }
 
 .desk__subtitle {
