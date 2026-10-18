@@ -25,15 +25,17 @@
 
 入口链：`index.html` → `src/main.ts` → `src/App.vue` → `src/app/AppShell.vue`。别名 `@` = `src/`。
 
-- `src/data/levels/`：剧情与文案的唯一来源。`level01.ts`（刷单返利）、`level02.ts`（冒充客服退款）可玩；`level03.ts` 只有 `coming-soon` 元数据；`index.ts` 是唯一注册表（`LEVELS`、`DEFAULT_LEVEL_ID`、`getPlayableLevel`、`requireLevel`）；`shared.ts` 是两关共用的虚构世界（品牌、妈妈转账、班级群）。`src/data/shop.ts` / `music.ts` / `video.ts` / `phone.ts` / `sms.ts` 是桌面生活与必备应用的虚构数据；`CASES.md` 记录真实案例来源。
+- `src/data/levels/`：剧情与文案的唯一来源。`level01.ts`（刷单返利）、`level02.ts`（冒充客服退款）可玩；`level03.ts` 只有 `coming-soon` 元数据（**有意不写剧情**：半成品话术比「正在制作」更容易误导，且「安全账户」写成可读剧本接近可复用诈骗素材；不要单独补写，要补就整关连转移、复盘、守卫一起补）；`index.ts` 是唯一注册表（`LEVELS`、`DEFAULT_LEVEL_ID`、`getLevel`、`getPlayableLevel`、`playableLevels`、`requireLevel`）；`shared.ts` 是两关共用的虚构世界（品牌、妈妈转账、班级群）。`src/data/shop.ts` / `music.ts` / `video.ts` / `photos.ts` / `phone.ts` / `sms.ts` / `antifraud.ts` 是桌面生活、相册与反诈提示的虚构数据；`CASES.md` 记录真实案例来源。
 - `src/game/level.ts`：关卡契约 `defineLevel`（节点、转移、会话规格、金额口径 `validBalances` / `platformRequiresPaid`、复盘、提醒）。新增关卡只实现这个契约，引擎和场景不认具体关卡。
 - `src/game/engine.ts`：纯状态机。`createInitialState` / `choose` / `isStateConsistent`；所有金额变化只在 `applyEffect` 内发生一次。`STATE_VERSION` 必须与 `src/game/storage.ts` 的 `SAVE_VERSION` 锁步。
 - `src/game/storage.ts`：版本化 localStorage，**每关一个槽** `fj-juzhongju:save:v2:<levelId>`；`parseSave` 逐字段校验节点/选项/金额不变式，坏档只清该关并回退开场。
 - `src/game/debrief.ts`：按 `state.riskTags` 生成「你实际经历了什么」的复盘，并用 `FORBIDDEN_PHRASES` / 否定前缀守卫误导性文案。
-- `src/app/AppShell.vue`：根壳 = 关卡大厅（`LevelDesk.vue`）↔ 某一关的手机（`PhoneShell.vue`），切关用 `:key` 整机重挂载；主题解析和浏览器返回键也在这层。
+- `src/app/AppShell.vue`：根壳 = 关卡大厅（`LevelDesk.vue`）↔ 某一关的手机（`PhoneShell.vue`），切关用 `:key` 整机重挂载；主题解析与浏览器返回键也在这层，这里是**唯一**调用 `useTheme()` 的地方。
+- `src/app/LevelDesk.vue` + `DeskPhone.vue`：书桌大厅（首屏）与桌上的手机卡。点手机后旋转放大整屏转场进该关；锁定关只给反馈不进入。书桌大厅是 `SCENES.md` 记录的**有意偏差**：它是开局前的选关界面，不算「第二层手机外框」，游戏过程仍全程在一部手机里。
 - `src/app/PhoneShell.vue`：单关手机壳，负责锁屏、桌面、底部导航、通知、弹层与音效；剧情推进只经 `useGame(levelId).dispatch(optionId)`，组件内不直接改余额或节点。
-- `src/app/` 其余文件：视图映射（`navigation.ts`）、通知、设置、聊天逐条呈现、短信验证码、时钟、随机、音效等纯前端逻辑。`src/scenes/` 是各视图，`src/components/` 是通用件。
-- `tests/`：Vitest + jsdom。`levels.spec.ts` 自动守卫**所有注册关卡**（结构、可达性、金额、文案），`app.spec.ts` 挂载整部手机点真实按钮（全量约 50 秒）。新增关卡不用补测试，但要保证自动守卫通过。
+- `src/app/` 其余文件：北京时间昼夜主题（`theme.ts`，07:00–18:59 为白天，写到 `<html data-theme>`）、时钟、设置、视图映射（`navigation.ts`）、通知、聊天逐条呈现、短信验证码、上滑解锁（`unlock.ts`）、大厅卡片文案（`levelCardText.ts`）、随机、音效等纯前端逻辑。`src/scenes/` 是各视图，`src/components/` 是通用件。
+- `src/styles/`：`tokens.css` 是颜色/字号/间距/圆角的**唯一来源**（含 `[data-theme='day']` 覆盖），`wallpaper.css` 是纯 CSS 昼夜壁纸（锁屏与桌面共用 `.wall`），`base.css` 是全局基础样式。
+- `tests/`：Vitest + jsdom，14 个 spec。`levels.spec.ts` 自动守卫**所有注册关卡**（结构、可达性、金额、文案），`app.spec.ts` 挂载整部手机点真实按钮（全量约 50 秒），`tokens.spec.ts` 静态守卫文字层级 token 不重复、对比度达标。新增关卡不用补测试，但要保证自动守卫通过。
 
 ## 4. 技术和结构
 
@@ -44,6 +46,7 @@
 - 如使用 `localStorage`，采用版本化存档并校验反序列化结果；**每关一个存档槽**，单关损坏只清那一关。损坏/旧版数据应安全回退到开场，可重新开始。所有面向玩家的展示按数据值渲染为文本，不把剧情文案当 HTML 注入。
 - 优先相对路径资源，保证静态部署可配置基础路径；任何核心剧情不依赖外部服务。
 - 竖屏移动优先，同时兼容桌面预览；适配窄屏和安全区（safe-area），避免按钮被底部工具栏遮住。尊重 `prefers-reduced-motion`，文本对比度和点击热区足够明确。
+- 颜色、字号、间距、圆角一律取 `src/styles/tokens.css` 变量，不在组件里硬编码颜色。昼夜主题只经 `<html data-theme>` 切换；`--c-on-wall*` 归 tokens 管，改壁纸时不要动。改 token 前后跑 `tests/tokens.spec.ts`。
 
 ## 5. 常用命令
 
@@ -53,9 +56,9 @@ npm run dev                          # 开发服务器 http://127.0.0.1:5173
 npm run build                        # 产物到 dist/（已 gitignore）
 npm run preview                      # 预览构建 http://127.0.0.1:4173
 npm run typecheck                    # vue-tsc --noEmit -p tsconfig.app.json
-npm test                             # vitest run，14 个 spec / 242 个用例
+npm test                             # vitest run，14 个 spec / 252 个用例（主要是 app.spec，全量约 50 秒）
 npx vitest run tests/levels.spec.ts tests/engine.spec.ts  # 改关卡/引擎时先跑针对性用例
-npm run verify                       # Edge/Chrome headless 跑三条结局路径 + 320/375/390px 溢出 + 截图到 .verify/
+npm run verify                       # Edge/Chrome headless 跑两关主线（第一关三条结局 + 第二关到复盘）+ 320/375/390px 无横向溢出 + 截图到 .verify/
 npm run smoke:public -- https://<url>/   # 发布到公网后的冒烟测试
 ```
 
