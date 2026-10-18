@@ -242,7 +242,7 @@ const options = computed<{ id: OptionId; label: string; kind: 'primary' | 'secon
     .map((id) => ({
       id,
       label: props.level.options[id]?.label ?? id,
-      kind: spec.value.secondaryOptions.includes(id) ? 'secondary' : 'primary',
+      kind: spec.value.safeOptions.includes(id) ? 'primary' : 'secondary',
     }))
 })
 
@@ -425,7 +425,13 @@ const detail = computed(() => {
       />
 
       <!-- 剧情选项：全部为真实 button，键盘可操作 -->
-      <div v-if="options.length" class="chat__actions">
+      <div
+        v-if="options.length"
+        class="chat__actions"
+        role="group"
+        aria-labelledby="chat-choice-label"
+      >
+        <p id="chat-choice-label" class="chat__actions-label">你会怎么回？</p>
         <button
           v-for="option in options"
           :key="option.id"
@@ -708,6 +714,13 @@ const detail = computed(() => {
 
 .chat__pendingtext {
   font-size: var(--font-sm);
+  color: var(--c-text-soft);
+}
+
+.chat__actions-label {
+  font-size: var(--font-xs);
+  font-weight: 600;
+  letter-spacing: 0.02em;
   color: var(--c-text-soft);
 }
 

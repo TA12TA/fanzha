@@ -669,6 +669,14 @@ describe('E. 整部手机的交互（B01–B14）', () => {
   it('B13 结局与复盘都可离开并从桌面/手册再次进入', async () => {
     const wrapper = await mountApp()
     await startAndOpenInvite(wrapper)
+
+    // 选择框不能用视觉主色引导玩家点骗局选项。
+    const safe = wrapper.findAll('button').find((b) => b.text().trim() === '拒绝并举报')
+    const risky = wrapper.findAll('button').find((b) => b.text().trim() === '进群看看')
+    expect(safe?.classes(), '安全选项应是主按钮').toContain('btn--primary')
+    expect(risky?.classes(), '骗局选项应是次要按钮').toContain('btn--secondary')
+    expect(wrapper.find('.chat__actions-label').text()).toBe('你会怎么回？')
+
     await click(wrapper, '拒绝并举报')
     await flush()
     expect(wrapper.text()).toContain('提前识破')

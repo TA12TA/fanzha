@@ -636,7 +636,7 @@ export const level03 = defineLevel<L3Node, L3Option>({
       'l3-transfer-2': 'l3-police',
     },
 
-    secondaryOptions: [
+    safeOptions: [
       'l3-verify',
       'l3-refuse',
       'l3-refuse-screen',

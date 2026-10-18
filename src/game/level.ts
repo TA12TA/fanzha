@@ -136,8 +136,8 @@ export interface LevelChatSpec<TNode extends string = string, TOption extends st
   optionSession: Partial<Record<TNode, string>>
   /** 打开消息应用时应定位到的会话（如邀请未处理时先看学姐）。 */
   preferredSession: Partial<Record<TNode, string>>
-  /** 渲染为次要按钮的选项（其余为主要按钮）。 */
-  secondaryOptions: TOption[]
+  /** 安全/止损选项：渲染为主按钮；骗局选项作为次要按钮，避免视觉引导玩家点错。 */
+  safeOptions: TOption[]
   /**
    * **不渲染成底部按钮**的选项：由界面上的专门入口触发
    * （标题栏的「订单详情」、资料入口的「···」等）。

@@ -676,7 +676,7 @@ export const level02 = defineLevel<L2Node, L2Option>({
       'l2-verify-3': 'l2-service',
     },
 
-    secondaryOptions: ['l2-refuse', 'l2-cancel-200', 'l2-stop', 'l2-refuse-300', 'l2-cancel-300'],
+    safeOptions: ['l2-refuse', 'l2-cancel-200', 'l2-stop', 'l2-refuse-300', 'l2-cancel-300'],
 
     /**
      * 这两个选项由界面上的专门入口触发，不作为底部按钮渲染：

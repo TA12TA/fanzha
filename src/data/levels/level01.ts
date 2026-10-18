@@ -730,13 +730,13 @@ export const level01 = defineLevel<L1Node, L1Option>({
     },
 
     /**
-     * 渲染为次要按钮的选项（其余为主要按钮）。
+     * 安全/止损选项：渲染为主按钮；骗局选项作为次要按钮。
      *
      * `view-profile` 不在其中：它由标题栏的「···」入口触发，
      * 列在下面的 `hiddenOptions` 里，因此底部操作区只有两个按钮 ——
      * 与第一关原先的行为一致。
      */
-    secondaryOptions: ['reject-invite', 'report-group', 'cancel-100', 'stop-after-100', 'stop-at-freeze', 'cancel-300'],
+    safeOptions: ['reject-invite', 'report-group', 'cancel-100', 'stop-after-100', 'stop-at-freeze', 'cancel-300'],
 
     /** 由资料入口触发，不作为底部按钮渲染。 */
     hiddenOptions: ['view-profile'],
