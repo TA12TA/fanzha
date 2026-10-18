@@ -40,7 +40,7 @@ import { playSound, setSoundEnabled } from '@/app/sound'
 import { useGame } from '@/app/useGame'
 import { REMINDER_HEADLINE, REMINDER_TITLE, reminderFor } from '@/data/antifraud'
 import { BRAND } from '@/data/levels/shared'
-import { codeGateFor, wantsReminderPopup } from '@/game/level'
+import { codeGateFor, popupCountdownFor, wantsReminderPopup } from '@/game/level'
 import type { PlayableLevel } from '@/game/level'
 import type { OptionId } from '@/game/types'
 
@@ -213,7 +213,7 @@ const noticeLeaving = computed(() => notices.leaving.value)
  * 弹窗是模态的、必须点一下才能继续 —— 所以绝不能每个节点都弹，
  * 否则玩家会开始无脑点「知道了」，等于没弹。
  */
-const antifraudDialog = ref<{ body: string } | null>(null)
+const antifraudDialog = ref<{ body: string; countdownSeconds: number } | null>(null)
 
 /** 关闭弹窗：玩家已读完。 */
 function closeAntifraudDialog(): void {
@@ -238,7 +238,12 @@ function pushAntifraud(node = state.value.node): void {
   if (wantsReminderPopup(props.level, node)) {
     // 只记录 + 弹窗，不进横幅队列 —— 同一条内容不该在两个地方各说一遍。
     notices.record(item)
-    if (settings.value.banner) antifraudDialog.value = { body }
+    if (settings.value.banner) {
+      antifraudDialog.value = {
+        body,
+        countdownSeconds: popupCountdownFor(props.level, node),
+      }
+    }
     return
   }
 
@@ -844,6 +849,7 @@ onBeforeUnmount(() => {
       :title="REMINDER_TITLE"
       :headline="REMINDER_HEADLINE"
       :body="antifraudDialog.body"
+      :countdown-seconds="antifraudDialog.countdownSeconds"
       @close="closeAntifraudDialog"
     />
 

@@ -204,8 +204,15 @@ async function enterCode(wrapper: VueWrapper, code: string): Promise<void> {
  * 所以这里要把这一步补上，否则测出来的流程根本走不通。
  */
 async function dismissAntifraud(wrapper: VueWrapper): Promise<boolean> {
-  const ok = wrapper.findAll('button').find((btn) => btn.text().trim() === '我知道了')
-  if (!ok) return false
+  const ok = wrapper.find('.af__ok')
+  if (!ok.exists()) return false
+
+  // 转账环节的弹窗有倒计时：按钮在倒计时结束前是 disabled 的。
+  if (ok.attributes('disabled') !== undefined) {
+    const seconds = Number(wrapper.find('.af__countdown').text().match(/\d+/)?.[0] ?? 0)
+    if (seconds > 0) await new Promise((resolve) => setTimeout(resolve, (seconds + 1) * 1000))
+  }
+
   await ok.trigger('click')
   await flush()
   return true
@@ -2305,6 +2312,8 @@ describe('Y. 关卡大厅（书桌选关）', () => {
     const wrapper = await mountApp({ atDesk: true })
     await tapPhone(wrapper, 2)
     await swipeUnlock(wrapper)
+    expect(wrapper.find('.af').text(), '进入第三关应先弹冒充公检法预警').toContain('冒充公检法诈骗')
+    await dismissAntifraud(wrapper)
     await clickDesktopApp(wrapper, '青讯')
     // 第三关的 preferredSession 会直接把青讯定位到“陈警官”会话。
     await click(wrapper, '挂断，自己去核实')
@@ -2319,6 +2328,7 @@ describe('Y. 关卡大厅（书桌选关）', () => {
     const wrapper = await mountApp({ atDesk: true })
     await tapPhone(wrapper, 2)
     await swipeUnlock(wrapper)
+    await dismissAntifraud(wrapper)
     await clickDesktopApp(wrapper, '青讯')
     await click(wrapper, '显示全部')
     await flush()
@@ -2328,6 +2338,8 @@ describe('Y. 关卡大厅（书桌选关）', () => {
 
     await click(wrapper, '继续听他说')
     await click(wrapper, '按他说的共享屏幕')
+    expect(wrapper.find('.af__countdown').exists(), '转账弹窗应有倒计时').toBe(true)
+    expect(wrapper.find('.af__ok').attributes('disabled'), '倒计时结束前不能关闭').toBeDefined()
     await dismissAntifraud(wrapper)
     expect(wrapper.find('.wallet').exists(), '应进入第三关钱包待确认页').toBe(true)
     expect(wrapper.text()).toContain('500')

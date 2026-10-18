@@ -308,6 +308,11 @@ export interface PlayableLevel<TNode extends string = string, TOption extends st
    * 挑出来弹窗，其余仍在顶部横幅里轻声提示。
    */
   popupReminders?: readonly TNode[]
+  /**
+   * 需要先等待几秒才能关闭的弹窗提醒（节点 → 秒数）。
+   * 只允许用在 popupReminders 里的节点；转账环节用它强迫玩家停一下。
+   */
+  popupCountdowns?: Partial<Record<TNode, number>>
   /** 界面文案。 */
   copy: LevelCopy
   /** 钱包收支记录（完全由状态推导，不单独存储）。 */
@@ -569,6 +574,17 @@ export function validateLevel(level: PlayableLevel): string[] {
       problems.push(`popupReminders 里的「${node}」没有提醒正文，弹窗会是空的`)
     }
   }
+  for (const [node, seconds] of Object.entries(level.popupCountdowns ?? {})) {
+    if (!nodeIds.includes(node)) {
+      problems.push(`popupCountdowns 里有未知节点「${node}」`)
+    } else if (typeof seconds !== 'number') {
+      problems.push(`节点「${node}」的弹窗倒计时必须是数字`)
+    } else if (!(level.popupReminders ?? []).includes(node)) {
+      problems.push(`节点「${node}」有倒计时，但不在 popupReminders 里`)
+    } else if (!Number.isInteger(seconds) || seconds <= 0 || seconds > 10) {
+      problems.push(`节点「${node}」的弹窗倒计时必须是 1–10 秒的整数`)
+    }
+  }
 
   // 11) 会话引用完整性。
   const sessionIds = new Set(level.chat.sessions.map((s) => s.id))
@@ -773,6 +789,11 @@ export function wantsReminderPopup<TNode extends string, TOption extends string>
   node: NodeId,
 ): boolean {
   return (level.popupReminders ?? []).includes(node as TNode)
+}
+
+/** 当前节点的弹窗倒计时秒数；没有则返回 0（可立即关闭）。 */
+export function popupCountdownFor(level: PlayableLevel, node: NodeId): number {
+  return level.popupCountdowns?.[node] ?? 0
 }
 
 /** 由状态取当前关卡要用的界面文案（找不到时回退到兜底文案）。 */

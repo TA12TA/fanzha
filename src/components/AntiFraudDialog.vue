@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { playSound } from '@/app/sound'
 
 /**
@@ -16,29 +16,45 @@ import { playSound } from '@/app/sound'
  *   每个节点都弹，玩家就开始无脑点「知道了」，等于没弹。
  * - 不用真实徽标、不画警徽、不给任何链接：文字与自绘图形。
  */
-defineProps<{
-  /** 提醒正文（来自关卡数据的 `reminders`）。 */
-  body: string
-  /** 第一行：「检测到你疑似正在被诈骗」。 */
-  headline: string
-  /** 顶部小标题：国家反诈中心。 */
-  title: string
-}>()
+const props = withDefaults(
+  defineProps<{
+    /** 提醒正文（来自关卡数据的 `reminders`）。 */
+    body: string
+    /** 第一行：「检测到你疑似正在被诈骗」。 */
+    headline: string
+    /** 顶部小标题：国家反诈中心。 */
+    title: string
+    /** 需要先等待的秒数；转账环节用，0 表示可以立即关闭。 */
+    countdownSeconds?: number
+  }>(),
+  { countdownSeconds: 0 },
+)
 
 const emit = defineEmits<{
   (e: 'close'): void
 }>()
 
 const okRef = ref<HTMLButtonElement | null>(null)
+const remaining = ref(Math.max(0, Math.ceil(props.countdownSeconds)))
+const canClose = computed(() => remaining.value <= 0)
+let countdownTimer: ReturnType<typeof setInterval> | null = null
+
+function clearCountdown(): void {
+  if (countdownTimer) {
+    clearInterval(countdownTimer)
+    countdownTimer = null
+  }
+}
 
 function close(): void {
+  if (!canClose.value) return
   playSound('tap')
   emit('close')
 }
 
-/** Esc 关闭 —— 键盘用户不该被一个只能点鼠标的弹窗困住。 */
+/** Esc 关闭 —— 倒计时结束前不响应，避免绕过“先停一下”。 */
 function onKeydown(event: KeyboardEvent): void {
-  if (event.key === 'Escape') {
+  if (event.key === 'Escape' && canClose.value) {
     event.preventDefault()
     close()
   }
@@ -47,12 +63,19 @@ function onKeydown(event: KeyboardEvent): void {
 onMounted(() => {
   // 焦点落到唯一的按钮上：读屏会先念标题与正文，再让玩家确认。
   okRef.value?.focus()
+  if (remaining.value > 0) {
+    countdownTimer = setInterval(() => {
+      remaining.value = Math.max(0, remaining.value - 1)
+      if (remaining.value === 0) clearCountdown()
+    }, 1000)
+  }
   if (typeof globalThis.addEventListener === 'function') {
     globalThis.addEventListener('keydown', onKeydown)
   }
 })
 
 onBeforeUnmount(() => {
+  clearCountdown()
   if (typeof globalThis.removeEventListener === 'function') {
     globalThis.removeEventListener('keydown', onKeydown)
   }
@@ -83,7 +106,20 @@ onBeforeUnmount(() => {
       <h2 id="af-headline" class="af__headline">{{ headline }}</h2>
       <p id="af-body" class="af__body">{{ body }}</p>
 
-      <button ref="okRef" type="button" class="af__ok" @click="close">我知道了</button>
+      <p v-if="!canClose" id="af-countdown" class="af__countdown" role="status" aria-live="polite">
+        请先停一下，{{ remaining }} 秒后可继续
+      </p>
+
+      <button
+        ref="okRef"
+        type="button"
+        class="af__ok"
+        :disabled="!canClose"
+        :aria-describedby="!canClose ? 'af-countdown' : undefined"
+        @click="close"
+      >
+        {{ canClose ? '我知道了' : `请稍等 ${remaining} 秒` }}
+      </button>
     </section>
   </div>
 </template>
@@ -155,6 +191,18 @@ onBeforeUnmount(() => {
   color: var(--c-text-soft);
 }
 
+.af__countdown {
+  margin-bottom: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-left: 2px solid var(--c-danger);
+  border-radius: var(--radius-sm);
+  background: var(--c-warn-bg);
+  color: var(--c-warn-text);
+  font-size: var(--font-xs);
+  font-weight: 600;
+  line-height: 1.45;
+}
+
 .af__ok {
   width: 100%;
   min-height: var(--tap-min);
@@ -166,8 +214,13 @@ onBeforeUnmount(() => {
   font-weight: 700;
 }
 
-.af__ok:active {
+.af__ok:active:not(:disabled) {
   transform: scale(0.99);
+}
+
+.af__ok:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 @keyframes af-fade {
