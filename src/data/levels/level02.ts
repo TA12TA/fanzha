@@ -220,7 +220,7 @@ export const level02 = defineLevel<L2Node, L2Option>({
     title: '冒充客服退款',
     category: '冒充客服',
     blurb: '「客服」说你订单重复扣款要退款，但要你先转一笔验证金。',
-    goal: '退款不需要你先转钱，也不需要你的短信验证码。',
+    goal: '正常退款不会先让你转钱，也不会要短信验证码。',
     accent: ['#3f7f6b', '#255446'],
     miniPreview: {
       caption: '青集商城 · 客服',

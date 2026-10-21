@@ -431,7 +431,7 @@ const detail = computed(() => {
         role="group"
         aria-labelledby="chat-choice-label"
       >
-        <p id="chat-choice-label" class="chat__actions-label">你会怎么回？</p>
+        <p id="chat-choice-label" class="chat__actions-label">你想怎么回？</p>
         <button
           v-for="option in options"
           :key="option.id"

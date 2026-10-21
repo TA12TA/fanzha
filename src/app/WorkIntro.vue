@@ -16,16 +16,14 @@ const emit = defineEmits<{ (e: 'close'): void }>()
       <p class="work-intro__subtitle">你的手机</p>
 
       <p class="work-intro__premise">
-        一部虚构手机，三场针对大学生的骗局。你会在哪一步停下来？
+        三部手机，三个常见的校园骗局。点开任意一部，从一条消息开始。
       </p>
 
-      <ol class="work-intro__steps">
-        <li><span>01</span>点桌上的手机，选一关</li>
-        <li><span>02</span>上滑解锁，进入桌面</li>
-        <li><span>03</span>在消息、钱包和反诈手册里自己判断</li>
-      </ol>
+      <p class="work-intro__guide">
+        点手机选一关，上滑解锁。拿不准的时候，钱包和反诈手册都在桌面上。
+      </p>
 
-      <p class="work-intro__meta">约 8 分钟 · 3 个关卡</p>
+      <p class="work-intro__meta">约 8 分钟</p>
 
       <button type="button" class="btn btn--primary work-intro__start" autofocus @click="emit('close')">
         进入作品
@@ -85,30 +83,13 @@ const emit = defineEmits<{ (e: 'close'): void }>()
   color: var(--c-text-soft);
 }
 
-.work-intro__steps {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin: 18px 0 0;
-  padding: 14px 0;
+.work-intro__guide {
+  margin-top: 14px;
+  padding-top: 12px;
   border-top: 1px solid var(--c-line);
-  border-bottom: 1px solid var(--c-line);
-  list-style: none;
   font-size: 12px;
-  line-height: 1.5;
-}
-
-.work-intro__steps li {
-  display: flex;
-  gap: 8px;
-}
-
-.work-intro__steps span {
-  flex: none;
-  min-width: 1.6em;
-  color: var(--c-accent);
-  font-variant-numeric: tabular-nums;
-  font-weight: 700;
+  line-height: 1.7;
+  color: var(--c-text-soft);
 }
 
 .work-intro__meta {

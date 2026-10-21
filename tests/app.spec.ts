@@ -675,7 +675,7 @@ describe('E. 整部手机的交互（B01–B14）', () => {
     const risky = wrapper.findAll('button').find((b) => b.text().trim() === '进群看看')
     expect(safe?.classes(), '安全选项应是主按钮').toContain('btn--primary')
     expect(risky?.classes(), '骗局选项应是次要按钮').toContain('btn--secondary')
-    expect(wrapper.find('.chat__actions-label').text()).toBe('你会怎么回？')
+    expect(wrapper.find('.chat__actions-label').text()).toBe('你想怎么回？')
 
     await click(wrapper, '拒绝并举报')
     await flush()
@@ -697,12 +697,12 @@ describe('E. 整部手机的交互（B01–B14）', () => {
     await click(wrapper, '看复盘')
     await flush()
     expect(wrapper.text()).toContain('复盘')
-    expect(wrapper.text()).toContain('你碰到的')
+    expect(wrapper.text()).toContain('你这局遇到的')
 
     // 复盘也可以离开再进入
     await click(wrapper, '桌面')
     await clickDesktopApp(wrapper, '国家反诈中心')
-    expect(wrapper.text()).toContain('你碰到的')
+    expect(wrapper.text()).toContain('你这局遇到的')
   })
 
   it('B13/A09 重开必须二次确认；取消则进度不变', async () => {
@@ -2159,7 +2159,7 @@ describe('Y. 关卡大厅（书桌选关）', () => {
 
     expect(wrapper.find('.desk').exists(), '首屏应是书桌场景').toBe(true)
     expect(wrapper.text()).toContain('关卡大厅')
-    expect(wrapper.text()).toContain('选一部手机开始挑战')
+    expect(wrapper.text()).toContain('点开一部手机，看看会发生什么')
 
     const phones = wrapper.findAll('.deskphone')
     expect(phones.length, '三关应有三部手机（三关都可玩）').toBe(3)

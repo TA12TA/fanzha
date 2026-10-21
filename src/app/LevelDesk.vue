@@ -371,7 +371,7 @@ const canReturn = computed(() => props.showReturn && currentTitle.value !== '')
     <header class="desk__head">
       <p class="desk__work">反诈局中局：你的手机</p>
       <h1 class="desk__title">关卡大厅</h1>
-      <p class="desk__subtitle">选一部手机开始挑战</p>
+      <p class="desk__subtitle">点开一部手机，看看会发生什么</p>
     </header>
 
     <div ref="stageRef" class="desk__stage" :class="{ 'desk__stage--flying': flying }">

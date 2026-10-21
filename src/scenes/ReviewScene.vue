@@ -44,14 +44,14 @@ const labels = computed(() => riskLabelsOf(props.state))
       </article>
 
       <section v-if="labels.length" class="tags" aria-label="本局经历">
-        <h2 class="tags__title">你碰到的</h2>
+        <h2 class="tags__title">你这局遇到的</h2>
         <ul class="tags__list">
           <li v-for="label in labels" :key="label" class="tag tags__item">{{ label }}</li>
         </ul>
       </section>
 
       <section class="items" aria-label="按经历复盘">
-        <h2 class="items__title">逐条看</h2>
+        <h2 class="items__title">这次发生了什么</h2>
         <ol class="items__list">
           <li v-for="item in debrief.items" :key="item.id" class="card items__item">
             <h3 class="items__itemtitle">{{ item.title }}</h3>
@@ -63,7 +63,7 @@ const labels = computed(() => riskLabelsOf(props.state))
       </section>
 
       <section class="actions" aria-label="行动建议">
-        <h2 class="actions__title">记住三件事</h2>
+        <h2 class="actions__title">接下来可以这样做</h2>
         <ol class="actions__list">
           <li v-for="action in debrief.actions" :key="action">{{ action }}</li>
         </ol>
