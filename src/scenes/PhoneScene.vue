@@ -62,6 +62,15 @@ function toggleSpeaker(): void {
   playSound('tap')
   speaker.value = !speaker.value
 }
+
+/** 手势返回先挂断通话，再退出电话应用。 */
+function handleBack(): boolean {
+  if (!call.value) return false
+  hangUp()
+  return true
+}
+
+defineExpose({ handleBack })
 </script>
 
 <template>

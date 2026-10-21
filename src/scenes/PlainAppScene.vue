@@ -38,6 +38,15 @@ function close(): void {
 }
 
 /** 左右翻页（到边界就停住，不做循环，避免误解为无限相册）。 */
+/** 手势返回先关闭全屏照片，再退出相册。 */
+function handleBack(): boolean {
+  if (openIndex.value === null) return false
+  close()
+  return true
+}
+
+defineExpose({ handleBack })
+
 function step(delta: number): void {
   if (openIndex.value === null) return
   const next = openIndex.value + delta

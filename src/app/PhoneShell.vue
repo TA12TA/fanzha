@@ -124,6 +124,8 @@ function initialView(): ViewId {
 }
 
 const view = ref<ViewId>(initialView())
+/** 当前场景暴露的二级返回处理（会话/详情/通话/查看器/评论面板）。 */
+const sceneRef = ref<{ handleBack?: () => boolean } | null>(null)
 /**
  * 「继续当前事项」的解锁状态。
  *
@@ -640,6 +642,8 @@ function goBack(): void {
     closeProfile()
     return
   }
+  // 先让当前场景处理自己的二级页面；没有可退的二级页才退回桌面。
+  if (sceneRef.value?.handleBack?.()) return
   if (view.value === 'home' || view.value === 'intro') return
   // 消息应用内逐层退：会话 → 会话列表 → 桌面。
   if (view.value === 'chat') {
@@ -813,15 +817,9 @@ const reviewOption = computed(() => debriefOptionOf(props.level, state.value.nod
 let historyGuardActive = false
 
 function onPopState(): void {
-  if (confirmRestart.value) {
-    confirmRestart.value = false
-  } else if (confirmClearAll.value) {
-    confirmClearAll.value = false
-  } else if (profileOpen.value) {
-    profileOpen.value = false
-  } else if (view.value !== 'home' && view.value !== 'intro') {
-    view.value = 'home'
-  }
+  // 手势/浏览器返回必须走和“返回上一层”按钮完全相同的层级：
+  // 会话 → 会话列表、商品详情 → 列表、通话 → 挂断、照片查看器 → 网格。
+  goBack()
   // 始终保持一条游戏内历史，避免返回键把玩家带出游戏。
   globalThis.history.pushState({ phone: true }, '')
 }
@@ -1034,12 +1032,12 @@ onBeforeUnmount(() => {
           </div>
         </section>
 
-        <PhoneScene v-else-if="view === 'phone'" @back="goBack" />
-        <SmsScene v-else-if="view === 'sms'" :code-sms="codeSmsText" @back="goBack" />
-        <ShopScene v-else-if="view === 'shop'" :initial-tab="shopTab" @back="goBack" />
+        <PhoneScene v-else-if="view === 'phone'" ref="sceneRef" @back="goBack" />
+        <SmsScene v-else-if="view === 'sms'" ref="sceneRef" :code-sms="codeSmsText" @back="goBack" />
+        <ShopScene v-else-if="view === 'shop'" ref="sceneRef" :initial-tab="shopTab" @back="goBack" />
         <MusicScene v-else-if="view === 'music'" @back="goBack" />
-        <VideoScene v-else-if="view === 'video'" @back="goBack" />
-        <PlainAppScene v-else-if="view === 'photos'" :key="photosKey" @back="goBack" />
+        <VideoScene v-else-if="view === 'video'" ref="sceneRef" @back="goBack" />
+        <PlainAppScene v-else-if="view === 'photos'" ref="sceneRef" :key="photosKey" @back="goBack" />
       </div>
     </main>
 

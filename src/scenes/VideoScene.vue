@@ -320,6 +320,15 @@ function closeOverlays(): void {
   shareOpen.value = false
 }
 
+/** 手势返回先关评论/分享面板，而不是直接退回桌面。 */
+function handleBack(): boolean {
+  if (!commentsOpen.value && !shareOpen.value) return false
+  closeOverlays()
+  return true
+}
+
+defineExpose({ handleBack })
+
 onMounted(() => {
   timer = setInterval(tick, 1000)
   void prepareVideoCache()

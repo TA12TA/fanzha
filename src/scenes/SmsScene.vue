@@ -64,12 +64,18 @@ function openThread(id: string): void {
 }
 
 function back(): void {
-  if (selectedId.value) {
-    selectedId.value = null
-    return
-  }
+  if (handleBack()) return
   emit('back')
 }
+
+/** 给父级手势返回用：先退出会话，再退出应用。 */
+function handleBack(): boolean {
+  if (!selectedId.value) return false
+  selectedId.value = null
+  return true
+}
+
+defineExpose({ handleBack })
 
 function send(): void {
   const text = draft.value.trim()

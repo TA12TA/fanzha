@@ -56,6 +56,25 @@ function toggleWish(id: string): void {
     : [...wishlist.value, id]
 }
 
+/** 给父级手势返回用：先关详情/政策，再回首页，最后才退出应用。 */
+function handleBack(): boolean {
+  if (active.value) {
+    closeProduct()
+    return true
+  }
+  if (policyOpen.value) {
+    policyOpen.value = false
+    return true
+  }
+  if (tab.value !== 'home') {
+    tab.value = 'home'
+    return true
+  }
+  return false
+}
+
+defineExpose({ handleBack })
+
 function closeOnEscape(event: KeyboardEvent): void {
   if (event.key === 'Escape' && active.value) closeProduct()
 }
