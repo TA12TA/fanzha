@@ -714,6 +714,7 @@ describe('E. 整部手机的交互（B01–B14）', () => {
     await click(wrapper, '桌面')
     await click(wrapper, '重新开始本局')
     expect(wrapper.text()).toContain('重来一次？')
+    expect(wrapper.text(), '重开确认不再解释清档后果').not.toContain('清掉就找不回来了')
 
     await click(wrapper, '算了，接着玩')
     expect(wrapper.text()).toContain('700')

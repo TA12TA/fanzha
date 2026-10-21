@@ -1054,9 +1054,6 @@ onBeforeUnmount(() => {
       size="dialog"
       @close="cancelRestart"
     >
-      <p class="confirm__text">
-        「{{ level.meta.title }}」的进度、余额和这局的记录都会清掉，回到开场。清掉就找不回来了。
-      </p>
       <template #footer>
         <button type="button" class="btn btn--danger" @click="doRestart">清掉，重来</button>
         <button type="button" class="btn btn--secondary" @click="cancelRestart">
