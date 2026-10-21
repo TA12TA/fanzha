@@ -17,6 +17,17 @@ const feedRef = ref<HTMLElement | null>(null)
 const activeVideo = ref<HTMLVideoElement | null>(null)
 const activeIndex = ref(0)
 const playing = ref(true)
+
+/**
+ * 只有进入青影后才开始缓存；缓存放在 CacheStorage 中，关闭页面后仍保留。
+ * 首条缓存完成后进入 feed，后续视频在后台顺序预缓存。
+ */
+const VIDEO_CACHE = 'qingying-videos-v1'
+const cachedSources = ref<Record<string, string>>({})
+const loading = ref(true)
+const loadingProgress = ref(0)
+const cacheDone = ref(0)
+const cacheTotal = ref(0)
 const muted = ref(false)
 const progress = ref(0)
 const followed = ref<string[]>([])
@@ -112,6 +123,67 @@ function onVideoTimeUpdate(): void {
 function onVideoEnded(): void {
   playing.value = false
   progress.value = 100
+}
+
+function videoSource(video: VideoItem): string {
+  return cachedSources.value[video.id] ?? video.video ?? ''
+}
+
+function setCachedSource(id: string, blob: Blob): void {
+  if (cachedSources.value[id]) return
+  cachedSources.value = { ...cachedSources.value, [id]: URL.createObjectURL(blob) }
+}
+
+async function cacheVideo(video: VideoItem, index: number): Promise<void> {
+  if (!video.video) return
+  try {
+    const cache = await caches.open(VIDEO_CACHE)
+    const hit = await cache.match(video.video)
+    if (hit) {
+      setCachedSource(video.id, await hit.blob())
+      cacheDone.value = Math.max(cacheDone.value, index + 1)
+      return
+    }
+
+    const response = await fetch(video.video)
+    if (!response.ok || !response.body) throw new Error('video fetch failed')
+    const total = Number(response.headers.get('content-length') || 0)
+    const reader = response.body.getReader()
+    const chunks: BlobPart[] = []
+    let received = 0
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      if (!value) continue
+      chunks.push(value)
+      received += value.byteLength
+      if (total > 0) loadingProgress.value = Math.min(99, Math.round((received / total) * 100))
+    }
+    loadingProgress.value = 100
+    const blob = new Blob(chunks, { type: response.headers.get('content-type') || 'video/mp4' })
+    await cache.put(
+      video.video,
+      new Response(blob, { headers: { 'Content-Type': blob.type || 'video/mp4' } }),
+    )
+    setCachedSource(video.id, blob)
+    cacheDone.value = Math.max(cacheDone.value, index + 1)
+  } catch {
+    // 缓存失败不影响在线播放；下次进入青影再试。
+  }
+}
+
+async function prepareVideoCache(): Promise<void> {
+  const videos = VIDEOS.filter((video) => video.video)
+  cacheTotal.value = videos.length
+  if (typeof caches === 'undefined' || !globalThis.caches) {
+    loading.value = false
+    return
+  }
+  if (videos[0]) await cacheVideo(videos[0], 0)
+  loading.value = false
+  for (let index = 1; index < videos.length; index += 1) {
+    await cacheVideo(videos[index], index)
+  }
 }
 
 function formatCount(value: number): string {
@@ -224,10 +296,12 @@ function closeOverlays(): void {
 
 onMounted(() => {
   timer = setInterval(tick, 1000)
+  void prepareVideoCache()
 })
 
 onBeforeUnmount(() => {
   activeVideo.value?.pause()
+  for (const url of Object.values(cachedSources.value)) URL.revokeObjectURL(url)
   if (timer) clearInterval(timer)
   timer = null
   if (toastTimer) clearTimeout(toastTimer)
@@ -261,6 +335,16 @@ onBeforeUnmount(() => {
       <span class="feedhead__spacer" aria-hidden="true"></span>
     </header>
 
+    <div v-if="loading" class="video__loading" role="status" aria-live="polite">
+      <p class="video__loadingtitle">正在准备视频</p>
+      <div class="video__loadingbar" aria-hidden="true">
+        <span :style="{ width: `${loadingProgress}%` }"></span>
+      </div>
+      <p class="video__loadingmeta">
+        {{ loadingProgress }}% · 缓存 {{ cacheDone }}/{{ cacheTotal }}
+      </p>
+    </div>
+
     <!-- 一屏一条，上下滑动 -->
     <div ref="feedRef" class="feed" aria-label="短视频推荐" @scroll.passive="onScroll">
       <article
@@ -274,7 +358,7 @@ onBeforeUnmount(() => {
           v-if="video.video && index === activeIndex"
           :ref="(el) => setActiveVideo(el as Element | null)"
           class="clip__video"
-          :src="video.video"
+          :src="videoSource(video)"
           :poster="video.image"
           :muted="muted"
           playsinline
@@ -796,6 +880,47 @@ onBeforeUnmount(() => {
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.02em;
   color: rgb(255 255 255 / 86%);
+}
+
+.video__loading {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  background: rgb(6 11 8 / 84%);
+  color: #f7f0e2;
+  text-align: center;
+}
+
+.video__loadingtitle {
+  font-size: var(--font-md);
+  font-weight: 700;
+}
+
+.video__loadingbar {
+  width: min(260px, 72%);
+  height: 5px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 18%);
+}
+
+.video__loadingbar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #f7f0e2;
+  transition: width 180ms linear;
+}
+
+.video__loadingmeta {
+  font-size: var(--font-xs);
+  color: rgb(247 240 226 / 62%);
 }
 
 .video__empty {
