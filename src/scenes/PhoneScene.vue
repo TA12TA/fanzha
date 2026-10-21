@@ -115,30 +115,41 @@ function toggleSpeaker(): void {
     </div>
 
     <div v-if="call" class="call" role="dialog" aria-modal="true" :aria-label="`呼叫${call.name}`">
-      <div class="call__avatar" aria-hidden="true">{{ call.name.slice(0, 1) }}</div>
       <p class="call__status">正在呼叫</p>
-      <h2 class="call__name">{{ call.name }}</h2>
-      <p class="call__number">{{ call.number }}</p>
+
+      <div class="call__identity">
+        <div class="call__avatar" aria-hidden="true">{{ call.name.slice(0, 1) }}</div>
+        <h2 class="call__name">{{ call.name }}</h2>
+        <p class="call__number">{{ call.number }}</p>
+      </div>
 
       <div class="call__actions">
-        <button type="button" class="call__mini" :class="{ 'call__mini--on': speaker }" @click="toggleSpeaker">
-          <span aria-hidden="true">◖</span>
-          {{ speaker ? '免提已开' : '免提' }}
-        </button>
-        <span class="call__endwrap">
+        <div class="call__action">
+          <button
+            type="button"
+            class="call__tool"
+            :class="{ 'call__tool--on': speaker }"
+            :aria-pressed="speaker"
+            aria-label="免提"
+            @click="toggleSpeaker"
+          >
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M4 9h3l4-3v12l-4-3H4Z" />
+              <path d="M15 9.5a4 4 0 0 1 0 5" />
+              <path d="M17.5 7a7 7 0 0 1 0 10" />
+            </svg>
+          </button>
+          <span class="call__actionlabel" aria-hidden="true">{{ speaker ? '免提已开' : '免提' }}</span>
+        </div>
+
+        <div class="call__action">
           <button type="button" class="call__end" aria-label="挂断" @click="hangUp">
-            <svg
-              viewBox="0 0 24 24"
-              width="30"
-              height="30"
-              fill="currentColor"
-              aria-hidden="true"
-            >
+            <svg viewBox="0 0 24 24" width="30" height="30" fill="currentColor" aria-hidden="true">
               <path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08a.956.956 0 0 1-.29-.7c0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.67c.18.18.29.43.29.71 0 .27-.11.52-.29.7l-2.48 2.48a.956.956 0 0 1-.7.29c-.28 0-.53-.11-.71-.29-.79-.73-1.68-1.36-2.66-1.85a.996.996 0 0 1-.56-.9v-3.1C15.15 9.25 13.6 9 12 9Z" />
             </svg>
           </button>
-          <span class="call__endlabel" aria-hidden="true">挂断</span>
-        </span>
+          <span class="call__actionlabel" aria-hidden="true">挂断</span>
+        </div>
       </div>
     </div>
   </section>
@@ -368,8 +379,8 @@ function toggleSpeaker(): void {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: var(--space-6) var(--space-4) var(--space-5);
-  background: #10231f;
+  padding: var(--space-5) var(--space-4) calc(var(--space-5) + var(--safe-bottom));
+  background: radial-gradient(circle at 50% 24%, #1d3d34 0, #10231f 48%, #091612 100%);
   color: #f4fbf8;
   animation: call-in var(--dur-base) ease both;
 }
@@ -381,28 +392,45 @@ function toggleSpeaker(): void {
   }
 }
 
+.call__identity {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+}
+
 .call__avatar {
   display: grid;
   place-items: center;
-  width: 82px;
-  height: 82px;
-  margin-top: var(--space-6);
+  width: 96px;
+  height: 96px;
   border-radius: 50%;
   background: rgb(255 255 255 / 12%);
-  font-size: 30px;
+  box-shadow:
+    0 0 0 8px rgb(255 255 255 / 4%),
+    0 18px 40px rgb(0 0 0 / 28%);
+  font-size: 38px;
   font-weight: 700;
 }
 
 .call__status {
-  margin-top: var(--space-4);
+  margin: var(--space-2) 0 0;
   font-size: var(--font-xs);
+  letter-spacing: 0.08em;
   color: rgb(244 251 248 / 58%);
 }
 
 .call__name {
-  margin-top: var(--space-1);
-  font-size: var(--font-xl);
+  max-width: 100%;
+  margin-top: var(--space-4);
+  font-size: 28px;
   font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+  overflow-wrap: anywhere;
 }
 
 .call__number {
@@ -414,32 +442,47 @@ function toggleSpeaker(): void {
 
 .call__actions {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  gap: var(--space-5);
+  gap: var(--space-6);
   width: 100%;
-  margin-top: auto;
+  margin-top: 0;
+  padding-bottom: var(--space-2);
 }
 
-.call__mini {
-  min-height: 44px;
-  padding: 0 var(--space-3);
-  border: 1px solid rgb(255 255 255 / 18%);
-  border-radius: 999px;
-  background: rgb(255 255 255 / 8%);
-  color: inherit;
-  font-size: var(--font-xs);
-}
-
-.call__mini--on {
-  background: rgb(255 255 255 / 22%);
-}
-
-.call__endwrap {
+.call__action {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+}
+
+.call__tool {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border: 1px solid rgb(255 255 255 / 16%);
+  border-radius: 50%;
+  background: rgb(255 255 255 / 8%);
+  color: inherit;
+}
+
+.call__tool--on {
+  background: rgb(255 255 255 / 20%);
+  border-color: rgb(255 255 255 / 30%);
+}
+
+.call__tool svg {
+  display: block;
+  width: 24px;
+  height: 24px;
+}
+
+.call__actionlabel {
+  font-size: var(--font-xs);
+  line-height: 1;
+  color: rgb(244 251 248 / 70%);
 }
 
 .call__end {
@@ -466,11 +509,6 @@ function toggleSpeaker(): void {
   display: block;
   width: 30px;
   height: 30px;
-}
-
-.call__endlabel {
-  font-size: var(--font-xs);
-  color: rgb(244 251 248 / 72%);
 }
 
 @media (prefers-reduced-motion: reduce) {
