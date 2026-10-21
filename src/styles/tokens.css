@@ -62,12 +62,22 @@
   --c-text-soft: #58645b;
   --c-text-invert: #f7f0e2;
   --c-primary: #245b4a;
+  --c-primary-fill: #245b4a;
   --c-primary-soft: #dbe8df;
   --c-accent: #a57b43;
   --c-danger: #a83c2c;
+  --c-danger-fill: #a83c2c;
+  --c-danger-soft: #f7e2dd;
+  --c-danger-line: #d9a79b;
+  --c-danger-text: #74291e;
   --c-warn-bg: #f7ead2;
   --c-warn-line: #d9b67f;
   --c-warn-text: #6f4819;
+  --c-transfer-a: #ead2a3;
+  --c-transfer-b: #d6b273;
+  --c-transfer-text: #2b2113;
+  --c-banner-bg: rgb(250 245 235 / 94%);
+  color-scheme: light;
   /* 原 --c-sim-bg / --c-sim-text 是「剧情模拟」标记用的，随标记一起删除 */
   /*
    * 文字层级（2026-10-14 新增，同日修正过一次）。
@@ -94,7 +104,7 @@
    *
    * 桌面与锁屏的内容直接压在壁纸上，所以它们的颜色必须跟着壁纸走：
    * 夜间壁纸深 → 文字浅；白天壁纸浅 → 文字深。
-   * 下面这组默认值对应夜间，白天主题在 [data-theme='day'] 里覆盖。
+   * 下面这组默认值对应夜间，白天主题在 data-theme=day 的覆盖段里处理。
    */
   --c-on-wall: #f8f1e4;
   --c-on-wall-soft: #d3c6b4;
@@ -137,6 +147,43 @@
  * 主 ~15:1、次 ~8.4:1、辅 ~5.8:1。白天这组的对比度比夜间那组更保守，
  * 因为浅色壁纸的局部亮度比深色壁纸更难预测。
  */
+
+/*
+ * 夜间应用界面：壁纸暗下来之后，纸面、卡片、状态栏也一起转深。
+ * 这组只覆盖应用内部用色，不碰 --c-on-wall*；壁纸上的文字仍由
+ * 默认夜间令牌与 day 选择器负责。
+ */
+[data-theme='night'] {
+  color-scheme: dark;
+  --c-surface: #12211a;
+  --c-surface-2: #0c1813;
+  --c-chat-bg: #0c1914;
+  --c-wallet-bg: #101f18;
+  --c-manual-bg: #111d16;
+  --c-line: #2b4035;
+  --c-text: #f0ebdf;
+  --c-text-soft: #b6c4b8;
+  --c-text-tertiary: #8b9b90;
+  --c-primary: #78b99a;
+  --c-primary-fill: #2e6f57;
+  --c-primary-soft: #1d3a2f;
+  --c-accent: #d3a86a;
+  --c-danger: #d76b57;
+  --c-danger-fill: #9d3f31;
+  --c-danger-soft: #3a211d;
+  --c-danger-line: #704137;
+  --c-danger-text: #f0b3a5;
+  --c-warn-bg: #392a19;
+  --c-warn-line: #6e5433;
+  --c-warn-text: #eccb96;
+  --c-transfer-a: #3a2b18;
+  --c-transfer-b: #211810;
+  --c-transfer-text: #f2d7a8;
+  --c-banner-bg: rgb(18 33 27 / 94%);
+  --shadow-card: 0 0 0 1px rgb(255 255 255 / 6%), 0 2px 8px rgb(0 0 0 / 28%);
+  --shadow-sheet: 0 -8px 30px rgb(0 0 0 / 48%);
+}
+
 [data-theme='day'] {
   --c-on-wall: #15231f;
   --c-on-wall-soft: #3f544b;

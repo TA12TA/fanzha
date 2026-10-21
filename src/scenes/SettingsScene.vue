@@ -258,7 +258,7 @@ function requestClearAll(): void {
   padding: 0;
   border: 0;
   border-radius: 999px;
-  background: #c9d2de;
+  background: var(--c-line);
   transition: background-color var(--dur-fast) ease;
 }
 

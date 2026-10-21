@@ -105,7 +105,7 @@ const emit = defineEmits<{
    * 看起来像布局崩了。改成半透明 + 强模糊之后，页头会隐约透出来，
    * 「这是盖在上面的一条通知」这层语义就成立了。
    */
-  background: rgb(250 245 235 / 94%);
+  background: var(--c-banner-bg);
   color: var(--c-text);
   box-shadow:
     0 10px 30px rgb(3 8 5 / 24%),
@@ -157,7 +157,7 @@ const emit = defineEmits<{
 }
 
 .banner--message .banner__icon {
-  background: #f1e4cc;
+  background: var(--c-warn-bg);
   color: var(--c-accent);
 }
 

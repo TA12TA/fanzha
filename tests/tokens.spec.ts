@@ -54,7 +54,8 @@ function resolveHex(name: string): string | null {
  */
 function textLevelTokens(): { name: string; hex: string }[] {
   const rootBlock = tokensCss.slice(0, tokensCss.indexOf("[data-theme='day']"))
-  const names = [...rootBlock.matchAll(/--(c-text[\w-]*)\s*:/g)].map((m) => m[1])
+  // 夜间主题会重复声明同一组 token；层级守卫只看名字集合，不把重复声明算成两档。
+  const names = [...new Set([...rootBlock.matchAll(/--(c-text[\w-]*)\s*:/g)].map((m) => m[1]))]
   return names
     .filter((name) => aliasOf(name) === null) // 别名不算独立一档
     .map((name) => ({ name, hex: resolveHex(name) }))

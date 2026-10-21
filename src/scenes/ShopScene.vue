@@ -584,7 +584,7 @@ onBeforeUnmount(() => globalThis.removeEventListener('keydown', closeOnEscape))
   left: 8px;
   padding: 2px 7px;
   border-radius: 999px;
-  background: rgb(250 245 235 / 92%);
+  background: var(--c-surface);
   color: var(--c-text);
   font-size: 10px;
   font-weight: 700;

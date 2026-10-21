@@ -107,9 +107,9 @@ defineProps<{
 }
 
 .msg--failed {
-  background: #f7e2dd;
-  border: 1px solid #d9a79b;
-  color: #74291e;
+  background: var(--c-danger-soft);
+  border: 1px solid var(--c-danger-line);
+  color: var(--c-danger-text);
 }
 
 /*
@@ -120,9 +120,9 @@ defineProps<{
   min-width: 180px;
   padding: var(--space-3);
   border-radius: var(--radius-md);
-  border: 1px solid #c9a86b;
-  background: linear-gradient(150deg, #ead2a3, #d6b273);
-  color: #2b2113;
+  border: 1px solid var(--c-warn-line);
+  background: linear-gradient(150deg, var(--c-transfer-a), var(--c-transfer-b));
+  color: var(--c-transfer-text);
   box-shadow: 0 3px 10px rgb(80 55 20 / 18%);
 }
 

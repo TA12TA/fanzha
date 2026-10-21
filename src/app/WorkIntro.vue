@@ -50,9 +50,9 @@ const emit = defineEmits<{ (e: 'close'): void }>()
   width: 100%;
   max-width: 330px;
   padding: 26px 22px 22px;
-  border: 1px solid rgb(29 42 37 / 14%);
+  border: 1px solid var(--c-line);
   border-radius: var(--radius-lg);
-  background: #faf5eb;
+  background: var(--c-surface);
   color: var(--c-text);
   box-shadow:
     0 0 0 1px rgb(255 255 255 / 20%),

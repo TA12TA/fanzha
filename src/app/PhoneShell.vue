@@ -466,6 +466,8 @@ const isIntro = computed(() => view.value === 'intro')
  * 应用内部页面本来就是浅色底，一律用浅色条。
  */
 const chromeTone = computed<'dark' | 'light'>(() => {
+  // 夜间整个应用界面都转深，状态栏/导航栏也跟着用深色。
+  if (props.theme === 'night') return 'dark'
   const onWallpaper = view.value === 'home' || view.value === 'intro'
   if (!onWallpaper) return 'light'
   return props.theme === 'day' ? 'light' : 'dark'
