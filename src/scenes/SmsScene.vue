@@ -15,15 +15,20 @@ const props = withDefaults(
   defineProps<{
     /** 当前剧情验证码对应的短信正文；没有验证码环节时为空。 */
     codeSms?: string
+    /** 已读会话；由手机壳持有，离开短信应用再回来时不会重新变红。 */
+    readIds?: string[]
   }>(),
-  { codeSms: '' },
+  { codeSms: '', readIds: () => [] },
 )
 
-const emit = defineEmits<{ (e: 'back'): void }>()
+const emit = defineEmits<{
+  (e: 'back'): void
+  (e: 'mark-read', id: string): void
+}>()
 
 const selectedId = ref<string | null>(null)
 const draft = ref('')
-const read = ref<string[]>([])
+const read = computed(() => props.readIds)
 const extras = ref<Record<string, SmsMessage[]>>({})
 
 const threads = computed(() => {
@@ -60,7 +65,7 @@ function messagesOf(id: string): SmsMessage[] {
 function openThread(id: string): void {
   playSound('tap')
   selectedId.value = id
-  if (!read.value.includes(id)) read.value = [...read.value, id]
+  if (!read.value.includes(id)) emit('mark-read', id)
 }
 
 function back(): void {

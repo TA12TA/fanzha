@@ -126,6 +126,8 @@ function initialView(): ViewId {
 const view = ref<ViewId>(initialView())
 /** 当前场景暴露的二级返回处理（会话/详情/通话/查看器/评论面板）。 */
 const sceneRef = ref<{ handleBack?: () => boolean } | null>(null)
+/** 短信已读状态放在手机壳里，退出短信应用再回来仍然保留。 */
+const smsRead = ref<string[]>([])
 /**
  * 「继续当前事项」的解锁状态。
  *
@@ -515,6 +517,10 @@ watch(
     chatView.value = preferredChatView(props.level, node)
   },
 )
+
+function markSmsRead(id: string): void {
+  if (!smsRead.value.includes(id)) smsRead.value = [...smsRead.value, id]
+}
 
 /** 打开消息应用里的某个会话（只切 UI，不影响剧情）。 */
 function openSession(id: string): void {
@@ -1033,7 +1039,14 @@ onBeforeUnmount(() => {
         </section>
 
         <PhoneScene v-else-if="view === 'phone'" ref="sceneRef" @back="goBack" />
-        <SmsScene v-else-if="view === 'sms'" ref="sceneRef" :code-sms="codeSmsText" @back="goBack" />
+        <SmsScene
+          v-else-if="view === 'sms'"
+          ref="sceneRef"
+          :code-sms="codeSmsText"
+          :read-ids="smsRead"
+          @mark-read="markSmsRead"
+          @back="goBack"
+        />
         <ShopScene v-else-if="view === 'shop'" ref="sceneRef" :initial-tab="shopTab" @back="goBack" />
         <MusicScene v-else-if="view === 'music'" @back="goBack" />
         <VideoScene v-else-if="view === 'video'" ref="sceneRef" @back="goBack" />
