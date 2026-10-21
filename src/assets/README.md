@@ -5,6 +5,8 @@
 | 文件 | 用途 | 来源 |
 |---|---|---|
 | `antifraud-logo.png` | 国家反诈中心应用图标（256×256 PNG） | Apple App Store 官方接口 |
+| `videos/anti-fraud.mp4` | 青影首条真实反诈短剧《专属恋人》 | 抖音 `@国家反诈中心` 视频 `7698357734265195810`，2026-10-21 下载并转码为 854×480 H.264/AAC |
+| `videos/anti-fraud.jpg` | 上述视频的首帧封面 | 同上 |
 
 ## 官方 logo 的获取过程
 
@@ -67,6 +69,8 @@ import antifraudLogo from '@/assets/antifraud-logo.png'
 | `shop/lamp.jpg` | `https://images.unsplash.com/photo-1507473885765-e6ed057f782c` |
 | `shop/bottle.jpg` | `https://images.unsplash.com/photo-1523362628745-0c100150b504` |
 
+> 反诈短剧视频来自国家反诈中心官方账号，按用户要求本地接入；版权归原作者，正式提交/发布前请确认赛事或平台的授权要求。视频已转码为 H.264/AAC 并本地托管，不在页面里嵌入抖音播放器或外链。
+>
 > 用户已明确决定保留官方反诈 App 的 logo；其余照片按上述来源追溯，提交前请按 Picsum / Unsplash / Pexels 的许可条款复核。
 > 图片不刻意包含品牌标识；如发现品牌元素或赛事要求更严格的书面授权，应替换为自有或 CC0 素材。
 > 本目录不把“已记录来源”等同于“已完成商用授权审核”。

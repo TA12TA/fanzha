@@ -4,6 +4,8 @@ import foodImage from '@/assets/videos/food.jpg'
 import musicImage from '@/assets/videos/music.jpg'
 import roadImage from '@/assets/videos/road.jpg'
 import campusImage from '@/assets/videos/campus.jpg'
+import antiFraudVideo from '@/assets/videos/anti-fraud.mp4'
+import antiFraudPoster from '@/assets/videos/anti-fraud.jpg'
 
 /**
  * 虚构短视频应用「青影」的内容数据。
@@ -23,6 +25,8 @@ export interface VideoItem {
   blurb: string
   /** 本地封面照片。 */
   image: string
+  /** 可选的真实视频文件；没有时只展示封面。 */
+  video?: string
   /** 封面遮罩的渐变色。 */
   colors: [string, string]
   /** 展示用点赞数。 */
@@ -33,9 +37,24 @@ export interface VideoItem {
   music: string
 }
 
-export const VIDEO_CATEGORIES = ['推荐', '生活', '旅行', '音乐', '校园'] as const
+export const VIDEO_CATEGORIES = ['推荐', '生活', '旅行', '音乐', '校园', '反诈'] as const
 
 export const VIDEOS: VideoItem[] = [
+  {
+    id: 'anti-fraud-lover',
+    title: '反诈短剧：专属恋人',
+    creator: '国家反诈中心',
+    views: '反诈宣传短剧',
+    duration: '04:03',
+    category: '反诈',
+    blurb: '网恋对象迟迟不肯见面，却一直催你转账——先停下来想一想。',
+    image: antiFraudPoster,
+    video: antiFraudVideo,
+    colors: ['#2c4a3e', '#091511'],
+    likes: 0,
+    comments: [],
+    music: '国家反诈中心 · 原声',
+  },
   {
     id: 'last-metro',
     title: '城市最后一班地铁',

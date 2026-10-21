@@ -7,13 +7,14 @@ import { playSound } from '@/app/sound'
  * 虚构短视频应用「青影」。
  *
  * 模仿常见的竖屏短视频：一屏一条，上下滑动切换；右侧点赞/评论/收藏/分享，
- * 底部作者、文案与音乐条。封面是本地打包的真实照片，点赞/评论/分享都只
- * 在本机内完成，不加载真实视频、不跳转外部平台。
+ * 底部作者、文案与音乐条。首条是本地打包的真实反诈短剧，其余条目用本地封面图；
+ * 视频、点赞、评论和分享都在本机内完成，不跳转外部平台。
  */
 const emit = defineEmits<{ (e: 'back'): void }>()
 
 const tab = ref<'following' | 'recommend'>('recommend')
 const feedRef = ref<HTMLElement | null>(null)
+const activeVideo = ref<HTMLVideoElement | null>(null)
 const activeIndex = ref(0)
 const playing = ref(true)
 const muted = ref(false)
@@ -38,6 +39,7 @@ let timer: ReturnType<typeof setInterval> | null = null
 let toastTimer: ReturnType<typeof setTimeout> | null = null
 
 watch(tab, async () => {
+  activeVideo.value?.pause()
   activeIndex.value = 0
   progress.value = 0
   playing.value = true
@@ -50,6 +52,7 @@ function onScroll(): void {
   if (!element || !element.clientHeight) return
   const index = Math.round(element.scrollTop / element.clientHeight)
   if (index !== activeIndex.value) {
+    activeVideo.value?.pause()
     activeIndex.value = index
     progress.value = 0
     playing.value = true
@@ -58,13 +61,57 @@ function onScroll(): void {
 
 function togglePlay(): void {
   playSound('tap')
+  const video = activeVideo.value
+  if (active.value?.video && video) {
+    if (video.paused) {
+      void video.play().then(() => {
+        playing.value = true
+      }).catch(() => {
+        playing.value = false
+      })
+    } else {
+      video.pause()
+      playing.value = false
+    }
+    return
+  }
   playing.value = !playing.value
 }
 
 function tick(): void {
+  // 真实视频由 timeupdate 驱动；图片封面才使用模拟进度。
+  if (active.value?.video) return
   if (!playing.value) return
   progress.value = Math.min(100, progress.value + 0.6)
   if (progress.value >= 100) progress.value = 0
+}
+
+function setActiveVideo(el: Element | null): void {
+  activeVideo.value = el instanceof HTMLVideoElement ? el : null
+}
+
+function onVideoLoaded(): void {
+  const video = activeVideo.value
+  if (!video) return
+  video.muted = muted.value
+  if (!playing.value) return
+  void video.play().then(() => {
+    playing.value = true
+  }).catch(() => {
+    // 浏览器拦截有声自动播放时，回到可点的暂停/播放态。
+    playing.value = false
+  })
+}
+
+function onVideoTimeUpdate(): void {
+  const video = activeVideo.value
+  if (!video || !video.duration) return
+  progress.value = (video.currentTime / video.duration) * 100
+}
+
+function onVideoEnded(): void {
+  playing.value = false
+  progress.value = 100
 }
 
 function formatCount(value: number): string {
@@ -92,12 +139,16 @@ function currentTimeOf(video: VideoItem): string {
 function seek(event: Event): void {
   const value = (event.target as HTMLInputElement).valueAsNumber
   if (!Number.isFinite(value)) return
-  progress.value = Math.min(100, Math.max(0, value))
+  const next = Math.min(100, Math.max(0, value))
+  progress.value = next
+  const video = activeVideo.value
+  if (video?.duration) video.currentTime = (next / 100) * video.duration
 }
 
 function toggleMuted(): void {
   playSound('tap')
   muted.value = !muted.value
+  if (activeVideo.value) activeVideo.value.muted = muted.value
 }
 
 function likeCount(video: VideoItem): number {
@@ -175,6 +226,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  activeVideo.value?.pause()
   if (timer) clearInterval(timer)
   timer = null
   if (toastTimer) clearTimeout(toastTimer)
@@ -217,7 +269,22 @@ onBeforeUnmount(() => {
         :aria-label="video.title"
         @click="togglePlay"
       >
-        <img class="clip__image" :src="video.image" :alt="video.title" />
+        <video
+          v-if="video.video && index === activeIndex"
+          :ref="(el) => setActiveVideo(el as Element | null)"
+          class="clip__video"
+          :src="video.video"
+          :poster="video.image"
+          :muted="muted"
+          playsinline
+          preload="metadata"
+          :aria-label="video.title"
+          @loadedmetadata="onVideoLoaded"
+          @timeupdate="onVideoTimeUpdate"
+          @ended="onVideoEnded"
+          @click.stop="togglePlay"
+        ></video>
+        <img v-else class="clip__image" :src="video.image" :alt="video.title" />
         <div
           class="clip__veil"
           :style="{ background: `linear-gradient(180deg, transparent 36%, ${video.colors[1]} 100%)` }"
@@ -497,6 +564,16 @@ onBeforeUnmount(() => {
   height: 100%;
   object-fit: cover;
   filter: saturate(0.9) brightness(0.82);
+}
+
+/* 真实视频保持完整画面：横屏素材在竖屏 feed 里留黑边，不裁切内容。 */
+.clip__video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #000;
 }
 
 .clip__veil {

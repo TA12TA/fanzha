@@ -1978,6 +1978,7 @@ describe('P. 常用生活应用', () => {
     expect(wrapper.find('.clip__transport').exists(), '应有播放控制条').toBe(true)
     expect(wrapper.find('.clip__seek').exists(), '应有可拖动进度条').toBe(true)
     expect(wrapper.find('.clip__transportbtn').exists(), '应有播放/暂停按钮').toBe(true)
+    expect(wrapper.find('.clip__video').exists(), '应能加载真实视频').toBe(true)
 
     const like = wrapper.find('button[aria-label="点赞"]')
     await like.trigger('click')
@@ -1985,7 +1986,7 @@ describe('P. 常用生活应用', () => {
 
     await wrapper.find('button[aria-label="评论"]').trigger('click')
     expect(wrapper.find('.sheet').exists(), '应打开评论面板').toBe(true)
-    expect(wrapper.text()).toContain('这个点地铁里真的全是故事')
+    expect(wrapper.text(), '反诈视频暂无评论').toContain('评论 0')
     await wrapper.find('button[aria-label="关闭评论"]').trigger('click')
 
     await wrapper.find('button[aria-label="分享"]').trigger('click')
