@@ -195,7 +195,7 @@ const PROFILE_INFO: ProfileInfo = {
   fields: [
     { label: '注册时间', value: '最近 7 天内' },
     { label: '资料完整度', value: '不完整：无学校、无实名信息' },
-    { label: '可核验线索', value: '无。无法通过独立渠道确认其身份' },
+    { label: '可核验线索', value: '无。' },
   ],
   notice: '头像和自称的身份都证明不了什么。真要转账，用别的渠道自己核实一遍。',
 }
@@ -207,7 +207,7 @@ const PROFILE_INFO_OWNER: ProfileInfo = {
   fields: [
     { label: '注册时间', value: '最近 7 天内' },
     { label: '资料完整度', value: '不完整：无学校、无实名信息' },
-    { label: '可核验线索', value: '无。无法通过独立渠道确认其身份' },
+    { label: '可核验线索', value: '无。' },
   ],
   notice: '头像是风景图，昵称是「群主」，这些都证明不了他是谁。真要转账，用别的渠道自己核实一遍。',
 }
