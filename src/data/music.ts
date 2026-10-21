@@ -1,8 +1,14 @@
+import track1 from '@/assets/music/track-1.mp3'
+import track2 from '@/assets/music/track-2.mp3'
+import track3 from '@/assets/music/track-3.mp3'
+import track4 from '@/assets/music/track-4.mp3'
+import track5 from '@/assets/music/track-5.mp3'
+
 /**
  * 虚构音乐应用「青听音乐」的曲库。
  *
- * 歌名、歌手、专辑均为虚构；不包含真实音频文件、版权素材或外链。
- * 播放器只做界面内的进度演示，不请求任何音乐服务。
+ * 歌名、歌手、专辑为虚构；播放的是本地打包的 30 秒试听片段，
+ * 不请求任何音乐服务。正式发布前应替换为已授权的完整音频。
  */
 
 export interface MusicTrack {
@@ -10,6 +16,8 @@ export interface MusicTrack {
   title: string
   artist: string
   album: string
+  /** 本地音频文件。 */
+  audio: string
   /** 时长（秒）。 */
   duration: number
   /** 封面渐变的两端颜色。 */
@@ -31,7 +39,8 @@ export const MUSIC_TRACKS: MusicTrack[] = [
     title: '晚风寄信',
     artist: '林屿',
     album: '把夏天折起来',
-    duration: 226,
+    audio: track1,
+    duration: 30,
     colors: ['#8e7dff', '#4a3fbd'],
     mood: '晚风',
   },
@@ -40,7 +49,8 @@ export const MUSIC_TRACKS: MusicTrack[] = [
     title: '操场边的夏天',
     artist: '青柠汽水',
     album: '下课以后',
-    duration: 198,
+    audio: track2,
+    duration: 30,
     colors: ['#ffb36b', '#e26b4f'],
     mood: '轻快',
   },
@@ -49,7 +59,8 @@ export const MUSIC_TRACKS: MusicTrack[] = [
     title: '山城夜行',
     artist: '远山乐队',
     album: '沿着江边走',
-    duration: 254,
+    audio: track3,
+    duration: 30,
     colors: ['#5f8ef7', '#26428f'],
     mood: '夜行',
   },
@@ -58,7 +69,8 @@ export const MUSIC_TRACKS: MusicTrack[] = [
     title: '雨停之后',
     artist: '白昼电台',
     album: '天气转晴',
-    duration: 211,
+    audio: track4,
+    duration: 30,
     colors: ['#61c8c0', '#247f89'],
     mood: '清透',
   },
@@ -67,7 +79,8 @@ export const MUSIC_TRACKS: MusicTrack[] = [
     title: '把答案交给风',
     artist: '小满',
     album: '没有标准答案',
-    duration: 240,
+    audio: track5,
+    duration: 30,
     colors: ['#f08ab9', '#a83d72'],
     mood: '松弛',
   },

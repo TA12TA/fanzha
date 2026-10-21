@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import AppHeader from '@/components/AppHeader.vue'
 import { MUSIC_PLAYLISTS, MUSIC_TRACKS, type MusicTrack } from '@/data/music'
 import { playSound } from '@/app/sound'
@@ -20,6 +20,7 @@ const playing = ref(false)
 const position = ref(0)
 
 const current = computed(() => tracks.find((track) => track.id === currentId.value) ?? tracks[0])
+const audio = ref<HTMLAudioElement | null>(null)
 
 let timer: ReturnType<typeof setInterval> | null = null
 
@@ -34,11 +35,21 @@ function formatTime(seconds: number): string {
   return `${min}:${String(sec).padStart(2, '0')}`
 }
 
+function startAudio(): void {
+  const element = audio.value
+  if (!element) return
+  // 用户点击后才播放；移动端浏览器允许这种有手势的播放。
+  void element.play()
+}
+
 function selectTrack(track: MusicTrack): void {
   playSound('tap')
   currentId.value = track.id
   position.value = 0
   playing.value = true
+  void nextTick(() => {
+    if (playing.value) startAudio()
+  })
 }
 
 function selectPlaylist(trackIds: string[]): void {
@@ -48,8 +59,14 @@ function selectPlaylist(trackIds: string[]): void {
 
 function togglePlay(): void {
   playSound('tap')
-  if (!playing.value && position.value >= current.value.duration) position.value = 0
-  playing.value = !playing.value
+  if (playing.value) {
+    audio.value?.pause()
+    playing.value = false
+    return
+  }
+  if (position.value >= current.value.duration) position.value = 0
+  playing.value = true
+  startAudio()
 }
 
 function nextTrack(autoPlay = false): void {
@@ -59,11 +76,13 @@ function nextTrack(autoPlay = false): void {
   position.value = 0
   playing.value = autoPlay || playing.value
   if (!autoPlay) playSound('tap')
+  if (playing.value) void nextTick(startAudio)
 }
 
 function previousTrack(): void {
   if (position.value > 4) {
     position.value = 0
+    if (audio.value) audio.value.currentTime = 0
     return
   }
   const previous = tracks[(indexOf(currentId.value) - 1 + tracks.length) % tracks.length]
@@ -71,14 +90,27 @@ function previousTrack(): void {
   playSound('tap')
   currentId.value = previous.id
   position.value = 0
+  if (playing.value) void nextTick(startAudio)
 }
 
 function seek(event: Event): void {
   const input = event.target as HTMLInputElement
-  position.value = Number(input.value)
+  const next = Number(input.value)
+  position.value = next
+  if (audio.value) audio.value.currentTime = next
+}
+
+function onAudioTime(): void {
+  if (audio.value) position.value = audio.value.currentTime
+}
+
+function onAudioEnded(): void {
+  nextTrack(true)
 }
 
 function tick(): void {
+  // 有真实音频时由 timeupdate 驱动；没有音频的旧数据才使用模拟进度。
+  if (current.value.audio) return
   if (!playing.value) return
   position.value += 1
   if (position.value >= current.value.duration) nextTrack(true)
@@ -89,6 +121,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  audio.value?.pause()
   if (timer) clearInterval(timer)
   timer = null
 })
@@ -96,6 +129,14 @@ onBeforeUnmount(() => {
 
 <template>
   <section class="music" aria-label="青听音乐">
+    <audio
+      ref="audio"
+      class="music__audio"
+      :src="current.audio"
+      preload="metadata"
+      @timeupdate="onAudioTime"
+      @ended="onAudioEnded"
+    ></audio>
     <AppHeader title="青听音乐" subtitle="把耳机戴上，世界安静一点" show-back @back="emit('back')" />
 
     <div class="music__body">
@@ -214,6 +255,10 @@ onBeforeUnmount(() => {
   background:
     radial-gradient(80% 32% at 8% 0%, rgb(47 107 88 / 15%), transparent 68%),
     var(--c-surface-2);
+}
+
+.music__audio {
+  display: none;
 }
 
 .music__body {

@@ -1988,6 +1988,7 @@ describe('P. 常用生活应用', () => {
     expect(wrapper.find('.clip__seek').exists(), '应有可拖动进度条').toBe(true)
     expect(wrapper.find('.clip__transportbtn').exists(), '应有播放/暂停按钮').toBe(true)
     expect(wrapper.find('.clip__video').exists(), '应能加载真实视频').toBe(true)
+    expect(wrapper.find('.rail__avatar--link').attributes('href'), '真实视频头像应去官方主页').toContain('douyin.com/user/')
 
     const like = wrapper.find('button[aria-label="点赞"]')
     await like.trigger('click')

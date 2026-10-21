@@ -305,7 +305,20 @@ onBeforeUnmount(() => {
         </button>
 
         <aside class="rail" @click.stop>
+          <a
+            v-if="video.douyinProfile"
+            class="rail__avatar rail__avatar--link"
+            :href="video.douyinProfile"
+            target="_blank"
+            rel="noopener noreferrer"
+            :aria-label="`打开${video.creator}抖音主页`"
+            @click.stop
+          >
+            {{ video.creator.slice(0, 1) }}
+            <span class="rail__follow">↗</span>
+          </a>
           <button
+            v-else
             type="button"
             class="rail__avatar"
             :aria-label="followed.includes(video.creator) ? `取消关注${video.creator}` : `关注${video.creator}`"
@@ -624,6 +637,7 @@ onBeforeUnmount(() => {
 
 .rail__avatar {
   position: relative;
+  text-decoration: none;
   display: grid;
   place-items: center;
   width: 42px;

@@ -29,6 +29,8 @@ export interface VideoItem {
   image: string
   /** 可选的真实视频文件；没有时只展示封面。 */
   video?: string
+  /** 真实视频的作者主页；点击头像时打开。 */
+  douyinProfile?: string
   /** 封面遮罩的渐变色。 */
   colors: [string, string]
   /** 展示用点赞数（虚构条目为虚构数字，真实视频为原视频公开数字）。 */
@@ -54,6 +56,7 @@ export const VIDEOS: VideoItem[] = [
     blurb: '网恋对象迟迟不肯见面，却一直催你转账——先停下来想一想。',
     image: antiFraudPoster,
     video: antiFraudVideo,
+    douyinProfile: 'https://www.douyin.com/user/MS4wLjABAAAAg8ocjNvZAIc3coYYWv_68OPkf1O0a4VAZPEBn7qbwaQ',
     colors: ['#2c4a3e', '#091511'],
     likes: 943,
     comments: ['网恋第一步，先见人', '多多宣传'],
@@ -70,6 +73,7 @@ export const VIDEOS: VideoItem[] = [
     blurb: '反诈短剧《别转！陈家安》。有人催你转账时，先停下来核实。',
     image: antiFraudPoster2,
     video: antiFraudVideo2,
+    douyinProfile: 'https://www.douyin.com/user/MS4wLjABAAAAg8ocjNvZAIc3coYYWv_68OPkf1O0a4VAZPEBn7qbwaQ',
     colors: ['#3b3430', '#100d0b'],
     likes: 1305,
     comments: ['希望国家把黑产全部打掉', '不要贪小便宜，不要妄想赚大钱'],

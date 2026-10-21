@@ -9,6 +9,7 @@
 | `videos/anti-fraud.jpg` | 上述视频的首帧封面 | 同上 |
 | `videos/anti-fraud-2.mp4` | 青影第二条真实反诈短剧《别转！陈家安》 | 抖音 `@国家反诈中心` 视频 `7694028063167876367`，2026-10-21 下载并转码为 854×480 H.264/AAC |
 | `videos/anti-fraud-2.jpg` | 上述视频的首帧封面 | 同上 |
+| `music/track-1.mp3` … `track-5.mp3` | 青听音乐 5 段 30 秒试听音频 | SoundHelix Song 1 的不同片段，2026-10-21 本地转码；仅作演示，发布前替换为已授权音乐 |
 
 ## 官方 logo 的获取过程
 
@@ -71,7 +72,7 @@ import antifraudLogo from '@/assets/antifraud-logo.png'
 | `shop/lamp.jpg` | `https://images.unsplash.com/photo-1507473885765-e6ed057f782c` |
 | `shop/bottle.jpg` | `https://images.unsplash.com/photo-1523362628745-0c100150b504` |
 
-> 反诈短剧视频来自国家反诈中心官方账号，按用户要求本地接入；版权归原作者，正式提交/发布前请确认赛事或平台的授权要求。视频已转码为 H.264/AAC 并本地托管，不在页面里嵌入抖音播放器或外链。
+> 反诈短剧视频来自国家反诈中心官方账号，按用户要求本地接入；版权归原作者，正式提交/发布前请确认赛事或平台的授权要求。视频已转码为 H.264/AAC 并本地托管；抖音页禁止 iframe 内嵌，因此不嵌入播放器，只在作者头像提供官方主页外链。音频为 SoundHelix 演示片段，发布前需替换为授权音乐。
 >
 > 用户已明确决定保留官方反诈 App 的 logo；其余照片按上述来源追溯，提交前请按 Picsum / Unsplash / Pexels 的许可条款复核。
 > 图片不刻意包含品牌标识；如发现品牌元素或赛事要求更严格的书面授权，应替换为自有或 CC0 素材。
