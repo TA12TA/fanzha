@@ -107,7 +107,7 @@ onBeforeUnmount(() => {
       <p id="af-body" class="af__body">{{ body }}</p>
 
       <p v-if="!canClose" id="af-countdown" class="af__countdown" role="status" aria-live="polite">
-        请先停一下，{{ remaining }} 秒后可继续
+        {{ remaining }} 秒后可继续
       </p>
 
       <button
