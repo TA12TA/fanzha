@@ -386,8 +386,8 @@ cherry-pick 到 `hall-desk` 分支为 `a680717`），大厅最终采用书桌版
 | `npm run dev`       | 成功，`http://127.0.0.1:5173/` 返回 200 且已注入 Vite 客户端                                                                  |
 | `npm run preview`   | 成功，`http://127.0.0.1:4173/` 返回构建产物（引用 hashed 资源）                                                                  |
 | `npm run typecheck` | 通过，无错误                                                                                                            |
-| `npm test`          | **262 项全部通过**（engine 17 / storage 22 / debrief 17 / levels 25 / clock 5 / unlock 6 / settings 14 / notifications 14 / app 110 / levelCardText 7 / tokens 4 / random 8 / classNews 6 / smsCode 7） |
-| `npm run build`     | 成功，`dist/assets/index-*.js` 242.04 kB（gzip 83.58 kB）                                                              |
+| `npm test`          | **266 项全部通过**（engine 17 / storage 22 / debrief 17 / levels 25 / clock 5 / unlock 6 / settings 14 / notifications 14 / app 114 / levelCardText 7 / tokens 4 / random 8 / classNews 6 / smsCode 7） |
+| `npm run build`     | 成功，`dist/assets/index-*.js` 242.80 kB（gzip 83.88 kB）                                                              |
 | `npm run verify`    | **139 项全部通过**（Edge 155.0.4283.45 headless）                                                                        |
 | `npm run smoke:public` | **15 项全部通过**（对本机预览与公网隧道地址各实跑一次）                                                                          |
 

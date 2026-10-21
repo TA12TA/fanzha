@@ -2366,6 +2366,71 @@ describe('Y. 关卡大厅（书桌选关）', () => {
     expect(readSave('level-03' as LevelId)?.ending).toBe('l3-end-stop')
   })
 
+  it('Y09d 第三关退出回大厅再进入仍显示选择按钮', async () => {
+    let wrapper = await mountApp({ atDesk: true })
+    await tapPhone(wrapper, 2)
+    await swipeUnlock(wrapper)
+    await clickDesktopApp(wrapper, '青讯')
+    await dismissAntifraud(wrapper)
+    expect(wrapper.text(), '第一次进入应有第三关选项').toContain('挂断，自己去核实')
+
+    wrapper = await remountAtDesk(wrapper)
+    await tapPhone(wrapper, 2)
+    await clickDesktopApp(wrapper, '青讯')
+    await dismissAntifraud(wrapper)
+    expect(wrapper.text(), '二次进入仍应显示第三关选项').toContain('挂断，自己去核实')
+  })
+
+  it('Y09e 第三关在屏幕共享节点退出再进入仍显示选择按钮', async () => {
+    let wrapper = await mountApp({ atDesk: true })
+    await tapPhone(wrapper, 2)
+    await swipeUnlock(wrapper)
+    await clickDesktopApp(wrapper, '青讯')
+    await dismissAntifraud(wrapper)
+    await click(wrapper, '继续听他说')
+    expect(wrapper.text(), '第一次进入应有屏幕共享选项').toContain('按他说的共享屏幕')
+
+    await click(wrapper, '回到桌面')
+    wrapper = await remountAtDesk(wrapper)
+    await tapPhone(wrapper, 2)
+    await clickDesktopApp(wrapper, '青讯')
+    expect(wrapper.text(), '二次进入仍应显示屏幕共享选项').toContain('按他说的共享屏幕')
+  })
+
+  it('Y09f 第三关在待转账节点退出再进入仍显示钱包按钮', async () => {
+    let wrapper = await mountApp({ atDesk: true })
+    await tapPhone(wrapper, 2)
+    await swipeUnlock(wrapper)
+    await clickDesktopApp(wrapper, '青讯')
+    await dismissAntifraud(wrapper)
+    await click(wrapper, '继续听他说')
+    await click(wrapper, '按他说的共享屏幕')
+    await dismissAntifraud(wrapper)
+    expect(wrapper.text(), '第一次进入钱包应有待确认按钮').toContain('确认转出 500 元')
+
+    await click(wrapper, '回到桌面')
+    wrapper = await remountAtDesk(wrapper)
+    await tapPhone(wrapper, 2)
+    await click(wrapper, '安心钱包')
+    expect(wrapper.text(), '二次进入钱包仍应有待确认按钮').toContain('确认转出 500 元')
+  })
+
+  it('Y09g 第三关完成后退出再进入仍显示结局按钮', async () => {
+    const wrapper = await mountApp({ atDesk: true })
+    await tapPhone(wrapper, 2)
+    await swipeUnlock(wrapper)
+    await clickDesktopApp(wrapper, '青讯')
+    await dismissAntifraud(wrapper)
+    await click(wrapper, '挂断，自己去核实')
+    await flush()
+    expect(wrapper.text(), '第一次进入应到结局').toContain('提前识破')
+
+    await click(wrapper, '返回关卡大厅')
+    await flush()
+    await tapPhone(wrapper, 2)
+    expect(wrapper.text(), '二次进入应直接显示结局，而不是空桌面').toContain('看复盘')
+  })
+
   it('Y10 手机是真实 button，方向键可在手机之间移动焦点', async () => {
     // 焦点用例必须把组件挂到 document 上，游离元素调 focus() 不生效
     const wrapper = await mountApp({ atDesk: true, attach: true })

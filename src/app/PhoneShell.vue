@@ -112,7 +112,18 @@ watch(
   { immediate: true },
 )
 
-const view = ref<ViewId>(state.value.node === props.level.startNode ? 'intro' : 'home')
+/**
+ * 首次进入从锁屏开始；重进已完成的关卡时，直接落在结局/复盘，
+ * 而不是回到桌面让玩家找不到「看复盘 / 返回大厅」这些按钮。
+ * 进行中的聊天/钱包仍回桌面，保留原有的「继续当前事项」入口。
+ */
+function initialView(): ViewId {
+  if (state.value.node === props.level.startNode) return 'intro'
+  const target = sceneForNode(props.level, state.value.node)
+  return target === 'result' || target === 'review' ? target : 'home'
+}
+
+const view = ref<ViewId>(initialView())
 /**
  * 「继续当前事项」的解锁状态。
  *
