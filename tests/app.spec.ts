@@ -209,7 +209,7 @@ async function dismissAntifraud(wrapper: VueWrapper): Promise<boolean> {
 
   // 转账环节的弹窗有倒计时：按钮在倒计时结束前是 disabled 的。
   if (ok.attributes('disabled') !== undefined) {
-    const seconds = Number(wrapper.find('.af__countdown').text().match(/\d+/)?.[0] ?? 0)
+    const seconds = Number(ok.text().match(/\d+/)?.[0] ?? 0)
     if (seconds > 0) await new Promise((resolve) => setTimeout(resolve, (seconds + 1) * 1000))
   }
 
@@ -2367,7 +2367,8 @@ describe('Y. 关卡大厅（书桌选关）', () => {
 
     await click(wrapper, '继续听他说')
     await click(wrapper, '按他说的共享屏幕')
-    expect(wrapper.find('.af__countdown').exists(), '转账弹窗应有倒计时').toBe(true)
+    expect(wrapper.find('.af__countdown').exists(), '不再显示重复的秒数提示').toBe(false)
+    expect(wrapper.find('.af__ok').text(), '按钮本身显示倒计时').toContain('请稍等')
     expect(wrapper.find('.af__ok').attributes('disabled'), '倒计时结束前不能关闭').toBeDefined()
     await dismissAntifraud(wrapper)
     expect(wrapper.find('.wallet').exists(), '应进入第三关钱包待确认页').toBe(true)
@@ -2380,6 +2381,34 @@ describe('Y. 关卡大厅（书桌选关）', () => {
     expect(readSave('level-03' as LevelId)?.paidTotal, '取消后累计转出应为 0').toBe(0)
     expect(readSave('level-03' as LevelId)?.ending).toBe('l3-end-stop')
   })
+
+  it('Y09h 第三关完整损失路径：转出 500 后再转 300', async () => {
+    const wrapper = await mountApp({ atDesk: true })
+    await tapPhone(wrapper, 2)
+    await swipeUnlock(wrapper)
+    await clickDesktopApp(wrapper, '青讯')
+    await dismissAntifraud(wrapper)
+
+    await click(wrapper, '继续听他说')
+    await click(wrapper, '按他说的共享屏幕')
+    await dismissAntifraud(wrapper)
+    expect(wrapper.text(), '第一笔应是 500 元待确认').toContain('确认转出 500 元')
+    await click(wrapper, '确认转出 500 元')
+    await flush()
+    expect(readSave('level-03' as LevelId)?.balance, '第一笔后余额应为 300').toBe(300)
+
+    await click(wrapper, '继续听他说')
+    await click(wrapper, '查看这笔保证金')
+    await dismissAntifraud(wrapper)
+    expect(wrapper.text(), '第二笔应是 300 元待确认').toContain('确认转出 300 元')
+    await click(wrapper, '确认转出 300 元')
+    await flush()
+
+    expect(readSave('level-03' as LevelId)?.balance, '两笔后余额应为 0').toBe(0)
+    expect(readSave('level-03' as LevelId)?.paidTotal, '累计转出应为 800').toBe(800)
+    expect(readSave('level-03' as LevelId)?.ending, '应记录完整损失结局').toBe('l3-end-loss')
+    expect(wrapper.text(), '应显示完整损失结局').toContain('越陷越深')
+  }, 20000)
 
   it('Y09d 第三关退出回大厅再进入仍显示选择按钮', async () => {
     let wrapper = await mountApp({ atDesk: true })

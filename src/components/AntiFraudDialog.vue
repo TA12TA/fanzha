@@ -106,16 +106,11 @@ onBeforeUnmount(() => {
       <h2 id="af-headline" class="af__headline">{{ headline }}</h2>
       <p id="af-body" class="af__body">{{ body }}</p>
 
-      <p v-if="!canClose" id="af-countdown" class="af__countdown" role="status" aria-live="polite">
-        {{ remaining }} 秒后可继续
-      </p>
-
       <button
         ref="okRef"
         type="button"
         class="af__ok"
         :disabled="!canClose"
-        :aria-describedby="!canClose ? 'af-countdown' : undefined"
         @click="close"
       >
         {{ canClose ? '我知道了' : `请稍等 ${remaining} 秒` }}
@@ -189,18 +184,6 @@ onBeforeUnmount(() => {
   font-size: var(--font-sm);
   line-height: 1.65;
   color: var(--c-text-soft);
-}
-
-.af__countdown {
-  margin-bottom: var(--space-2);
-  padding: var(--space-2) var(--space-3);
-  border-left: 2px solid var(--c-danger);
-  border-radius: var(--radius-sm);
-  background: var(--c-warn-bg);
-  color: var(--c-warn-text);
-  font-size: var(--font-xs);
-  font-weight: 600;
-  line-height: 1.45;
 }
 
 .af__ok {
