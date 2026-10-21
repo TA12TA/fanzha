@@ -1610,6 +1610,7 @@ describe('S. 沉浸感（去说明文字 / 解锁过渡 / 设置页重开）', (
     // 从设置页重开（真机把「清空数据」放在设置里）
     await click(wrapper, '回到桌面')
     await clickDesktopApp(wrapper, '设置')
+    expect(wrapper.text(), '设置页不再解释「会先问一句」').not.toContain('会先问一句')
     await click(wrapper, '重新开始本局')
     expect(wrapper.text()).toContain('重来一次？')
 

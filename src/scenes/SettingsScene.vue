@@ -163,7 +163,7 @@ function requestClearAll(): void {
             <button type="button" class="row row--action" @click="requestRestart">
               <span class="row__main">
                 <span class="row__label row__label--danger">重新开始本局</span>
-                <span class="row__hint">只清掉「{{ currentLevelTitle }}」的进度和余额（会先问一句）</span>
+                <span class="row__hint">只清掉「{{ currentLevelTitle }}」的进度和余额</span>
               </span>
               <span class="row__chev" aria-hidden="true"></span>
             </button>
@@ -172,7 +172,7 @@ function requestClearAll(): void {
             <button type="button" class="row row--action" @click="requestClearAll">
               <span class="row__main">
                 <span class="row__label row__label--danger">清空全部关卡进度</span>
-                <span class="row__hint">所有关卡都回到没玩过的状态（会先问一句）</span>
+                <span class="row__hint">所有关卡都回到没玩过的状态</span>
               </span>
               <span class="row__chev" aria-hidden="true"></span>
             </button>
