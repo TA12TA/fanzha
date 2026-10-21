@@ -175,6 +175,7 @@ function send(): void {
 }
 
 .threads {
+  flex: none;
   margin: 0;
   padding: 0;
   list-style: none;
