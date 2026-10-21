@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import AppHeader from '@/components/AppHeader.vue'
 import { BRAND } from '@/data/levels/shared'
-import { buildDebrief, riskLabelsOf } from '@/game/debrief'
+import { buildDebrief } from '@/game/debrief'
 import type { PlayableLevel } from '@/game/level'
+import type { DebriefRule } from '@/game/types'
 import type { GameState } from '@/game/types'
 
 /**
@@ -24,7 +25,39 @@ const emit = defineEmits<{
 }>()
 
 const debrief = computed(() => buildDebrief(props.state))
-const labels = computed(() => riskLabelsOf(props.state))
+
+/** 风险标签 → 对应的复盘条目；标签由关卡数据提供，不在组件里写死。 */
+interface TagEntry {
+  id: string
+  label: string
+  rules: DebriefRule[]
+}
+
+const activeTag = ref<string | null>(null)
+
+const tagEntries = computed<TagEntry[]>(() =>
+  props.state.riskTags
+    .map((tag) => ({
+      id: tag,
+      label: props.level.riskTagLabels[tag],
+      rules: props.level.debriefRules.filter((rule) => rule.triggers.includes(tag)),
+    }))
+    .filter((entry) => Boolean(entry.label)),
+)
+
+const activeEntry = computed(
+  () => tagEntries.value.find((entry) => entry.id === activeTag.value) ?? null,
+)
+
+const visibleItems = computed(() => {
+  if (!activeEntry.value) return debrief.value.items
+  const ids = new Set(activeEntry.value.rules.map((rule) => rule.id))
+  return debrief.value.items.filter((item) => ids.has(item.id))
+})
+
+function selectTag(tag: string): void {
+  activeTag.value = activeTag.value === tag ? null : tag
+}
 </script>
 
 <template>
@@ -43,23 +76,38 @@ const labels = computed(() => riskLabelsOf(props.state))
         <p class="summary__text">{{ debrief.summary }}</p>
       </article>
 
-      <section v-if="labels.length" class="tags" aria-label="本局经历">
+      <section v-if="tagEntries.length" class="tags" aria-label="本局经历">
         <h2 class="tags__title">你这局遇到的</h2>
+        <p class="tags__hint">点一项，看对应的诈骗类型</p>
         <ul class="tags__list">
-          <li v-for="label in labels" :key="label" class="tag tags__item">{{ label }}</li>
+          <li v-for="entry in tagEntries" :key="entry.id">
+            <button
+              type="button"
+              class="tag tags__button"
+              :class="{ 'tags__button--on': activeTag === entry.id }"
+              :aria-pressed="activeTag === entry.id ? 'true' : 'false'"
+              aria-controls="review-items"
+              @click="selectTag(entry.id)"
+            >
+              {{ entry.label }}
+            </button>
+          </li>
         </ul>
       </section>
 
-      <section class="items" aria-label="按经历复盘">
-        <h2 class="items__title">这次发生了什么</h2>
-        <ol class="items__list">
-          <li v-for="item in debrief.items" :key="item.id" class="card items__item">
+      <section id="review-items" class="items" aria-label="按经历复盘">
+        <h2 class="items__title">
+          {{ activeEntry ? '对应的诈骗类型' : '这次发生了什么' }}
+        </h2>
+        <ol v-if="visibleItems.length" class="items__list">
+          <li v-for="item in visibleItems" :key="item.id" class="card items__item">
             <h3 class="items__itemtitle">{{ item.title }}</h3>
             <p class="items__observation">{{ item.observation }}</p>
             <p class="items__risk"><span class="items__key">问题在哪：</span>{{ item.risk }}</p>
             <p class="items__advice"><span class="items__key">该怎么做：</span>{{ item.advice }}</p>
           </li>
         </ol>
+        <p v-else class="items__empty">这一类经历暂时没有单独的复盘条目。</p>
       </section>
 
       <section class="actions" aria-label="行动建议">
@@ -150,9 +198,30 @@ const labels = computed(() => riskLabelsOf(props.state))
   list-style: none;
 }
 
-.tags__item {
-  background: var(--c-surface);
+.tags__hint {
+  margin: calc(var(--space-1) * -1) 0 var(--space-2);
+  font-size: var(--font-xs);
+  color: var(--c-text-soft);
+}
+
+.tags__button {
+  min-height: 32px;
+  padding: 3px 9px;
   border: 1px solid var(--c-line);
+  background: var(--c-surface);
+  color: var(--c-text-soft);
+  cursor: pointer;
+  font: inherit;
+}
+
+.tags__button--on {
+  border-color: var(--c-primary);
+  background: var(--c-primary);
+  color: #fff;
+}
+
+.items__empty {
+  font-size: var(--font-sm);
   color: var(--c-text-soft);
 }
 

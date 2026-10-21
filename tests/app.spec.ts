@@ -699,6 +699,15 @@ describe('E. 整部手机的交互（B01–B14）', () => {
     expect(wrapper.text()).toContain('复盘')
     expect(wrapper.text()).toContain('你这局遇到的')
 
+    // 经历标签是按钮：点一次展示对应诈骗类型，再点恢复全部条目。
+    const tag = wrapper.findAll('.tags__button')[0]
+    expect(tag.exists(), '经历标签应可点击').toBe(true)
+    await tag.trigger('click')
+    expect(wrapper.text()).toContain('对应的诈骗类型')
+    expect(tag.attributes('aria-pressed')).toBe('true')
+    await tag.trigger('click')
+    expect(wrapper.text()).toContain('这次发生了什么')
+
     // 复盘也可以离开再进入
     await click(wrapper, '桌面')
     await clickDesktopApp(wrapper, '国家反诈中心')
