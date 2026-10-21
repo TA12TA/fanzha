@@ -336,12 +336,20 @@ onBeforeUnmount(() => {
     </header>
 
     <div v-if="loading" class="video__loading" role="status" aria-live="polite">
+      <button type="button" class="video__loadingback" aria-label="返回上一层" @click="emit('back')">←</button>
+      <div class="video__loadingicon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="5" width="18" height="14" rx="3" />
+          <path d="m10 9 5 3-5 3Z" fill="currentColor" stroke="none" />
+        </svg>
+      </div>
       <p class="video__loadingtitle">正在准备视频</p>
+      <p class="video__loadingsub">第一次打开会慢一点，之后会快一些。</p>
       <div class="video__loadingbar" aria-hidden="true">
         <span :style="{ width: `${loadingProgress}%` }"></span>
       </div>
       <p class="video__loadingmeta">
-        {{ loadingProgress }}% · 缓存 {{ cacheDone }}/{{ cacheTotal }}
+        {{ loadingProgress }}% · 已缓存 {{ cacheDone }}/{{ cacheTotal }}
       </p>
     </div>
 
@@ -891,19 +899,52 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
   gap: var(--space-3);
-  padding: var(--space-5);
-  background: rgb(6 11 8 / 84%);
+  padding: calc(var(--space-6) + var(--safe-top)) var(--space-5) calc(var(--space-6) + var(--safe-bottom));
+  background:
+    radial-gradient(70% 48% at 50% 38%, rgb(46 91 71 / 34%), transparent 72%),
+    linear-gradient(155deg, #14251e, #07100c);
   color: #f7f0e2;
   text-align: center;
 }
 
+.video__loadingback {
+  position: absolute;
+  top: calc(var(--space-4) + var(--safe-top));
+  left: var(--space-3);
+  width: var(--tap-min);
+  height: var(--tap-min);
+  border: 0;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 8%);
+  color: inherit;
+  font-size: 20px;
+}
+
+.video__loadingicon {
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  border: 1px solid rgb(255 255 255 / 16%);
+  border-radius: 22px;
+  background: rgb(255 255 255 / 7%);
+  color: #c8a064;
+}
+
 .video__loadingtitle {
-  font-size: var(--font-md);
+  font-size: var(--font-lg);
   font-weight: 700;
+}
+
+.video__loadingsub {
+  margin-top: calc(var(--space-1) * -1);
+  font-size: var(--font-xs);
+  color: rgb(247 240 226 / 58%);
 }
 
 .video__loadingbar {
   width: min(260px, 72%);
+  margin-top: var(--space-3);
   height: 5px;
   overflow: hidden;
   border-radius: 999px;
