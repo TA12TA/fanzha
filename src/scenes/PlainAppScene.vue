@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import AppHeader from '@/components/AppHeader.vue'
 import { PHOTOS } from '@/data/photos'
+import { playSound } from '@/app/sound'
 
 /**
  * 相册：本机照片（真实照片，打包为本地资源）。
@@ -30,10 +31,12 @@ const groups = computed(() => {
 })
 
 function open(index: number): void {
+  playSound('tap')
   openIndex.value = index
 }
 
 function close(): void {
+  playSound('tap')
   openIndex.value = null
 }
 
@@ -51,6 +54,7 @@ function step(delta: number): void {
   if (openIndex.value === null) return
   const next = openIndex.value + delta
   if (next < 0 || next >= PHOTOS.length) return
+  playSound('tap')
   openIndex.value = next
 }
 

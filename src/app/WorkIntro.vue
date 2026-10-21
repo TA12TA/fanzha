@@ -6,7 +6,14 @@
  * 目的不是加免责声明，而是让第一次打开链接的人先知道：这是什么作品、
  * 大约多长、点哪里开始——同时仍然把场景留在同一张书桌上。
  */
+import { playSound } from '@/app/sound'
+
 const emit = defineEmits<{ (e: 'close'): void }>()
+
+function start(): void {
+  playSound('tap')
+  emit('close')
+}
 </script>
 
 <template>
@@ -25,7 +32,7 @@ const emit = defineEmits<{ (e: 'close'): void }>()
 
       <p class="work-intro__meta">约 8 分钟</p>
 
-      <button type="button" class="btn btn--primary work-intro__start" autofocus @click="emit('close')">
+      <button type="button" class="btn btn--primary work-intro__start" autofocus @click="start">
         进入作品
       </button>
     </article>

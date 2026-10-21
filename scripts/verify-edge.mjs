@@ -991,7 +991,7 @@ async function main() {
     record(
       '待付款页显示固定金额，且不再有模拟声明牌',
       text.includes('确认垫付 100 元') &&
-        text.includes('这一页不用输卡号') &&
+        !text.includes('这一页不用输卡号') &&
         !text.includes('不会动你的真钱') &&
         !text.includes('剧情演示'),
       text.includes('不会动你的真钱') ? '仍有模拟声明' : '已移除',

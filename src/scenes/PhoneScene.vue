@@ -82,7 +82,10 @@ defineExpose({ handleBack })
         <span class="dial__hint">{{ matchedName || '输入号码' }}</span>
         <span class="dial__number">{{ number || '——' }}</span>
         <button v-if="number" type="button" class="dial__back" aria-label="删除一位" @click="backspace">
-          ⌫
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M20 6H9l-5 6 5 6h11Z" />
+            <path d="m13 9 5 6m0-6-5 6" />
+          </svg>
         </button>
       </div>
 
@@ -101,7 +104,9 @@ defineExpose({ handleBack })
       </div>
 
       <button type="button" class="dialbtn" :disabled="!number" aria-label="拨号" @click="dial">
-        <span aria-hidden="true">✆</span>
+        <svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor" aria-hidden="true">
+          <path d="M6.6 10.8c1.4 3.1 3.5 5.2 6.6 6.6l2.2-2.2c.3-.3.7-.4 1.1-.2 1 .4 2 .6 3 .6.6 0 1 .4 1 1v3c0 .6-.4 1-1 1C10.6 20.6 3.4 13.4 3.4 4.5c0-.6.4-1 1-1h3c.6 0 1 .4 1 1 0 1 .2 2 .6 3 .1.4 0 .8-.2 1.1Z" />
+        </svg>
       </button>
 
       <section class="recents" aria-label="最近通话">

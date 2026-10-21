@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { playSound } from '@/app/sound'
 import { CODE_LENGTH, isCodeComplete, sanitizeCodeInput } from '@/app/smsCode'
 
 /**
@@ -57,6 +58,7 @@ function submit(): void {
 
 function resend(): void {
   if (props.submitting) return
+  playSound('tap')
   raw.value = ''
   emit('resend')
 }

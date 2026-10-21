@@ -149,7 +149,13 @@ onBeforeUnmount(() => {
           <h2 class="hero__title">{{ current.title }}</h2>
           <p class="hero__sub">{{ current.artist }} · {{ current.album }}</p>
           <button type="button" class="hero__play" @click="togglePlay">
-            <span aria-hidden="true">{{ playing ? '❚❚' : '▶' }}</span>
+            <svg v-if="playing" viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true">
+              <rect x="7" y="5" width="3.5" height="14" rx="1" />
+              <rect x="13.5" y="5" width="3.5" height="14" rx="1" />
+            </svg>
+            <svg v-else viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true">
+              <path d="M8 5.5v13l10-6.5Z" />
+            </svg>
             {{ playing ? '暂停' : '播放' }}
           </button>
         </div>
@@ -203,7 +209,11 @@ onBeforeUnmount(() => {
               <span class="playlist__eyebrow">歌单</span>
               <span class="playlist__title">{{ playlist.title }}</span>
               <span class="playlist__sub">{{ playlist.subtitle }}</span>
-              <span class="playlist__play" aria-hidden="true">▶</span>
+              <span class="playlist__play" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor">
+                  <path d="M8 5.5v13l10-6.5Z" />
+                </svg>
+              </span>
             </button>
           </li>
         </ul>
@@ -220,11 +230,27 @@ onBeforeUnmount(() => {
           <span class="player__sub">{{ current.artist }}</span>
         </div>
         <div class="player__controls">
-          <button type="button" class="player__btn" aria-label="上一首" @click="previousTrack">⏮</button>
-          <button type="button" class="player__btn player__btn--main" :aria-label="playing ? '暂停' : '播放'" @click="togglePlay">
-            {{ playing ? '❚❚' : '▶' }}
+          <button type="button" class="player__btn" aria-label="上一首" @click="previousTrack">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M6 5v14" />
+              <path d="M18 6.5 9.5 12 18 17.5Z" fill="currentColor" stroke="none" />
+            </svg>
           </button>
-          <button type="button" class="player__btn" aria-label="下一首" @click="nextTrack(false)">⏭</button>
+          <button type="button" class="player__btn player__btn--main" :aria-label="playing ? '暂停' : '播放'" @click="togglePlay">
+            <svg v-if="playing" viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true">
+              <rect x="7" y="5" width="3.5" height="14" rx="1" />
+              <rect x="13.5" y="5" width="3.5" height="14" rx="1" />
+            </svg>
+            <svg v-else viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true">
+              <path d="M8 5.5v13l10-6.5Z" />
+            </svg>
+          </button>
+          <button type="button" class="player__btn" aria-label="下一首" @click="nextTrack(false)">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M18 5v14" />
+              <path d="M6 6.5 14.5 12 6 17.5Z" fill="currentColor" stroke="none" />
+            </svg>
+          </button>
         </div>
       </div>
       <input

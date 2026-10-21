@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import AppHeader from '@/components/AppHeader.vue'
 import { BRAND } from '@/data/levels/shared'
 import { buildDebrief } from '@/game/debrief'
+import { playSound } from '@/app/sound'
 import type { PlayableLevel } from '@/game/level'
 import type { DebriefRule } from '@/game/types'
 import type { GameState } from '@/game/types'
@@ -56,6 +57,7 @@ const visibleItems = computed(() => {
 })
 
 function selectTag(tag: string): void {
+  playSound('tap')
   activeTag.value = activeTag.value === tag ? null : tag
 }
 </script>

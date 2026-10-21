@@ -49,6 +49,28 @@ function closeProduct(): void {
   active.value = null
 }
 
+function setTab(next: 'home' | 'orders'): void {
+  if (tab.value === next) return
+  playSound('tap')
+  tab.value = next
+}
+
+function clearQuery(): void {
+  playSound('tap')
+  query.value = ''
+}
+
+function selectCategory(next: string): void {
+  if (category.value === next) return
+  playSound('tap')
+  category.value = next
+}
+
+function togglePolicy(): void {
+  playSound('tap')
+  policyOpen.value = !policyOpen.value
+}
+
 function toggleWish(id: string): void {
   playSound('tap')
   wishlist.value = wishlist.value.includes(id)
@@ -63,11 +85,11 @@ function handleBack(): boolean {
     return true
   }
   if (policyOpen.value) {
-    policyOpen.value = false
+    togglePolicy()
     return true
   }
   if (tab.value !== 'home') {
-    tab.value = 'home'
+    setTab('home')
     return true
   }
   return false
@@ -97,7 +119,7 @@ onBeforeUnmount(() => globalThis.removeEventListener('keydown', closeOnEscape))
         class="shop__tab"
         :class="{ 'shop__tab--on': tab === 'home' }"
         :aria-current="tab === 'home' ? 'page' : undefined"
-        @click="tab = 'home'"
+        @click="setTab('home')"
       >
         首页
       </button>
@@ -106,7 +128,7 @@ onBeforeUnmount(() => globalThis.removeEventListener('keydown', closeOnEscape))
         class="shop__tab"
         :class="{ 'shop__tab--on': tab === 'orders' }"
         :aria-current="tab === 'orders' ? 'page' : undefined"
-        @click="tab = 'orders'"
+        @click="setTab('orders')"
       >
         订单
       </button>
@@ -119,7 +141,7 @@ onBeforeUnmount(() => globalThis.removeEventListener('keydown', closeOnEscape))
           <path d="m16 16 4.4 4.4" stroke-linecap="round" />
         </svg>
         <input v-model="query" type="search" placeholder="搜一搜想要的东西" aria-label="搜索商品" />
-        <button v-if="query" type="button" class="shop__clear" aria-label="清空搜索" @click="query = ''">
+        <button v-if="query" type="button" class="shop__clear" aria-label="清空搜索" @click="clearQuery">
           ✕
         </button>
       </label>
@@ -133,7 +155,7 @@ onBeforeUnmount(() => globalThis.removeEventListener('keydown', closeOnEscape))
           class="chip"
           :class="{ 'chip--on': category === item }"
           :aria-selected="category === item"
-          @click="category = item"
+          @click="selectCategory(item)"
         >
           {{ item }}
         </button>
@@ -207,7 +229,7 @@ onBeforeUnmount(() => globalThis.removeEventListener('keydown', closeOnEscape))
           </div>
         </dl>
         <p class="order__note">{{ SHOP_ORDER.note }}</p>
-        <button type="button" class="order__policybtn" @click="policyOpen = !policyOpen">
+        <button type="button" class="order__policybtn" @click="togglePolicy">
           {{ policyOpen ? '收起售后规则' : '查看售后规则' }}
         </button>
         <p v-if="policyOpen" class="order__policy">{{ SHOP_ORDER.policy }}</p>

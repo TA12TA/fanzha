@@ -55,7 +55,13 @@ const threads = computed(() => {
     return {
       ...thread,
       time: dynamic ? '刚刚' : thread.time,
-      unread: read.value.includes(thread.id) ? 0 : dynamic ? Math.max(1, thread.unread) : thread.unread,
+      unread: dynamic
+        ? read.value.includes('wallet-code')
+          ? 0
+          : Math.max(1, thread.unread)
+        : read.value.includes(thread.id)
+          ? 0
+          : thread.unread,
       preview: dynamic ? props.codeSms : last,
     }
   })
@@ -81,6 +87,10 @@ function openThread(id: string): void {
   playSound('tap')
   selectedId.value = id
   if (!read.value.includes(id)) emit('mark-read', id)
+  // 验证码到达后要单独记“这条新短信已读”，否则之前读过钱包会让新码没有红标。
+  if (id === 'wallet' && props.codeSms && !read.value.includes('wallet-code')) {
+    emit('mark-read', 'wallet-code')
+  }
 }
 
 function back(): void {
@@ -91,6 +101,7 @@ function back(): void {
 /** 给父级手势返回用：先退出会话，再退出应用。 */
 function handleBack(): boolean {
   if (!selectedId.value) return false
+  playSound('tap')
   selectedId.value = null
   return true
 }

@@ -316,8 +316,15 @@ function shareTo(name: string): void {
 }
 
 function closeOverlays(): void {
+  playSound('tap')
   commentsOpen.value = false
   shareOpen.value = false
+}
+
+function setTab(next: 'following' | 'recommend'): void {
+  if (tab.value === next) return
+  playSound('tap')
+  tab.value = next
 }
 
 /** 手势返回先关评论/分享面板，而不是直接退回桌面。 */
@@ -354,7 +361,7 @@ onBeforeUnmount(() => {
           type="button"
           class="feedhead__tab"
           :class="{ 'feedhead__tab--on': tab === 'following' }"
-          @click="tab = 'following'"
+          @click="setTab('following')"
         >
           关注
         </button>
@@ -362,7 +369,7 @@ onBeforeUnmount(() => {
           type="button"
           class="feedhead__tab"
           :class="{ 'feedhead__tab--on': tab === 'recommend' }"
-          @click="tab = 'recommend'"
+          @click="setTab('recommend')"
         >
           推荐
         </button>
@@ -560,14 +567,14 @@ onBeforeUnmount(() => {
 
     <div v-if="!feed.length" class="video__empty">
       <p>还没有关注的创作者。</p>
-      <button type="button" class="video__emptybtn" @click="tab = 'recommend'">去推荐看看</button>
+      <button type="button" class="video__emptybtn" @click="setTab('recommend')">去推荐看看</button>
     </div>
 
     <!-- 评论面板 -->
     <div v-if="commentsOpen && active" class="sheet" role="dialog" aria-modal="true" aria-label="评论">
       <header class="sheet__head">
         <span>评论 {{ commentCount(active) }}</span>
-        <button type="button" class="sheet__close" aria-label="关闭评论" @click="commentsOpen = false">✕</button>
+        <button type="button" class="sheet__close" aria-label="关闭评论" @click="closeOverlays">✕</button>
       </header>
       <ul class="comments">
         <li v-for="(comment, index) in commentsOf(active)" :key="index" class="comment">
@@ -588,7 +595,7 @@ onBeforeUnmount(() => {
     <div v-if="shareOpen && active" class="sheet" role="dialog" aria-modal="true" aria-label="分享">
       <header class="sheet__head">
         <span>分享给</span>
-        <button type="button" class="sheet__close" aria-label="关闭分享" @click="shareOpen = false">✕</button>
+        <button type="button" class="sheet__close" aria-label="关闭分享" @click="closeOverlays">✕</button>
       </header>
       <div class="sharelist">
         <button v-for="name in ['妈妈', '班级通知群', '室友小陈']" :key="name" type="button" @click="shareTo(name)">
