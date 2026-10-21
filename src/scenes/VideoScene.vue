@@ -70,16 +70,31 @@ function onScroll(): void {
   }
 }
 
-function togglePlay(): void {
-  playSound('tap')
-  const video = activeVideo.value
-  if (active.value?.video && video) {
-    if (video.paused) {
-      void video.play().then(() => {
+function playVideo(video: HTMLVideoElement): void {
+  try {
+    const result = video.play()
+    // jsdom 的 play() 返回 undefined；真实浏览器返回 Promise，不能假定一定有 then。
+    if (result && typeof result.then === 'function') {
+      void result.then(() => {
         playing.value = true
       }).catch(() => {
         playing.value = false
       })
+    } else {
+      playing.value = true
+    }
+  } catch {
+    playing.value = false
+  }
+}
+
+function togglePlay(): void {
+  playSound('tap')
+  if (loading.value) return
+  const video = activeVideo.value
+  if (active.value?.video && video) {
+    if (video.paused) {
+      playVideo(video)
     } else {
       video.pause()
       playing.value = false
@@ -105,13 +120,13 @@ function onVideoLoaded(): void {
   const video = activeVideo.value
   if (!video) return
   video.muted = muted.value
+  // 缓存画面还在时只挂载、不播放，避免用户在“正在准备视频”时听到声音。
+  if (loading.value) {
+    video.pause()
+    return
+  }
   if (!playing.value) return
-  void video.play().then(() => {
-    playing.value = true
-  }).catch(() => {
-    // 浏览器拦截有声自动播放时，回到可点的暂停/播放态。
-    playing.value = false
-  })
+  playVideo(video)
 }
 
 function onVideoTimeUpdate(): void {
@@ -124,6 +139,17 @@ function onVideoEnded(): void {
   playing.value = false
   progress.value = 100
 }
+
+watch(loading, (isLoading) => {
+  const video = activeVideo.value
+  if (!video) return
+  if (isLoading) {
+    video.pause()
+    return
+  }
+  if (!playing.value) return
+  playVideo(video)
+})
 
 function videoSource(video: VideoItem): string {
   return cachedSources.value[video.id] ?? video.video ?? ''
