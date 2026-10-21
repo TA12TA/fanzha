@@ -2133,7 +2133,9 @@ describe('Y. 关卡大厅（书桌选关）', () => {
     const wrapper = await mountApp({ atDesk: true, keepIntro: true })
 
     expect(wrapper.find('.work-intro').exists(), '首屏应有作品封面').toBe(true)
-    expect(wrapper.text(), '封面应出现网络文化节作品信息').toContain('2026 网络文化节')
+    expect(wrapper.text(), '封面不再保留网络文化节栏').not.toContain('2026 网络文化节')
+    expect(wrapper.text(), '封面不再写可选音效').not.toContain('含可选音效')
+    expect(wrapper.text()).toContain('约 8 分钟')
     expect(wrapper.text()).toContain('反诈局中局')
     expect(wrapper.text()).toContain('你的手机')
     expect(wrapper.text()).toContain('进入作品')

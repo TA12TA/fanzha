@@ -12,7 +12,6 @@ const emit = defineEmits<{ (e: 'close'): void }>()
 <template>
   <section class="work-intro" role="dialog" aria-modal="true" aria-labelledby="work-intro-title">
     <article class="work-intro__card">
-      <p class="work-intro__eyebrow">2026 网络文化节 · 互动叙事 H5</p>
       <h2 id="work-intro-title" class="work-intro__title">反诈局中局</h2>
       <p class="work-intro__subtitle">你的手机</p>
 
@@ -26,7 +25,7 @@ const emit = defineEmits<{ (e: 'close'): void }>()
         <li><span>03</span>在消息、钱包和反诈手册里自己判断</li>
       </ol>
 
-      <p class="work-intro__meta">约 8 分钟 · 3 个关卡 · 含可选音效</p>
+      <p class="work-intro__meta">约 8 分钟 · 3 个关卡</p>
 
       <button type="button" class="btn btn--primary work-intro__start" autofocus @click="emit('close')">
         进入作品
@@ -60,14 +59,6 @@ const emit = defineEmits<{ (e: 'close'): void }>()
   box-shadow:
     0 0 0 1px rgb(255 255 255 / 20%),
     0 22px 60px rgb(0 0 0 / 36%);
-}
-
-.work-intro__eyebrow {
-  font-family: var(--font-sans);
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  color: var(--c-text-soft);
 }
 
 .work-intro__title {
