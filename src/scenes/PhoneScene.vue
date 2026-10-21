@@ -460,8 +460,8 @@ function toggleSpeaker(): void {
 .call__tool {
   display: grid;
   place-items: center;
-  width: 56px;
-  height: 56px;
+  width: 60px;
+  height: 60px;
   border: 1px solid rgb(255 255 255 / 16%);
   border-radius: 50%;
   background: rgb(255 255 255 / 8%);
@@ -488,8 +488,8 @@ function toggleSpeaker(): void {
 .call__end {
   display: grid;
   place-items: center;
-  width: 64px;
-  height: 64px;
+  width: 60px;
+  height: 60px;
   border: 0;
   border-radius: 50%;
   background: #d84b3f;
