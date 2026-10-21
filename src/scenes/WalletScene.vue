@@ -96,7 +96,6 @@ const records = computed(() => props.level.walletRecords(props.state))
       <section v-if="request" class="request" aria-label="待确认的付款">
         <p class="request__title">{{ request.title }}</p>
         <p class="request__amount">{{ request.amount }} <span>元</span></p>
-        <p class="request__hint">离开只是先放着，不会扣款或取消。</p>
         <div class="request__actions">
           <button
             type="button"
@@ -115,13 +114,6 @@ const records = computed(() => props.level.walletRecords(props.state))
             {{ cancelLabel }}
           </button>
         </div>
-        <!--
-          原来这句是「不用输卡号、验证码或密码」。
-          现在游戏里真的会出现一次「把短信验证码发给对方」的环节（在聊天里，
-          见 level02 的 codeGate），钱包页再说「不用输验证码」会自相矛盾。
-          这里只保留与钱包页本身相关的部分。
-        -->
-        <p class="request__note">这一页不用输卡号，也不用输密码。</p>
       </section>
 
       <section v-else class="norequest" aria-label="当前没有待处理请求">
@@ -256,13 +248,6 @@ const records = computed(() => props.level.walletRecords(props.state))
 .request__amount span {
   font-size: var(--font-base);
   font-weight: 500;
-}
-
-.request__hint,
-.request__note {
-  font-size: var(--font-xs);
-  color: var(--c-text-soft);
-  line-height: 1.55;
 }
 
 /* ============ 账户与安全 ============ */

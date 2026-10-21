@@ -800,7 +800,8 @@ describe('E. 整部手机的交互（B01–B14）', () => {
      */
     expect(text, '不应再有「不会动你的真钱」这类模拟声明').not.toContain('不会动你的真钱')
     expect(text, '不应再有「剧情演示」字样').not.toContain('剧情演示')
-    expect(text).toContain('这一页不用输卡号')
+    expect(text, '转账页不再写「先放着」').not.toContain('离开只是先放着')
+    expect(text, '转账页不再写不用输卡号').not.toContain('这一页不用输卡号')
     /*
      * 仍然不允许真的收集敏感信息：
      * - 不许有链接（不能跳走）
