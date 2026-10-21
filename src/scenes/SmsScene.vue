@@ -17,8 +17,10 @@ const props = withDefaults(
     codeSms?: string
     /** 已读会话；由手机壳持有，离开短信应用再回来时不会重新变红。 */
     readIds?: string[]
+    /** 每局随机种子：开局/重开时换顺序，重新进入应用时保持不变。 */
+    seed?: number
   }>(),
-  { codeSms: '', readIds: () => [] },
+  { codeSms: '', readIds: () => [], seed: 1 },
 )
 
 const emit = defineEmits<{
@@ -31,8 +33,21 @@ const draft = ref('')
 const read = computed(() => props.readIds)
 const extras = ref<Record<string, SmsMessage[]>>({})
 
+function shuffleThreads<T>(items: readonly T[], seed: number): T[] {
+  const list = [...items]
+  let state = seed >>> 0 || 0x9e3779b9
+  for (let i = list.length - 1; i > 0; i -= 1) {
+    state = (Math.imul(state, 1664525) + 1013904223) >>> 0
+    const j = state % (i + 1)
+    ;[list[i], list[j]] = [list[j], list[i]]
+  }
+  return list
+}
+
 const threads = computed(() => {
-  const list = SMS_THREADS.map((thread) => {
+  const base = shuffleThreads(SMS_THREADS, props.seed)
+  const rank = new Map(base.map((thread, index) => [thread.id, index]))
+  const list = base.map((thread) => {
     const dynamic = thread.id === 'wallet' && props.codeSms
     const extra = extras.value[thread.id] ?? []
     const last =
@@ -44,11 +59,11 @@ const threads = computed(() => {
       preview: dynamic ? props.codeSms : last,
     }
   })
-  // 验证码到达时，安心钱包应该像真机一样跳到收件箱最上面。
-  if (props.codeSms) {
-    list.sort((a, b) => (a.id === 'wallet' ? -1 : b.id === 'wallet' ? 1 : 0))
-  }
-  return list
+  // 未读永远在上；同组内保持本局的随机顺序。
+  return list.sort((a, b) => {
+    if (a.unread !== b.unread) return b.unread - a.unread
+    return (rank.get(a.id) ?? 0) - (rank.get(b.id) ?? 0)
+  })
 })
 
 const selected = computed(() => threads.value.find((thread) => thread.id === selectedId.value) ?? null)

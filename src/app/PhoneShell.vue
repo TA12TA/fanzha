@@ -128,6 +128,8 @@ const view = ref<ViewId>(initialView())
 const sceneRef = ref<{ handleBack?: () => boolean } | null>(null)
 /** 短信已读状态放在手机壳里，退出短信应用再回来仍然保留。 */
 const smsRead = ref<string[]>([])
+/** 每局随机一次短信顺序：重开本局会换一批，重新进入短信应用不会换。 */
+const smsSeed = ref(makeSmsSeed())
 /**
  * 「继续当前事项」的解锁状态。
  *
@@ -518,6 +520,10 @@ watch(
   },
 )
 
+function makeSmsSeed(): number {
+  return (Date.now() ^ Math.floor(Math.random() * 0x7fffffff)) >>> 0
+}
+
 function markSmsRead(id: string): void {
   if (!smsRead.value.includes(id)) smsRead.value = [...smsRead.value, id]
 }
@@ -698,6 +704,9 @@ function doRestart(): void {
    * 不清的话，「再玩一次」看到的还是上一局那几条，随机就白做了。
    */
   resetClassGroupNews()
+  // 重新开局：短信已读清空，并按新种子重排收件箱。
+  smsRead.value = []
+  smsSeed.value = makeSmsSeed()
   confirmRestart.value = false
   profileOpen.value = false
   notices.clear()
@@ -1044,6 +1053,7 @@ onBeforeUnmount(() => {
           ref="sceneRef"
           :code-sms="codeSmsText"
           :read-ids="smsRead"
+          :seed="smsSeed"
           @mark-read="markSmsRead"
           @back="goBack"
         />
