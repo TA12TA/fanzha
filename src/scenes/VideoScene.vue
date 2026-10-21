@@ -16,6 +16,7 @@ const tab = ref<'following' | 'recommend'>('recommend')
 const feedRef = ref<HTMLElement | null>(null)
 const activeIndex = ref(0)
 const playing = ref(true)
+const muted = ref(false)
 const progress = ref(0)
 const followed = ref<string[]>([])
 const liked = ref<string[]>([])
@@ -68,6 +69,35 @@ function tick(): void {
 
 function formatCount(value: number): string {
   return value >= 10000 ? `${(value / 10000).toFixed(1)} 万` : String(value)
+}
+
+/** 把展示用时长（MM:SS / H:MM:SS）换算成秒，供进度条与时间码使用。 */
+function durationSeconds(value: string): number {
+  const parts = value.split(':').map(Number)
+  if (parts.some((part) => !Number.isFinite(part))) return 0
+  return parts.reduce((total, part) => total * 60 + part, 0)
+}
+
+function formatTime(value: number): string {
+  const seconds = Math.max(0, Math.floor(value))
+  const minutes = Math.floor(seconds / 60)
+  return `${minutes}:${String(seconds % 60).padStart(2, '0')}`
+}
+
+function currentTimeOf(video: VideoItem): string {
+  const total = durationSeconds(video.duration)
+  return formatTime((progress.value / 100) * total)
+}
+
+function seek(event: Event): void {
+  const value = (event.target as HTMLInputElement).valueAsNumber
+  if (!Number.isFinite(value)) return
+  progress.value = Math.min(100, Math.max(0, value))
+}
+
+function toggleMuted(): void {
+  playSound('tap')
+  muted.value = !muted.value
 }
 
 function likeCount(video: VideoItem): number {
@@ -201,7 +231,9 @@ onBeforeUnmount(() => {
           aria-label="播放"
           @click.stop="togglePlay"
         >
-          ▶
+          <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor" aria-hidden="true">
+            <path d="M8 5.5v13l10-6.5Z" />
+          </svg>
         </button>
 
         <aside class="rail" @click.stop>
@@ -222,12 +254,17 @@ onBeforeUnmount(() => {
             :aria-label="liked.includes(video.id) ? '取消点赞' : '点赞'"
             @click="toggleLike(video)"
           >
-            <span aria-hidden="true">♥</span>
+            <svg class="rail__icon" viewBox="0 0 24 24" width="28" height="28" :fill="liked.includes(video.id) ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12 20.2 4.7 13a4.8 4.8 0 0 1 6.8-6.8l.5.5.5-.5a4.8 4.8 0 0 1 6.8 6.8Z" />
+            </svg>
             <small>{{ formatCount(likeCount(video)) }}</small>
           </button>
 
           <button type="button" class="rail__btn" aria-label="评论" @click="openComments">
-            <span aria-hidden="true">◌</span>
+            <svg class="rail__icon" viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true">
+              <path d="M5 5h14v10H9l-4 4V5Z" />
+              <path d="M8 9h8M8 12h5" stroke-linecap="round" />
+            </svg>
             <small>{{ commentCount(video) }}</small>
           </button>
 
@@ -238,12 +275,18 @@ onBeforeUnmount(() => {
             :aria-label="saved.includes(video.id) ? '取消收藏' : '收藏视频'"
             @click="toggleSave(video)"
           >
-            <span aria-hidden="true">★</span>
+            <svg class="rail__icon" viewBox="0 0 24 24" width="28" height="28" :fill="saved.includes(video.id) ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true">
+              <path d="M6 4.5h12v16l-6-4-6 4Z" />
+            </svg>
             <small>{{ saved.includes(video.id) ? '已收藏' : '收藏' }}</small>
           </button>
 
           <button type="button" class="rail__btn" aria-label="分享" @click="openShare">
-            <span aria-hidden="true">↗</span>
+            <svg class="rail__icon" viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12 15V4" />
+              <path d="m7.5 8.5 4.5-4.5 4.5 4.5" />
+              <path d="M5 13v6h14v-6" />
+            </svg>
             <small>分享</small>
           </button>
         </aside>
@@ -258,8 +301,51 @@ onBeforeUnmount(() => {
           <p class="clip__music"><span aria-hidden="true">♪</span> {{ video.music }}</p>
         </div>
 
-        <div v-if="index === activeIndex" class="clip__progress" aria-hidden="true">
-          <span :style="{ width: `${progress}%` }"></span>
+        <!--
+          控制条与内容解耦：后续把封面图换成真实 <video> 时，
+          只需把 playing / progress / muted 同步到 video 元素即可。
+        -->
+        <div v-if="index === activeIndex" class="clip__transport" @click.stop>
+          <button
+            type="button"
+            class="clip__transportbtn"
+            :aria-label="playing ? '暂停' : '播放'"
+            @click="togglePlay"
+          >
+            <svg v-if="playing" viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">
+              <rect x="7" y="5" width="3.5" height="14" rx="1" />
+              <rect x="13.5" y="5" width="3.5" height="14" rx="1" />
+            </svg>
+            <svg v-else viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">
+              <path d="M8 5.5v13l10-6.5Z" />
+            </svg>
+          </button>
+          <input
+            class="clip__seek"
+            type="range"
+            min="0"
+            max="100"
+            step="0.1"
+            :value="progress"
+            aria-label="播放进度"
+            @input="seek"
+          />
+          <span class="clip__time">{{ currentTimeOf(video) }} / {{ video.duration }}</span>
+          <button
+            type="button"
+            class="clip__transportbtn"
+            :aria-label="muted ? '取消静音' : '静音'"
+            @click="toggleMuted"
+          >
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M4 9h3l4-3v12l-4-3H4Z" />
+              <template v-if="!muted">
+                <path d="M15 9.5a4 4 0 0 1 0 5" />
+                <path d="M17.5 7a7 7 0 0 1 0 10" />
+              </template>
+              <path v-else d="m16 9 4 6m0-6-4 6" />
+            </svg>
+          </button>
         </div>
       </article>
     </div>
@@ -423,7 +509,7 @@ onBeforeUnmount(() => {
   position: absolute;
   top: 50%;
   left: 50%;
-  z-index: 4;
+  z-index: 6;
   display: grid;
   place-items: center;
   width: 58px;
@@ -432,17 +518,22 @@ onBeforeUnmount(() => {
   border-radius: 50%;
   background: rgb(4 8 14 / 42%);
   color: #fff;
-  font-size: 19px;
   transform: translate(-50%, -50%);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
+}
+
+.clip__play svg {
+  display: block;
+  width: 26px;
+  height: 26px;
 }
 
 /* 右侧操作栏 */
 .rail {
   position: absolute;
   right: var(--space-2);
-  bottom: 132px;
+  bottom: 176px;
   z-index: 4;
   display: flex;
   flex-direction: column;
@@ -495,6 +586,12 @@ onBeforeUnmount(() => {
   text-shadow: 0 1px 4px rgb(0 0 0 / 50%);
 }
 
+.rail__icon {
+  display: block;
+  width: 28px;
+  height: 28px;
+}
+
 .rail__btn small {
   font-size: 10px;
   font-weight: 600;
@@ -509,7 +606,7 @@ onBeforeUnmount(() => {
   position: absolute;
   left: var(--space-4);
   right: 76px;
-  bottom: 26px;
+  bottom: 68px;
   z-index: 4;
   display: flex;
   flex-direction: column;
@@ -550,21 +647,60 @@ onBeforeUnmount(() => {
   color: rgb(247 240 226 / 82%);
 }
 
-.clip__progress {
+/* 底部播放控制条：播放/暂停、可拖动进度、时间、静音 */
+.clip__transport {
   position: absolute;
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 4;
-  height: 2px;
-  background: rgb(255 255 255 / 20%);
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 56px;
+  padding: 4px var(--space-3) calc(var(--space-2) + var(--safe-bottom));
+  background: linear-gradient(180deg, transparent, rgb(0 0 0 / 72%));
+  color: #fff;
 }
 
-.clip__progress span {
+.clip__transportbtn {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 12%);
+  color: inherit;
+}
+
+.clip__transportbtn:active {
+  background: rgb(255 255 255 / 24%);
+}
+
+.clip__transportbtn svg {
   display: block;
-  height: 100%;
-  background: rgb(255 255 255 / 86%);
-  transition: width 1s linear;
+  width: 20px;
+  height: 20px;
+}
+
+.clip__seek {
+  flex: 1;
+  min-width: 0;
+  height: 24px;
+  margin: 0;
+  accent-color: #f7f0e2;
+  cursor: pointer;
+}
+
+.clip__time {
+  flex: none;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  color: rgb(255 255 255 / 86%);
 }
 
 .video__empty {
@@ -764,8 +900,5 @@ onBeforeUnmount(() => {
     animation: none;
   }
 
-  .clip__progress span {
-    transition: none;
-  }
 }
 </style>

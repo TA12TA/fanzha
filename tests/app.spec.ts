@@ -1975,6 +1975,9 @@ describe('P. 常用生活应用', () => {
     expect(wrapper.find('.video').exists(), '应打开青影').toBe(true)
     expect(wrapper.findAll('.clip').length, '应有一屏一条的短视频').toBeGreaterThanOrEqual(6)
     expect(wrapper.find('.clip__image').exists(), '短视频应使用真实封面图').toBe(true)
+    expect(wrapper.find('.clip__transport').exists(), '应有播放控制条').toBe(true)
+    expect(wrapper.find('.clip__seek').exists(), '应有可拖动进度条').toBe(true)
+    expect(wrapper.find('.clip__transportbtn').exists(), '应有播放/暂停按钮').toBe(true)
 
     const like = wrapper.find('button[aria-label="点赞"]')
     await like.trigger('click')
