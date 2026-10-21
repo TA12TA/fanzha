@@ -180,19 +180,6 @@ function requestClearAll(): void {
         </ul>
       </section>
 
-      <section aria-label="关于本机">
-        <h2 class="groupcard__title">关于本机</h2>
-        <ul class="plain">
-          <!--
-            按用户要求去掉「所有金额与转账都是剧情演示，不涉及真实资金」这类
-            模拟声明：整个网站本身就是模拟叙事，不需要再挂一块"这是假的"的牌子。
-            「验证码」也从下面这句里拿掉 —— 现在第二关真的会有一次把短信验证码
-            发给对方的环节，这里再说"不要你填验证码"会自相矛盾。
-          -->
-          <li>不需要账号，也不要你填真实姓名、手机号或银行卡。</li>
-          <li>进度和设置只存在这台设备的浏览器里，不会传出去。</li>
-        </ul>
-      </section>
     </div>
   </section>
 </template>
@@ -293,20 +280,6 @@ function requestClearAll(): void {
 
 .switch--on .switch__knob {
   transform: translateX(20px);
-}
-
-.plain {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  margin: 0;
-  padding: var(--space-3) var(--space-3) var(--space-3) 1.8em;
-  border-radius: var(--radius-md);
-  background: var(--c-surface);
-  box-shadow: var(--shadow-card);
-  font-size: var(--font-sm);
-  line-height: 1.6;
-  color: var(--c-text-soft);
 }
 
 @media (prefers-reduced-motion: reduce) {
