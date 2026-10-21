@@ -8,6 +8,8 @@ import antiFraudVideo from '@/assets/videos/anti-fraud.mp4'
 import antiFraudPoster from '@/assets/videos/anti-fraud.jpg'
 import antiFraudVideo2 from '@/assets/videos/anti-fraud-2.mp4'
 import antiFraudPoster2 from '@/assets/videos/anti-fraud-2.jpg'
+import antiFraudVideo3 from '@/assets/videos/anti-fraud-3.mp4'
+import antiFraudPoster3 from '@/assets/videos/anti-fraud-3.jpg'
 
 /**
  * 虚构短视频应用「青影」的内容数据。
@@ -78,6 +80,23 @@ export const VIDEOS: VideoItem[] = [
     likes: 1305,
     comments: ['希望国家把黑产全部打掉', '不要贪小便宜，不要妄想赚大钱'],
     commentTotal: 46,
+    music: '国家反诈中心 · 原声',
+  },
+  {
+    id: 'anti-fraud-targets',
+    title: '骗子为什么会找上你',
+    creator: '国家反诈中心',
+    views: '反诈宣传短剧',
+    duration: '01:45',
+    category: '反诈',
+    blurb: '骗子挑目标有套路：信息泄露、行为习惯、心理弱点。先把自己的漏洞补上。',
+    image: antiFraudPoster3,
+    video: antiFraudVideo3,
+    douyinProfile: 'https://www.douyin.com/user/MS4wLjABAAAAg8ocjNvZAIc3coYYWv_68OPkf1O0a4VAZPEBn7qbwaQ',
+    colors: ['#4a3b32', '#120d0a'],
+    likes: 7273,
+    comments: ['谢谢警姐姐们'],
+    commentTotal: 281,
     music: '国家反诈中心 · 原声',
   },
   {
