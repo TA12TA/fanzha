@@ -125,9 +125,20 @@ function toggleSpeaker(): void {
           <span aria-hidden="true">◖</span>
           {{ speaker ? '免提已开' : '免提' }}
         </button>
-        <button type="button" class="call__end" aria-label="挂断" @click="hangUp">
-          <span aria-hidden="true">✆</span>
-        </button>
+        <span class="call__endwrap">
+          <button type="button" class="call__end" aria-label="挂断" @click="hangUp">
+            <svg
+              viewBox="0 0 24 24"
+              width="30"
+              height="30"
+              fill="currentColor"
+              aria-hidden="true"
+            >
+              <path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08a.956.956 0 0 1-.29-.7c0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.67c.18.18.29.43.29.71 0 .27-.11.52-.29.7l-2.48 2.48a.956.956 0 0 1-.7.29c-.28 0-.53-.11-.71-.29-.79-.73-1.68-1.36-2.66-1.85a.996.996 0 0 1-.56-.9v-3.1C15.15 9.25 13.6 9 12 9Z" />
+            </svg>
+          </button>
+          <span class="call__endlabel" aria-hidden="true">挂断</span>
+        </span>
       </div>
     </div>
   </section>
@@ -404,7 +415,9 @@ function toggleSpeaker(): void {
 .call__actions {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: var(--space-5);
+  width: 100%;
   margin-top: auto;
 }
 
@@ -422,17 +435,42 @@ function toggleSpeaker(): void {
   background: rgb(255 255 255 / 22%);
 }
 
+.call__endwrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
 .call__end {
   display: grid;
   place-items: center;
-  width: 60px;
-  height: 60px;
+  width: 64px;
+  height: 64px;
   border: 0;
   border-radius: 50%;
   background: #d84b3f;
   color: #fff;
-  font-size: 25px;
-  transform: rotate(135deg);
+  box-shadow:
+    0 8px 20px rgb(0 0 0 / 28%),
+    inset 0 1px 0 rgb(255 255 255 / 22%);
+  transition: transform var(--dur-fast) ease, background-color var(--dur-fast) ease;
+}
+
+.call__end:active {
+  transform: scale(0.95);
+  background: #c63d32;
+}
+
+.call__end svg {
+  display: block;
+  width: 30px;
+  height: 30px;
+}
+
+.call__endlabel {
+  font-size: var(--font-xs);
+  color: rgb(244 251 248 / 72%);
 }
 
 @media (prefers-reduced-motion: reduce) {
