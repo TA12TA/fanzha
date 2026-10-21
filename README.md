@@ -387,7 +387,7 @@ cherry-pick 到 `hall-desk` 分支为 `a680717`），大厅最终采用书桌版
 | `npm run preview`   | 成功，`http://127.0.0.1:4173/` 返回构建产物（引用 hashed 资源）                                                                  |
 | `npm run typecheck` | 通过，无错误                                                                                                            |
 | `npm test`          | **266 项全部通过**（engine 17 / storage 22 / debrief 17 / levels 25 / clock 5 / unlock 6 / settings 14 / notifications 14 / app 114 / levelCardText 7 / tokens 4 / random 8 / classNews 6 / smsCode 7） |
-| `npm run build`     | 成功，`dist/assets/index-*.js` 248.10 kB（gzip 85.67 kB）；另有 `anti-fraud.mp4` 13.7 MB（854×480 H.264/AAC）                                                              |
+| `npm run build`     | 成功，`dist/assets/index-*.js` 248.69 kB（gzip 85.87 kB）；另有两条本地反诈视频 `anti-fraud.mp4` / `anti-fraud-2.mp4`（约 13.7 MB + 26.0 MB）；另有 `anti-fraud.mp4` 13.7 MB（854×480 H.264/AAC）                                                              |
 | `npm run verify`    | **139 项全部通过**（Edge 155.0.4283.45 headless）                                                                        |
 | `npm run smoke:public` | **15 项全部通过**（对本机预览与公网隧道地址各实跑一次）                                                                          |
 

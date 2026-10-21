@@ -6,6 +6,8 @@ import roadImage from '@/assets/videos/road.jpg'
 import campusImage from '@/assets/videos/campus.jpg'
 import antiFraudVideo from '@/assets/videos/anti-fraud.mp4'
 import antiFraudPoster from '@/assets/videos/anti-fraud.jpg'
+import antiFraudVideo2 from '@/assets/videos/anti-fraud-2.mp4'
+import antiFraudPoster2 from '@/assets/videos/anti-fraud-2.jpg'
 
 /**
  * 虚构短视频应用「青影」的内容数据。
@@ -56,6 +58,22 @@ export const VIDEOS: VideoItem[] = [
     likes: 943,
     comments: ['网恋第一步，先见人', '多多宣传'],
     commentTotal: 65,
+    music: '国家反诈中心 · 原声',
+  },
+  {
+    id: 'anti-fraud-chenjian',
+    title: '反诈短剧：别转！陈家安',
+    creator: '国家反诈中心',
+    views: '反诈宣传短剧',
+    duration: '04:47',
+    category: '反诈',
+    blurb: '反诈短剧《别转！陈家安》。有人催你转账时，先停下来核实。',
+    image: antiFraudPoster2,
+    video: antiFraudVideo2,
+    colors: ['#3b3430', '#100d0b'],
+    likes: 1305,
+    comments: ['希望国家把黑产全部打掉', '不要贪小便宜，不要妄想赚大钱'],
+    commentTotal: 46,
     music: '国家反诈中心 · 原声',
   },
   {
