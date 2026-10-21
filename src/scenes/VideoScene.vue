@@ -181,7 +181,8 @@ function commentsOf(video: VideoItem): string[] {
 }
 
 function commentCount(video: VideoItem): number {
-  return commentsOf(video).length
+  const base = video.commentTotal ?? video.comments.length
+  return base + (userComments.value[video.id]?.length ?? 0)
 }
 
 function openComments(): void {
@@ -434,6 +435,9 @@ onBeforeUnmount(() => {
           <span class="comment__text">{{ comment }}</span>
         </li>
       </ul>
+      <p v-if="active.commentTotal && active.commentTotal > commentsOf(active).length" class="comments__note">
+        仅展示部分公开评论，共 {{ active.commentTotal }} 条
+      </p>
       <form class="commentform" @submit.prevent="addComment">
         <input v-model="draft" type="text" placeholder="说点什么" aria-label="写评论" autocomplete="off" />
         <button type="submit" :disabled="!draft.trim()">发送</button>
@@ -881,6 +885,13 @@ onBeforeUnmount(() => {
   font-size: var(--font-xs);
   line-height: 1.6;
   color: rgb(245 248 255 / 84%);
+}
+
+.comments__note {
+  flex: none;
+  margin: 0 0 var(--space-2);
+  font-size: 11px;
+  color: rgb(245 248 255 / 54%);
 }
 
 .commentform {

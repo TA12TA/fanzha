@@ -29,10 +29,12 @@ export interface VideoItem {
   video?: string
   /** 封面遮罩的渐变色。 */
   colors: [string, string]
-  /** 展示用点赞数。 */
+  /** 展示用点赞数（虚构条目为虚构数字，真实视频为原视频公开数字）。 */
   likes: number
-  /** 虚构评论（打开评论面板时展示）。 */
+  /** 评论区可展示的评论（真实视频只保留可公开、无个人信息的部分）。 */
   comments: string[]
+  /** 原视频的公开评论总数；省略时按 comments.length 计算。 */
+  commentTotal?: number
   /** 底部音乐条文案。 */
   music: string
 }
@@ -51,8 +53,9 @@ export const VIDEOS: VideoItem[] = [
     image: antiFraudPoster,
     video: antiFraudVideo,
     colors: ['#2c4a3e', '#091511'],
-    likes: 0,
-    comments: [],
+    likes: 943,
+    comments: ['网恋第一步，先见人', '多多宣传'],
+    commentTotal: 65,
     music: '国家反诈中心 · 原声',
   },
   {

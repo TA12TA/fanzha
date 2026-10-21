@@ -1986,7 +1986,8 @@ describe('P. 常用生活应用', () => {
 
     await wrapper.find('button[aria-label="评论"]').trigger('click')
     expect(wrapper.find('.sheet').exists(), '应打开评论面板').toBe(true)
-    expect(wrapper.text(), '反诈视频暂无评论').toContain('评论 0')
+    expect(wrapper.text(), '反诈视频应显示真实评论数').toContain('评论 65')
+    expect(wrapper.text(), '应保留公开评论样本').toContain('网恋第一步，先见人')
     await wrapper.find('button[aria-label="关闭评论"]').trigger('click')
 
     await wrapper.find('button[aria-label="分享"]').trigger('click')
