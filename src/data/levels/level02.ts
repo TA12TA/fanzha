@@ -676,6 +676,9 @@ export const level02 = defineLevel<L2Node, L2Option>({
       'l2-verify-3': 'l2-service',
     },
 
+    /** 平台展示的退款数字只在客服会话里出现。 */
+    platformSession: 'l2-service',
+
     safeOptions: ['l2-refuse', 'l2-cancel-200', 'l2-stop', 'l2-refuse-300', 'l2-cancel-300'],
 
     /**

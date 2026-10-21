@@ -729,6 +729,9 @@ export const level01 = defineLevel<L1Node, L1Option>({
       'transfer-300': 'taskgroup',
     },
 
+    /** 「平台内显示」只出现在刷单兼职群，不要跟到妈妈/班级群里。 */
+    platformSession: 'taskgroup',
+
     /**
      * 安全/止损选项：渲染为主按钮；骗局选项作为次要按钮。
      *

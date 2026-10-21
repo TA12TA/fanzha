@@ -61,6 +61,10 @@ const spec = computed(() => props.level.chat)
 const active = computed(() => spec.value.sessions.find((s) => s.id === props.session) ?? null)
 
 const isGroupChat = computed(() => active.value?.kind === 'group')
+/** 平台展示数字只属于关卡声明的那个会话，不跟着状态跑到所有聊天里。 */
+const showPlatform = computed(
+  () => props.state.platformDisplayed > 0 && !!spec.value.platformSession && active.value?.id === spec.value.platformSession,
+)
 
 /**
  * 某会话在当前剧情节点下的消息 = 基础消息 + 该节点追加的卡片。
@@ -445,7 +449,7 @@ const detail = computed(() => {
       </div>
 
       <!-- 平台展示数字：与钱包余额明确区分 -->
-      <div v-if="state.platformDisplayed > 0" class="chat__platform">
+      <div v-if="showPlatform" class="chat__platform">
         <p class="chat__platformlabel">{{ level.copy.platformLabel }}</p>
         <p class="chat__platformamount">{{ state.platformDisplayed }} <span>元</span></p>
         <p class="chat__platformnote">{{ level.copy.platformChatNote(state.balance) }}</p>

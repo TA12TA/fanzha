@@ -136,6 +136,8 @@ export interface LevelChatSpec<TNode extends string = string, TOption extends st
   optionSession: Partial<Record<TNode, string>>
   /** 打开消息应用时应定位到的会话（如邀请未处理时先看学姐）。 */
   preferredSession: Partial<Record<TNode, string>>
+  /** 平台展示数字只在该会话里显示；不设置则不在聊天页显示。 */
+  platformSession?: string
   /** 安全/止损选项：渲染为主按钮；骗局选项作为次要按钮，避免视觉引导玩家点错。 */
   safeOptions: TOption[]
   /**
