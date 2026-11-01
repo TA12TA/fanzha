@@ -107,7 +107,7 @@ onBeforeUnmount(() => globalThis.removeEventListener('keydown', closeOnEscape))
 
 <template>
   <section class="shop" aria-label="青集商城">
-    <AppHeader title="青集商城" subtitle="慢慢挑，挑喜欢的" show-back @back="emit('back')">
+    <AppHeader title="青集商城" show-back @back="emit('back')">
       <template #action>
         <span class="shop__wish" :aria-label="`心愿单 ${wishlist.length} 件`">♡ {{ wishlist.length }}</span>
       </template>
@@ -623,10 +623,10 @@ onBeforeUnmount(() => globalThis.removeEventListener('keydown', closeOnEscape))
   position: absolute;
   top: 8px;
   left: 8px;
-  padding: 2px 7px;
-  border-radius: 999px;
-  background: var(--c-surface);
-  color: var(--c-text);
+  padding: 2px 6px;
+  border-radius: 2px;
+  background: rgb(9 18 14 / 58%);
+  color: #f7f0e2;
   font-size: 10px;
   font-weight: 700;
 }

@@ -254,7 +254,7 @@ defineExpose({ handleBack })
   border-radius: var(--radius-md);
   background: var(--c-surface);
   color: var(--c-text);
-  box-shadow: 0 1px 3px rgb(16 30 54 / 8%);
+  box-shadow: 0 1px 3px rgb(29 42 37 / 8%);
 }
 
 .key:active {

@@ -93,7 +93,7 @@ const hintText = computed(() => {
 
 /** 副标题跟随当前关卡：第一关时与原来逐字一致。 */
 const subtitle = computed(
-  () => `大学生反诈互动 · ${props.level.meta.ordinal}「${props.level.meta.title}」`,
+  () => `${props.level.meta.ordinal}「${props.level.meta.title}」`,
 )
 </script>
 
@@ -236,19 +236,6 @@ const subtitle = computed(
   flex-direction: column;
   gap: 2px;
   margin-top: var(--space-5);
-  padding-top: var(--space-4);
-}
-
-.lock__brand::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 44px;
-  height: 2px;
-  border-radius: 2px;
-  background: currentcolor;
-  opacity: 0.32;
 }
 
 .lock__title {
@@ -296,7 +283,7 @@ const subtitle = computed(
   height: 6px;
   border-radius: 999px;
   background: var(--c-wall-hint-track);
-  box-shadow: inset 0 1px 2px rgb(4 10 20 / 12%);
+  box-shadow: inset 0 1px 2px rgb(3 8 5 / 12%);
   overflow: hidden;
 }
 
@@ -316,19 +303,12 @@ const subtitle = computed(
   font-weight: 500;
   letter-spacing: 0.16em;
   color: var(--c-on-wall-soft);
-  animation: hint-breathe 2.4s ease-in-out infinite;
 }
 
 @keyframes lock-out {
   to {
     transform: translateY(-14px);
     opacity: 0;
-  }
-}
-
-@keyframes hint-breathe {
-  50% {
-    opacity: 0.55;
   }
 }
 

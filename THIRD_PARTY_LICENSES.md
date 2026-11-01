@@ -7,7 +7,7 @@
 
 - 来源：<https://fonts.google.com/icons>
 - npm 包：`@material-symbols/svg-400@0.48.2`
-- 使用文件：`outlined/*-fill.svg`（`chat_bubble`、`account_balance_wallet`、`photo_library`、`call`、`sms`、`shopping_bag`、`music_note`、`smart_display`、`stairs`、`notifications`、`tune`）
+- 使用文件：`rounded/*-fill.svg`（`forum`、`wallet`、`imagesmode`、`call`、`comment`、`shopping_bag`、`music_note`、`smart_display`、`stairs`、`notifications`、`settings`）
 - 许可证：Apache License 2.0
 - 使用位置：`src/components/AppIcon.vue`
 - 修改说明：仅将 SVG 的 `path d` 内联到 Vue 组件，未修改图形几何。

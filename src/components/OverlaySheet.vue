@@ -42,7 +42,7 @@ const emit = defineEmits<{ (e: 'close'): void }>()
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  background: rgb(8 14 24 / 48%);
+  background: rgb(9 18 14 / 48%);
 }
 
 .overlay__panel {

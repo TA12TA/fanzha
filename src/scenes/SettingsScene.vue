@@ -153,7 +153,7 @@ function requestClearAll(): void {
           两个考虑：一是分段控件自带高亮，再写一行「当前：自动」是重复信息（已删）；
           二是放在行内会被右侧控件挤成两三行，反而不好读。
         -->
-        <p class="settings__note">自动按北京时间切换：7:00–19:00 为白天，其余为夜间</p>
+        <p class="settings__note">自动按北京时间切换，7:00–19:00 为白天</p>
       </section>
 
       <section aria-label="关卡">
@@ -274,7 +274,7 @@ function requestClearAll(): void {
   height: 26px;
   border-radius: 50%;
   background: #fff;
-  box-shadow: 0 1px 4px rgb(10 20 36 / 28%);
+  box-shadow: 0 1px 4px rgb(9 18 14 / 28%);
   transition: transform var(--dur-fast) ease;
 }
 

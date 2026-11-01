@@ -137,7 +137,7 @@ onBeforeUnmount(() => {
       @timeupdate="onAudioTime"
       @ended="onAudioEnded"
     ></audio>
-    <AppHeader title="青听音乐" subtitle="把耳机戴上，世界安静一点" show-back @back="emit('back')" />
+    <AppHeader title="青听音乐" show-back @back="emit('back')" />
 
     <div class="music__body">
       <section
@@ -145,7 +145,6 @@ onBeforeUnmount(() => {
         :style="{ background: `linear-gradient(135deg, ${current.colors[0]}, ${current.colors[1]})` }"
       >
         <div class="hero__copy">
-          <span class="hero__eyebrow">每日推荐</span>
           <h2 class="hero__title">{{ current.title }}</h2>
           <p class="hero__sub">{{ current.artist }} · {{ current.album }}</p>
           <button type="button" class="hero__play" @click="togglePlay">
@@ -321,15 +320,6 @@ onBeforeUnmount(() => {
   align-items: flex-start;
   gap: 3px;
   min-width: 0;
-}
-
-.hero__eyebrow {
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: rgb(255 255 255 / 18%);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
 }
 
 .hero__title {

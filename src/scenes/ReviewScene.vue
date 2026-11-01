@@ -80,7 +80,6 @@ function selectTag(tag: string): void {
 
       <section v-if="tagEntries.length" class="tags" aria-label="本局经历">
         <h2 class="tags__title">你这局遇到的</h2>
-        <p class="tags__hint">点一项，看对应的诈骗类型</p>
         <ul class="tags__list">
           <li v-for="entry in tagEntries" :key="entry.id">
             <button
@@ -198,12 +197,6 @@ function selectTag(tag: string): void {
   margin: 0;
   padding: 0;
   list-style: none;
-}
-
-.tags__hint {
-  margin: calc(var(--space-1) * -1) 0 var(--space-2);
-  font-size: var(--font-xs);
-  color: var(--c-text-soft);
 }
 
 .tags__button {

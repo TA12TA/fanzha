@@ -385,14 +385,11 @@ onBeforeUnmount(() => {
           <path d="m10 9 5 3-5 3Z" fill="currentColor" stroke="none" />
         </svg>
       </div>
-      <p class="video__loadingtitle">正在准备视频</p>
-      <p class="video__loadingsub">第一次打开会慢一点，之后会快一些。</p>
+      <p class="video__loadingtitle">加载中</p>
       <div class="video__loadingbar" aria-hidden="true">
         <span :style="{ width: `${loadingProgress}%` }"></span>
       </div>
-      <p class="video__loadingmeta">
-        {{ loadingProgress }}% · 已缓存 {{ cacheDone }}/{{ cacheTotal }}
-      </p>
+      <p class="video__loadingmeta">{{ loadingProgress }}%</p>
     </div>
 
     <!-- 一屏一条，上下滑动 -->
@@ -976,12 +973,6 @@ onBeforeUnmount(() => {
 .video__loadingtitle {
   font-size: var(--font-lg);
   font-weight: 700;
-}
-
-.video__loadingsub {
-  margin-top: calc(var(--space-1) * -1);
-  font-size: var(--font-xs);
-  color: rgb(247 240 226 / 58%);
 }
 
 .video__loadingbar {

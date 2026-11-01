@@ -83,7 +83,7 @@ const LABELS: Record<AppId, string> = {
   position: absolute;
   inset: 0;
   border: 0;
-  background: rgb(8 14 24 / 52%);
+  background: rgb(9 18 14 / 52%);
   border-radius: 0;
 }
 

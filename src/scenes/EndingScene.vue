@@ -65,7 +65,7 @@ const lossText = computed(() =>
 
         <p class="resultcard__loss">{{ lossText }}</p>
         <p class="resultcard__note">
-          开始时有 {{ level.initialBalance }} 元。这只是游戏里的账，现实中钱转出去不保证能追回来。
+          开始时有 {{ level.initialBalance }} 元。钱转出去后，不保证能追回来。
         </p>
       </article>
 

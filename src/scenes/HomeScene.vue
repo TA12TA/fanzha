@@ -360,8 +360,10 @@ function badgeAria(id: string, badge: string): string {
   padding: var(--space-3) var(--space-4);
   color: inherit;
   text-align: left;
-  border-color: var(--c-wall-chip-border);
-  background: var(--c-wall-chip);
+  border: 1px solid var(--c-wall-border);
+  border-left-width: 3px;
+  border-left-color: var(--c-danger);
+  background: var(--c-wall-surface);
   box-shadow: var(--shadow-on-wall);
 }
 
@@ -430,7 +432,7 @@ function badgeAria(id: string, badge: string): string {
   font-weight: 500;
   line-height: 1.25;
   text-align: center;
-  text-shadow: 0 1px 3px rgb(4 10 20 / 80%);
+  text-shadow: 0 1px 3px rgb(3 8 5 / 80%);
 }
 
 [data-theme='day'] .app__label {
@@ -445,15 +447,15 @@ function badgeAria(id: string, badge: string): string {
   min-width: 19px;
   height: 19px;
   padding: 0 5px;
-  border: 1.5px solid rgb(8 18 15 / 90%);
+  border: 1.5px solid rgb(9 18 14 / 90%);
   border-radius: 999px;
-  background: #b43c2c;
-  color: #fff8ee;
+  background: var(--c-danger-fill);
+  color: var(--c-text-invert);
   font-size: 11px;
   font-weight: 700;
   line-height: 17px;
   text-align: center;
-  box-shadow: 0 2px 6px rgb(4 10 20 / 40%);
+  box-shadow: 0 2px 6px rgb(3 8 5 / 40%);
 }
 
 /* ============ 底部：重新开始（低存在感） ============ */
@@ -478,9 +480,9 @@ function badgeAria(id: string, badge: string): string {
 .home__restart {
   min-height: var(--tap-min);
   padding: 0 var(--space-5);
-  border: 1px solid var(--c-wall-border);
+  border: 1px solid transparent;
   border-radius: var(--radius-sm);
-  background: var(--c-wall-surface);
+  background: transparent;
   color: var(--c-on-wall-dim);
   font-size: var(--font-sm);
   font-weight: 500;

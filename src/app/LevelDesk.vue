@@ -512,18 +512,7 @@ const canReturn = computed(() => props.showReturn && currentTitle.value !== '')
   transition: opacity 180ms ease;
 }
 
-/* 标题下方的暖色细线：在深木色上给标题一个视觉锚点 */
-.desk__head::after {
-  content: '';
-  display: block;
-  width: 46px;
-  height: 2px;
-  margin: 7px auto 0;
-  border-radius: 2px;
-  background: linear-gradient(90deg, transparent, var(--desk-accent), transparent);
-  opacity: 0.85;
-}
-
+/* 标题不再加装饰横线：层级交给字号、字距和留白。 */
 .desk__work {
   margin-bottom: 2px;
   font-family: var(--font-display);
@@ -545,7 +534,7 @@ const canReturn = computed(() => props.showReturn && currentTitle.value !== '')
   font-size: 27px;
   font-weight: 700;
   line-height: 1.22;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.02em;
   text-shadow: 0 2px 10px rgb(0 0 0 / 22%);
 }
 

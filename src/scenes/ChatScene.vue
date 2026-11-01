@@ -644,6 +644,9 @@ const detail = computed(() => {
 .chat__more {
   font-size: var(--font-md);
   letter-spacing: 2px;
+  background: transparent;
+  border-color: transparent;
+  color: var(--c-text-soft);
 }
 
 .chat__list {
@@ -668,7 +671,13 @@ const detail = computed(() => {
   display: flex;
   align-items: flex-start;
   gap: var(--space-2);
+  width: auto;
   max-width: 92%;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
 }
 
 .row--them {
@@ -713,7 +722,7 @@ const detail = computed(() => {
   padding: var(--space-3);
   border-top: 1px solid var(--c-line);
   background: var(--c-surface);
-  box-shadow: 0 -8px 20px rgb(16 30 54 / 7%);
+  box-shadow: 0 -1px 0 rgb(29 42 37 / 8%);
 }
 
 .chat__pendingtext {

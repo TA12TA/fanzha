@@ -76,7 +76,7 @@ button:focus-visible,
   min-height: var(--tap-min);
   padding: 10px var(--space-4);
   border: 1px solid transparent;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-control);
   font-size: var(--font-base);
   font-weight: 600;
   text-align: center;
@@ -121,16 +121,15 @@ button:focus-visible,
 
 .card {
   border: 1px solid var(--c-line);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-card);
   background: var(--c-surface);
-  box-shadow: var(--shadow-card);
   padding: var(--space-4);
 }
 
 .tag {
   display: inline-block;
   padding: 2px 8px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   font-size: var(--font-xs);
   font-weight: 600;
 }
@@ -146,9 +145,8 @@ button:focus-visible,
   padding: 0;
   list-style: none;
   border: 1px solid var(--c-line);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-card);
   background: var(--c-surface);
-  box-shadow: var(--shadow-card);
   overflow: hidden;
 }
 

@@ -106,10 +106,7 @@ function resend(): void {
       </button>
     </div>
 
-    <p class="gate__hint">
-      <template v-if="!complete">还差 {{ missing }} 位</template>
-      <template v-else>发出去之前，先想想这条验证码是给谁用的。</template>
-    </p>
+    <p v-if="!complete" class="gate__hint">还差 {{ missing }} 位</p>
   </section>
 </template>
 
@@ -122,7 +119,7 @@ function resend(): void {
   padding: var(--space-3);
   border-top: 1px solid var(--c-line);
   background: var(--c-surface);
-  box-shadow: 0 -8px 20px rgb(16 30 54 / 7%);
+  box-shadow: 0 -1px 0 rgb(29 42 37 / 8%);
 }
 
 .gate__prompt {

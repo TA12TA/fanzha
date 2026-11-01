@@ -1315,7 +1315,7 @@ onBeforeUnmount(() => {
 
 /* 与顶部横幅同一套规则：底色一致，仅左侧强调色区分类型 */
 .center__item--antifraud {
-  border-left-color: #4084e0;
+  border-left-color: var(--c-primary);
 }
 
 .center__item--message {

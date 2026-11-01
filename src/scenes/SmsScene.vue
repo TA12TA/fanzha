@@ -373,7 +373,7 @@ function send(): void {
   color: var(--c-text);
   font-size: var(--font-sm);
   line-height: 1.6;
-  box-shadow: 0 1px 2px rgb(16 30 54 / 8%);
+  box-shadow: 0 1px 2px rgb(29 42 37 / 8%);
 }
 
 .bubble--me {

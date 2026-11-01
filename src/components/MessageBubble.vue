@@ -85,13 +85,14 @@ defineProps<{
 .msg {
   max-width: 100%;
   padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-md);
+  border: 1px solid rgb(29 42 37 / 8%);
+  border-radius: 4px 14px 14px 14px;
   background: var(--c-surface);
-  box-shadow: var(--shadow-card);
-  animation: msg-in var(--dur-base) ease;
+  box-shadow: 0 1px 1px rgb(29 42 37 / 6%);
 }
 
 .msg--me {
+  border-radius: 14px 4px 14px 14px;
   background: var(--c-primary-soft);
 }
 
@@ -277,13 +278,6 @@ defineProps<{
   margin-top: var(--space-1);
   font-size: var(--font-xs);
   color: var(--c-text-soft);
-}
-
-@keyframes msg-in {
-  from {
-    transform: translateY(6px);
-    opacity: 0;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {

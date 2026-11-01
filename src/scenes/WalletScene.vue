@@ -118,7 +118,6 @@ const records = computed(() => props.level.walletRecords(props.state))
 
       <section v-else class="norequest" aria-label="当前没有待处理请求">
         <p class="norequest__title">没有待处理的钱</p>
-        <p class="norequest__text">这里只显示余额和记录。</p>
       </section>
 
       <section class="records" aria-label="收支记录">
@@ -161,25 +160,26 @@ const records = computed(() => props.level.walletRecords(props.state))
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  padding: var(--space-4);
-  border-radius: var(--radius-md);
-  border: 1px solid rgb(226 201 163 / 22%);
-  background: linear-gradient(150deg, #285d4b, #163a2e 80%);
-  color: #f8f1e4;
-  box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 13%),
-    var(--shadow-card);
+  padding: var(--space-4) 0 var(--space-3);
+  border: 0;
+  border-bottom: 1px solid var(--c-line);
+  border-radius: 0;
+  background: transparent;
+  color: var(--c-text);
+  box-shadow: none;
 }
 
 .balance__label {
   font-size: var(--font-xs);
-  color: #c8d6cc;
+  color: var(--c-text-soft);
 }
 
 .balance__amount {
-  font-size: 34px;
-  font-weight: 700;
+  font-family: var(--font-display);
+  font-size: 40px;
+  font-weight: 600;
   line-height: 1.15;
+  letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
 }
 
@@ -190,7 +190,7 @@ const records = computed(() => props.level.walletRecords(props.state))
 
 .balance__note {
   font-size: var(--font-xs);
-  color: #c8d6cc;
+  color: var(--c-text-soft);
 }
 
 .platform {
@@ -253,10 +253,12 @@ const records = computed(() => props.level.walletRecords(props.state))
 /* ============ 账户与安全 ============ */
 
 .account {
-  padding: var(--space-3);
-  border-radius: var(--radius-md);
-  background: var(--c-surface);
-  box-shadow: var(--shadow-card);
+  padding: var(--space-3) 0;
+  border: 0;
+  border-bottom: 1px solid var(--c-line);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .account__head {
@@ -317,10 +319,11 @@ const records = computed(() => props.level.walletRecords(props.state))
 }
 
 .norequest {
-  padding: var(--space-4);
-  border-radius: var(--radius-md);
-  background: var(--c-surface);
-  box-shadow: var(--shadow-card);
+  padding: var(--space-2) 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .norequest__title {
@@ -328,16 +331,13 @@ const records = computed(() => props.level.walletRecords(props.state))
   font-weight: 700;
 }
 
-.norequest__text {
-  font-size: var(--font-sm);
-  color: var(--c-text-soft);
-}
-
 .records {
-  padding: var(--space-4);
-  border-radius: var(--radius-md);
-  background: var(--c-surface);
-  box-shadow: var(--shadow-card);
+  padding: var(--space-3) 0;
+  border: 0;
+  border-top: 1px solid var(--c-line);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .records__title {
