@@ -218,21 +218,35 @@ const style = computed(() => ({
 }
 
 /*
- * 国家反诈中心：官方 logo 不套色块，但给一张米纸托，
- * 避免它和其余彩色图标并排时显得像一张贴纸。
+ * 国家反诈中心：官方 logo 自带蓝色方底，直接把整张图作为图标底板。
+ * 不套米纸托、不内缩，只用父级圆角裁切 + 统一高光/内暗边，
+ * 这样它和其余渐变色图标处在同一套材质语言里。
  */
 .app__glyph--brand {
-  background-color: #ede4d2;
-  background-image: linear-gradient(158deg, #f5eee0, #ddd0bb);
+  background-color: #1f4f9e;
+  background-image: none;
+}
+
+.app__glyph--brand::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 28%),
+    inset 0 -2px 5px rgb(0 0 0 / 18%);
 }
 
 .app__logo {
   position: relative;
   z-index: 1;
   display: block;
-  width: 82%;
-  height: 82%;
-  object-fit: contain;
-  border-radius: calc(var(--glyph-size, 58px) * 0.08);
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 0;
+  filter: brightness(0.94) saturate(0.9);
 }
 </style>
