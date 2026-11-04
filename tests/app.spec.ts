@@ -2019,7 +2019,8 @@ describe('P. 常用生活应用', () => {
     expect(wrapper.find('.order').exists(), '应直接落在订单页').toBe(true)
     expect(wrapper.text()).toContain('轻跑运动鞋')
     expect(wrapper.text()).toContain('199')
-    expect(wrapper.text()).toContain('重复扣款')
+    expect(wrapper.text()).toContain('QJ202610120427')
+    expect(wrapper.text()).toContain('已完成 · 已签收')
     expect(
       readSave('level-02')?.riskTags,
       '打开订单详情应记录一次「自己查了订单」的线索',

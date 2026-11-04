@@ -223,10 +223,6 @@ onBeforeUnmount(() => globalThis.removeEventListener('keydown', closeOnEscape))
             <dt>订单状态</dt>
             <dd>{{ SHOP_ORDER.status }}</dd>
           </div>
-          <div>
-            <dt>重复扣款</dt>
-            <dd>无，只有这一笔正常扣款</dd>
-          </div>
         </dl>
         <p class="order__note">{{ SHOP_ORDER.note }}</p>
         <button type="button" class="order__policybtn" @click="togglePolicy">

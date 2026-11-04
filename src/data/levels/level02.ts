@@ -207,7 +207,6 @@ const ORDER_DETAIL = {
     { label: '订单状态', value: '已完成 · 已签收' },
     { label: '订单金额', value: `¥${ORDER_AMOUNT}` },
     { label: '支付方式', value: '安心钱包余额' },
-    { label: '重复扣款记录', value: '无。只有这一笔正常扣款' },
   ],
   notice: '自己查过订单，就知道没有所谓的重复扣款。客服说的和 App 里显示的不一样时，以你自己查到的为准。',
 }
