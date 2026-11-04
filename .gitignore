@@ -6,6 +6,15 @@ coverage/
 .vite/
 .verify/
 
+# 本地开发规范与关卡设计（不随公开仓库发布）
+/AGENTS.md
+/LEVELS.md
+/LEVEL-*.md
+/DEVELOPMENT.md
+/SCENES.md
+/ACCEPTANCE.md
+/CASES.md
+
 # 编辑器 / 系统
 .DS_Store
 Thumbs.db
