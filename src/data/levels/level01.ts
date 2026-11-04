@@ -620,6 +620,13 @@ export const level01 = defineLevel<L1Node, L1Option>({
    */
   popupReminders: ['transfer-100', 'freeze', 'transfer-300'],
 
+  /** 三个掏钱时刻统一先停 5 秒，避免误点。 */
+  popupCountdowns: {
+    'transfer-100': 5,
+    freeze: 5,
+    'transfer-300': 5,
+  },
+
   copy: {
     balanceLabel: '生活费',
     spentLabel: '已垫付',

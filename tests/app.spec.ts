@@ -1,6 +1,7 @@
 import { mount, type VueWrapper } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import AppShell from '@/app/AppShell.vue'
+import AntiFraudDialog from '@/components/AntiFraudDialog.vue'
 import { resetChatReveal } from '@/app/chatReveal'
 import { DEFAULT_DURATIONS, FIRST_NOTICE_DELAY_MS, LEAVE_MS } from '@/app/notifications'
 import { reloadSettings } from '@/app/settings'
@@ -209,8 +210,12 @@ async function dismissAntifraud(wrapper: VueWrapper): Promise<boolean> {
 
   // 转账环节的弹窗有倒计时：按钮在倒计时结束前是 disabled 的。
   if (ok.attributes('disabled') !== undefined) {
-    const seconds = Number(ok.text().match(/\d+/)?.[0] ?? 0)
-    if (seconds > 0) await new Promise((resolve) => setTimeout(resolve, (seconds + 1) * 1000))
+    // 倒计时本身由 tests/antiFraudDialog.spec.ts 专项验证；
+    // 流程用例不必为每次弹窗真等 5 秒，直接结束模态即可。
+    const dialog = wrapper.findComponent(AntiFraudDialog)
+    dialog.vm.$emit('close')
+    await flush()
+    return true
   }
 
   await ok.trigger('click')

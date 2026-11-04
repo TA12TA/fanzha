@@ -534,9 +534,11 @@ export const level03 = defineLevel<L3Node, L3Option>({
   popupReminders: ['l3-call', 'l3-transfer-1', 'l3-transfer-2'],
   // 来电提醒不在解锁后立刻弹：先让玩家看到来电通知，点进会话再提醒。
   deferredPopupNodes: ['l3-call'],
+  /** 本关所有反诈弹窗统一 5 秒，与第一、二关保持一致。 */
   popupCountdowns: {
-    'l3-transfer-1': 3,
-    'l3-transfer-2': 3,
+    'l3-call': 5,
+    'l3-transfer-1': 5,
+    'l3-transfer-2': 5,
   },
 
   copy: {

@@ -962,14 +962,32 @@ async function main() {
      * 它是模态的 —— 不点掉，下面被盖住的付款按钮真人点不到。
      */
     const dismissAntifraud = async () => {
-      const clicked = await cdp.eval(`
-        const b = [...document.querySelectorAll('button')]
-          .find(x => (x.textContent || '').trim() === '我知道了');
-        if (b) { b.click(); return true; }
-        return false;
-      `)
-      if (clicked) await sleep(300)
-      return clicked
+      // 第一、二、三关的反诈弹窗统一带 5 秒倒计时：
+      // 按钮在倒计时结束前是 disabled，必须等它真正可用再点。
+      for (let i = 0; i < 80; i++) {
+        const state = await cdp.eval(`
+          const el = document.querySelector('.af');
+          const b = document.querySelector('.af__ok');
+          return {
+            open: !!el,
+            disabled: b ? !!b.disabled : true,
+            text: b ? (b.textContent || '').trim() : '',
+          };
+        `)
+        if (!state.open) return false
+        if (!state.disabled) {
+          const clicked = await cdp.eval(`
+            const b = [...document.querySelectorAll('button')]
+              .find(x => (x.textContent || '').trim() === '我知道了');
+            if (b) { b.click(); return true; }
+            return false;
+          `)
+          if (clicked) await sleep(300)
+          return clicked
+        }
+        await sleep(250)
+      }
+      return false
     }
 
     await cdp.click('继续当前事项')
@@ -1025,7 +1043,12 @@ async function main() {
     await cdp.click('继续当前事项')
     await cdp.click('继续查看任务')
     await dismissAntifraud() // 要求交解冻费也是掏钱时刻，同样弹警告
-    await cdp.click('显示全部')
+    // 5 秒倒计时结束后，消息往往已经逐条播完，「显示全部」可能已经消失。
+    const hasShowAllAtFreeze = await cdp.eval(`
+      return [...document.querySelectorAll('button')]
+        .some(x => (x.textContent || '').trim() === '显示全部');
+    `)
+    if (hasShowAllAtFreeze) await cdp.click('显示全部')
     text = await cdp.text()
     record('提现异常显示解冻费话术', text.includes('解冻费') && text.includes('提现失败'))
 
@@ -1598,6 +1621,15 @@ async function main() {
       `弹窗含依据=${afDialog.text.includes('验证码给出去')} 聊天仍重复=${afDialog.chatHasHint}`,
     )
 
+    // 弹窗有 5 秒倒计时：等按钮真正可用后再点。
+    for (let i = 0; i < 80; i++) {
+      const ready = await cdp.eval(`
+        const b = document.querySelector('.af__ok');
+        return !!b && !b.disabled;
+      `)
+      if (ready) break
+      await sleep(250)
+    }
     await cdp.click('我知道了')
     await sleep(300)
     const afClosed = await cdp.eval(`return !document.querySelector('.af')`)

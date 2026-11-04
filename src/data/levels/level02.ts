@@ -581,6 +581,11 @@ export const level02 = defineLevel<L2Node, L2Option>({
    */
   popupReminders: ['l2-refund-claim'],
 
+  /** 索要验证码这一步统一先停 5 秒。 */
+  popupCountdowns: {
+    'l2-refund-claim': 5,
+  },
+
   copy: {
     balanceLabel: '生活费',
     spentLabel: '已转出',

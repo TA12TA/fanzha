@@ -192,6 +192,15 @@ describe('X. 关卡数据守卫（所有可玩关卡）', () => {
   )
 
   it.each(levels.map((level) => [level.meta.id, level] as const))(
+    'X07b %s：每个反诈弹窗都统一等待 5 秒',
+    (_id, level) => {
+      for (const node of level.popupReminders ?? []) {
+        expect(level.popupCountdowns?.[node], `节点 ${node} 的弹窗倒计时应为 5 秒`).toBe(5)
+      }
+    },
+  )
+
+  it.each(levels.map((level) => [level.meta.id, level] as const))(
     'X08 %s：复盘建议有 3 条，且包含止损与留证据',
     (_id, level) => {
       expect(level.debriefActions.length).toBe(3)
