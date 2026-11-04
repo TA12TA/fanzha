@@ -18,3 +18,13 @@
 - 文件：`src/assets/antifraud-logo.png`
 - 用途：仅作为虚构手机中「国家反诈中心」应用的识别图标，不用于商业宣传。
 - 如用于正式发布，请按官方素材使用规范复核。
+
+## SoundHelix 音乐
+
+- 文件：`src/assets/music/track-1.mp3` … `track-5.mp3`
+- 来源：<https://www.soundhelix.com/audio-examples>
+- 曲目：SoundHelix Song 1–5
+- 作者：T. Schürger
+- 使用方式：本地打包完整 MP3，运行时请求本站资源，不调用外部音乐服务。
+- 许可说明：SoundHelix 音频示例页面明确允许“use these audio examples in any way you like”，并要求标注 SoundHelix 与对应曲目的作者。本项目在青听音乐页底部显示“音乐：SoundHelix · T. Schürger”，并在此文件保留署名。
+- 用途：反诈教育演示，不用于商业发行。

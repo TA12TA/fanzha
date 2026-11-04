@@ -11,7 +11,7 @@
 | `videos/anti-fraud-2.jpg` | 上述视频的首帧封面 | 同上 |
 | `videos/anti-fraud-3.mp4` | 青影真实反诈短片《骗子为什么会找上你》 | 抖音 `@国家反诈中心` 视频 `7694030012445445391`，2026-10-21 下载并转码为 854×1518 H.264/AAC |
 | `videos/anti-fraud-3.jpg` | 上述视频的首帧封面 | 同上 |
-| `music/track-1.mp3` … `track-5.mp3` | 青听音乐 5 段 30 秒试听音频 | SoundHelix Song 1 的不同片段，2026-10-21 本地转码；仅作演示，发布前替换为已授权音乐 |
+| `music/track-1.mp3` … `track-5.mp3` | 青听音乐完整曲目 | SoundHelix Song 1–5（作者 T. Schürger），2026-11-04 从 `soundhelix.com/audio-examples` 下载完整 MP3；许可要求标注 SoundHelix 与作者 |
 
 ## 官方 logo 的获取过程
 

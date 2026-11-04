@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import AppHeader from '@/components/AppHeader.vue'
-import { MUSIC_PLAYLISTS, MUSIC_TRACKS, type MusicTrack } from '@/data/music'
+import { MUSIC_CREDIT, MUSIC_PLAYLISTS, MUSIC_TRACKS, type MusicTrack } from '@/data/music'
 import { playSound } from '@/app/sound'
 import {
   currentTrack,
@@ -148,6 +148,8 @@ function onSeek(event: Event): void {
           </li>
         </ul>
       </section>
+
+      <p class="music__credit">{{ MUSIC_CREDIT }}</p>
     </div>
 
     <div class="player" aria-label="播放器">
@@ -279,6 +281,15 @@ function onSeek(event: Event): void {
   overflow-y: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
+}
+
+.music__credit {
+  margin: 0;
+  padding: var(--space-1) 0 var(--space-2);
+  color: var(--c-text-tertiary);
+  font-size: 10px;
+  letter-spacing: 0.02em;
+  text-align: center;
 }
 
 .music__body > * {

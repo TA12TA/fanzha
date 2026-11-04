@@ -7,9 +7,12 @@ import track5 from '@/assets/music/track-5.mp3'
 /**
  * 虚构音乐应用「青听音乐」的曲库。
  *
- * 歌名、歌手、专辑为虚构；音频是本地打包的 30 秒片段，
- * 不请求任何外部音乐服务。正式发布前可替换为已授权的完整音频。
+ * 歌名、歌手、专辑为虚构；音频是本地打包的完整 SoundHelix 曲目，
+ * 不请求任何外部音乐服务。SoundHelix 许可要求标注来源与作者，
+ * 见 `MUSIC_CREDIT` 与 `THIRD_PARTY_LICENSES.md`。
  */
+
+export const MUSIC_CREDIT = '音乐：SoundHelix · T. Schürger'
 
 export interface MusicTrack {
   id: string
@@ -40,7 +43,7 @@ export const MUSIC_TRACKS: MusicTrack[] = [
     artist: '林屿',
     album: '把夏天折起来',
     audio: track1,
-    duration: 30,
+    duration: 372,
     colors: ['#8e7dff', '#4a3fbd'],
     mood: '晚风',
   },
@@ -50,7 +53,7 @@ export const MUSIC_TRACKS: MusicTrack[] = [
     artist: '青柠汽水',
     album: '下课以后',
     audio: track2,
-    duration: 30,
+    duration: 426,
     colors: ['#ffb36b', '#e26b4f'],
     mood: '轻快',
   },
@@ -60,7 +63,7 @@ export const MUSIC_TRACKS: MusicTrack[] = [
     artist: '远山乐队',
     album: '沿着江边走',
     audio: track3,
-    duration: 30,
+    duration: 344,
     colors: ['#5f8ef7', '#26428f'],
     mood: '夜行',
   },
@@ -70,7 +73,7 @@ export const MUSIC_TRACKS: MusicTrack[] = [
     artist: '白昼电台',
     album: '天气转晴',
     audio: track4,
-    duration: 30,
+    duration: 302,
     colors: ['#61c8c0', '#247f89'],
     mood: '清透',
   },
@@ -80,7 +83,7 @@ export const MUSIC_TRACKS: MusicTrack[] = [
     artist: '小满',
     album: '没有标准答案',
     audio: track5,
-    duration: 30,
+    duration: 354,
     colors: ['#f08ab9', '#a83d72'],
     mood: '松弛',
   },
