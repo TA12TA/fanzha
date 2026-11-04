@@ -71,11 +71,6 @@ function requestClearAll(): void {
     <AppHeader title="设置" show-back @back="emit('back')" />
 
     <div class="settings__body">
-      <section class="device" aria-label="本机">
-        <p class="device__name">青屏 X1</p>
-        <p class="device__meta">青屏 OS 2.0 · 128 GB · 电池 78%</p>
-      </section>
-
       <section aria-label="声音">
         <h2 class="groupcard__title">声音</h2>
         <ul class="rows">
@@ -208,24 +203,6 @@ function requestClearAll(): void {
   padding: var(--space-3);
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-}
-
-.device {
-  padding: 0 var(--space-1) var(--space-1);
-  border-bottom: 1px solid var(--c-line);
-}
-
-.device__name {
-  font-family: var(--font-display);
-  font-size: 22px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-}
-
-.device__meta {
-  margin-top: 2px;
-  font-size: var(--font-xs);
-  color: var(--c-text-soft);
 }
 
 /* 可点击的整行（右侧带箭头） */
