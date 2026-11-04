@@ -210,17 +210,19 @@ const subtitle = computed(
  */
 .lock__clock {
   font-size: 52px;
-  font-weight: 300;
+  font-weight: 600;
   line-height: 1.02;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
   font-variant-numeric: tabular-nums;
 }
 
 .lock__date {
   margin-top: calc(-1 * var(--space-1));
   font-size: var(--font-sm);
-  letter-spacing: 0.06em;
+  font-weight: 600;
+  letter-spacing: 0.04em;
   color: var(--c-on-wall-soft);
+  font-variant-numeric: tabular-nums;
 }
 
 /*
