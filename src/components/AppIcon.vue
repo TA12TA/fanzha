@@ -114,16 +114,16 @@ const style = computed(() => ({
   color: #f7f0e2;
   background-color: var(--glyph-top);
   background-image:
-    radial-gradient(130% 90% at 30% 0%, rgb(255 255 255 / 26%), transparent 58%),
+    radial-gradient(130% 90% at 30% 0%, rgb(255 255 255 / 14%), transparent 58%),
     linear-gradient(158deg, var(--glyph-top), var(--glyph-bottom));
   box-shadow:
-    inset 0 2px 2px rgb(255 255 255 / 18%),
-    inset 0 -3px 7px rgb(0 0 0 / 24%),
-    inset 1px 0 0 rgb(255 255 255 / 10%),
-    inset -1px 0 0 rgb(0 0 0 / 12%),
-    0 1px 0 rgb(0 0 0 / 28%),
-    0 1px 2px rgb(0 0 0 / 24%),
-    0 7px 16px -5px rgb(3 8 5 / 46%);
+    inset 0 2px 2px rgb(255 255 255 / 10%),
+    inset 0 -3px 7px rgb(0 0 0 / 16%),
+    inset 1px 0 0 rgb(255 255 255 / 7%),
+    inset -1px 0 0 rgb(0 0 0 / 10%),
+    0 1px 0 rgb(0 0 0 / 24%),
+    0 1px 2px rgb(0 0 0 / 20%),
+    0 5px 12px -5px rgb(3 8 5 / 34%);
   overflow: hidden;
 }
 
@@ -134,7 +134,7 @@ const style = computed(() => ({
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  background: linear-gradient(180deg, rgb(255 255 255 / 10%), transparent 38%);
+  background: linear-gradient(180deg, rgb(255 255 255 / 7%), transparent 38%);
 }
 
 .app__glyph svg {
@@ -143,9 +143,7 @@ const style = computed(() => ({
   display: block;
   width: var(--glyph-inner, 34px);
   height: var(--glyph-inner, 34px);
-  filter:
-    drop-shadow(0 1px 0 rgb(255 255 255 / 12%))
-    drop-shadow(0 2px 3px rgb(0 0 0 / 26%));
+  filter: drop-shadow(0 2px 3px rgb(0 0 0 / 22%));
 }
 
 /* ============ 11 个应用的色族（同族分深浅，明度差控制在 10–15%） ============ */

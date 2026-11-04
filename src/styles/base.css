@@ -68,6 +68,19 @@ button:focus-visible,
   border: 0;
 }
 
+/*
+ * 模拟手机不显示滚动条：真机的滚动条只在滚动瞬间出现，
+ * 常驻的白色轨道会立刻暴露“这是网页”。
+ */
+* {
+  scrollbar-width: none;
+}
+
+*::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
 .btn {
   display: inline-flex;
   align-items: center;

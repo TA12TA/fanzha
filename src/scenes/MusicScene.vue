@@ -140,10 +140,7 @@ onBeforeUnmount(() => {
     <AppHeader title="青听音乐" show-back @back="emit('back')" />
 
     <div class="music__body">
-      <section
-        class="hero"
-        :style="{ background: `linear-gradient(135deg, ${current.colors[0]}, ${current.colors[1]})` }"
-      >
+      <section class="hero" :style="{ '--track-color': current.colors[0] }">
         <div class="hero__copy">
           <h2 class="hero__title">{{ current.title }}</h2>
           <p class="hero__sub">{{ current.artist }} · {{ current.album }}</p>
@@ -157,9 +154,6 @@ onBeforeUnmount(() => {
             </svg>
             {{ playing ? '暂停' : '播放' }}
           </button>
-        </div>
-        <div class="hero__disc" aria-hidden="true">
-          <span class="hero__note">♪</span>
         </div>
       </section>
 
@@ -205,7 +199,6 @@ onBeforeUnmount(() => {
               :aria-label="`播放歌单：${playlist.title}`"
               @click="selectPlaylist(playlist.trackIds)"
             >
-              <span class="playlist__eyebrow">歌单</span>
               <span class="playlist__title">{{ playlist.title }}</span>
               <span class="playlist__sub">{{ playlist.subtitle }}</span>
               <span class="playlist__play" aria-hidden="true">
@@ -304,14 +297,13 @@ onBeforeUnmount(() => {
 
 .hero {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: space-between;
   gap: var(--space-3);
-  min-height: 168px;
-  padding: var(--space-4);
-  border-radius: var(--radius-lg);
-  color: #fff;
-  box-shadow: 0 12px 26px rgb(37 68 54 / 24%);
+  padding: var(--space-5) var(--space-4) var(--space-4);
+  border-left: 3px solid var(--track-color, var(--c-primary));
+  border-bottom: 1px solid var(--c-line);
+  color: var(--c-text);
 }
 
 .hero__copy {
@@ -325,11 +317,11 @@ onBeforeUnmount(() => {
 .hero__title {
   max-width: 100%;
   margin-top: 4px;
-  font-family: var(--font-display);
-  font-size: 24px;
-  font-weight: 700;
-  line-height: 1.28;
-  letter-spacing: 0.03em;
+  font-family: var(--font-sans);
+  font-size: 30px;
+  font-weight: 600;
+  line-height: 1.22;
+  letter-spacing: -0.02em;
 }
 
 .hero__sub {
@@ -338,7 +330,7 @@ onBeforeUnmount(() => {
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: var(--font-xs);
-  color: rgb(255 255 255 / 78%);
+  color: var(--c-text-soft);
 }
 
 .hero__play {
@@ -346,14 +338,14 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 6px;
   min-height: 36px;
-  margin-top: var(--space-2);
+  margin-top: var(--space-3);
   padding: 0 var(--space-3);
-  border: 0;
-  border-radius: 999px;
-  background: #f8f1e4;
-  color: var(--c-primary);
+  border: 1px solid var(--c-line);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--c-text);
   font-size: var(--font-xs);
-  font-weight: 800;
+  font-weight: 600;
 }
 
 .hero__disc {

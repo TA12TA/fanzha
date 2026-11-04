@@ -586,6 +586,19 @@ onBeforeUnmount(() => globalThis.removeEventListener('keydown', closeOnEscape))
   list-style: none;
 }
 
+/* 第一个商品作为主推：跨两列、更宽的图，避免所有卡片一样大 */
+.shop__grid > li:first-child {
+  grid-column: 1 / -1;
+}
+
+.shop__grid > li:first-child .product__art {
+  aspect-ratio: 1.85;
+}
+
+.shop__grid > li:first-child .product__name {
+  font-size: var(--font-lg);
+}
+
 .product {
   display: flex;
   flex-direction: column;
