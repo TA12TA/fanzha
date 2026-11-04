@@ -72,6 +72,21 @@ npm run smoke:public -- <公网URL>   # 公网部署冒烟测试：真实浏览�
 
 部署：`vite.config.ts` 使用 `base: './'` 相对路径，`dist/` 可直接放到任意静态目录（含子路径）。核心剧情不依赖任何外部服务。
 
+### GitHub Pages
+
+仓库已包含 `.github/workflows/deploy.yml`：推送到 `main` 后，GitHub Actions 会安装依赖、构建 `dist/` 并发布到 Pages，不需要本地提交构建产物。
+
+1. 在 GitHub 新建仓库，把本地 `main` 推上去。
+2. 仓库 **Settings → Pages → Build and deployment → Source** 选择 **GitHub Actions**。
+3. 推送 `main`，或在 Actions 页面手动运行 **Deploy to GitHub Pages**。
+4. 发布地址通常是 `https://<用户名>.github.io/<仓库名>/`；`base: './'` 已经适配仓库子路径，不用再改。
+
+注意：
+
+- 免费账号的 GitHub Pages 只对 **public** 仓库开放；私有仓库需要 GitHub Pro/Team 等支持 Pages 的方案。
+- 当前 `dist/` 约 96 MB（主要来自完整音频与反诈视频）。单文件都低于 GitHub 100 MB 限制，站点总量也低于 1 GB，但首次部署和访问会比纯文本站点慢。
+- 没有后端、路由或环境变量依赖；部署后可以直接跑 `npm run smoke:public -- https://<用户名>.github.io/<仓库名>/` 做公网冒烟测试。
+
 ### 临时发布到公网（隧道）
 
 本项目是纯静态 H5、没有后端，所以任何静态托管都能用。临时演示最省事的做法是打一条隧道：
