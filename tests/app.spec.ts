@@ -2151,13 +2151,14 @@ describe('Y. 关卡大厅（书桌选关）', () => {
   it('Y00 首屏是作品封面：作品名、简介与进入入口', async () => {
     const wrapper = await mountApp({ atDesk: true, keepIntro: true })
 
-    expect(wrapper.find('.work-intro').exists(), '首屏应有作品封面').toBe(true)
-    expect(wrapper.text(), '封面不再保留网络文化节栏').not.toContain('2026 网络文化节')
-    expect(wrapper.text(), '封面不再写可选音效').not.toContain('含可选音效')
-    expect(wrapper.text()).toContain('约 8 分钟')
-    expect(wrapper.text()).toContain('反诈局中局')
-    expect(wrapper.text()).toContain('你的手机')
-    expect(wrapper.text()).toContain('进入作品')
+    const intro = wrapper.find('.work-intro')
+    expect(intro.exists(), '首屏应有作品封面').toBe(true)
+    expect(intro.text(), '封面不再保留网络文化节栏').not.toContain('2026 网络文化节')
+    expect(intro.text(), '封面不再写可选音效').not.toContain('含可选音效')
+    expect(intro.text(), '封面不再显示时长').not.toContain('约 8 分钟')
+    expect(intro.text(), '封面不再显示副标题').not.toContain('你的手机')
+    expect(intro.text()).toContain('反诈局中局')
+    expect(intro.text()).toContain('进入作品')
 
     await click(wrapper, '进入作品')
     expect(wrapper.find('.work-intro').exists(), '进入作品后封面应关闭').toBe(false)
