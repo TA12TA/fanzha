@@ -2155,8 +2155,9 @@ describe('Y. 关卡大厅（书桌选关）', () => {
     expect(intro.exists(), '首屏应有作品封面').toBe(true)
     expect(intro.text(), '封面不再保留网络文化节栏').not.toContain('2026 网络文化节')
     expect(intro.text(), '封面不再写可选音效').not.toContain('含可选音效')
-    expect(intro.text(), '封面不再显示时长').not.toContain('约 8 分钟')
-    expect(intro.text(), '封面不再显示副标题').not.toContain('你的手机')
+    expect(intro.text()).toContain('你的手机')
+    expect(intro.text()).toContain('选择一部手机进入关卡')
+    expect(intro.text()).toContain('预计体验时长：约 8 分钟')
     expect(intro.text()).toContain('反诈局中局')
     expect(intro.text()).toContain('进入作品')
 

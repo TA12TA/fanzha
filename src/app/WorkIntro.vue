@@ -20,10 +20,17 @@ function start(): void {
   <section class="work-intro" role="dialog" aria-modal="true" aria-labelledby="work-intro-title">
     <article class="work-intro__card">
       <h2 id="work-intro-title" class="work-intro__title">反诈局中局</h2>
+      <p class="work-intro__subtitle">你的手机</p>
 
       <p class="work-intro__premise">
         三部手机，三个常见的校园骗局。点开任意一部，从一条消息开始。
       </p>
+
+      <p class="work-intro__guide">
+        选择一部手机进入关卡，上滑解锁。需要核对余额或查阅反诈知识时，可使用桌面上的「安心钱包」与「国家反诈中心」。
+      </p>
+
+      <p class="work-intro__meta">预计体验时长：约 8 分钟</p>
 
       <button type="button" class="btn btn--primary work-intro__start" autofocus @click="start">
         进入作品
@@ -68,11 +75,35 @@ function start(): void {
   letter-spacing: 0.08em;
 }
 
+.work-intro__subtitle {
+  margin-top: -2px;
+  font-family: var(--font-display);
+  font-size: 20px;
+  letter-spacing: 0.18em;
+  color: var(--c-primary);
+}
+
 .work-intro__premise {
   margin-top: 16px;
   font-size: var(--font-sm);
   line-height: 1.7;
   color: var(--c-text-soft);
+}
+
+.work-intro__guide {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--c-line);
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--c-text-soft);
+}
+
+.work-intro__meta {
+  margin-top: 12px;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: var(--c-text-tertiary);
 }
 
 .work-intro__start {
