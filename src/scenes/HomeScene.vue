@@ -304,18 +304,19 @@ function badgeAria(id: string, badge: string): string {
 .clock__time {
   font-family: var(--font-sans);
   font-size: 34px;
-  font-weight: 300;
+  font-weight: 600;
   line-height: 1.15;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
   font-variant-numeric: tabular-nums;
 }
 
 /* 日期是时钟组件的次要信息：比时间浅一档，字距略放开更透气 */
 .clock__date {
   font-size: var(--font-xs);
-  font-weight: 400;
+  font-weight: 500;
   letter-spacing: 0.04em;
   color: var(--c-on-wall-soft);
+  font-variant-numeric: tabular-nums;
 }
 
 .widget--wallet {
