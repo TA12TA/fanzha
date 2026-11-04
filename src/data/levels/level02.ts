@@ -1,5 +1,6 @@
 import { defineLevel } from '@/game/level'
 import type { ChatMessage, ProfileInfo } from '@/game/level'
+import shoePhoto from '@/assets/shop/shoe.jpg'
 import { BRAND, CLASSGROUP_MESSAGES, INITIAL_BALANCE, MOM_MESSAGES } from '@/data/levels/shared'
 
 /**
@@ -94,6 +95,7 @@ const CONTACT_MESSAGES: ChatMessage[] = [
     name: L2_BRAND.service,
     variant: 'order',
     orderTitle: '轻跑运动鞋 · 白色 42 码',
+    orderImage: shoePhoto,
     orderAmount: ORDER_AMOUNT,
     orderStatus: '已完成 · 已签收',
     text: '订单信息',

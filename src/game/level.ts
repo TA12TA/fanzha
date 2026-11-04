@@ -53,6 +53,8 @@ export interface ChatMessage {
   transferNote?: string
   /** 订单标题（仅 order 变体）。 */
   orderTitle?: string
+  /** 订单商品图（仅 order 变体）。 */
+  orderImage?: string
   /** 订单金额（仅 order 变体）。 */
   orderAmount?: number
   /** 订单状态（仅 order 变体）。 */

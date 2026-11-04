@@ -9,6 +9,8 @@ defineProps<{
   subtitle?: string
   /** 显示返回按钮。 */
   showBack?: boolean
+  /** 返回按钮的无障碍名称，默认「返回上一层」。 */
+  backLabel?: string
   /** 右侧按钮文案（可选）。 */
   actionLabel?: string
 }>()
@@ -25,7 +27,7 @@ const emit = defineEmits<{
       v-if="showBack"
       type="button"
       class="appbar__back"
-      aria-label="返回上一层"
+      :aria-label="backLabel ?? '返回上一层'"
       @click="emit('back')"
     >
       <span aria-hidden="true">←</span>

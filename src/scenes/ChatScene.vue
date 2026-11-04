@@ -295,7 +295,7 @@ const detail = computed(() => {
   <section class="chat" aria-label="青讯消息应用">
     <!-- ================= 会话列表 ================= -->
     <template v-if="!active">
-      <AppHeader title="青讯" action-label="退出" @action="emit('back')" />
+      <AppHeader title="青讯" show-back back-label="退出青讯" @back="emit('back')" />
       <ul class="sessions">
         <li v-for="s in sessions" :key="s.id">
           <button

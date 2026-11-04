@@ -42,10 +42,21 @@ defineProps<{
 
     <!-- 订单卡：购物订单（纯文字，不画平台 logo） -->
     <template v-else-if="message.variant === 'order'">
-      <p class="card__label">订单</p>
-      <p class="card__title">{{ message.orderTitle }}</p>
-      <p class="card__amount">¥{{ message.orderAmount }}</p>
-      <p class="card__status">{{ message.orderStatus }}</p>
+      <div class="order__row">
+        <img
+          v-if="message.orderImage"
+          class="order__image"
+          :src="message.orderImage"
+          :alt="message.orderTitle ?? '订单商品'"
+          loading="lazy"
+        />
+        <div class="order__body">
+          <p class="card__label">订单</p>
+          <p class="card__title">{{ message.orderTitle }}</p>
+          <p class="card__amount">¥{{ message.orderAmount }}</p>
+          <p class="card__status">{{ message.orderStatus }}</p>
+        </div>
+      </div>
     </template>
 
     <!-- 退款进度卡：平台内未兑现的数字，样式上明确区别于钱包余额 -->
@@ -134,12 +145,34 @@ defineProps<{
  * 让玩家一眼看出「这是平台里显示的数字」，而不是自己账上的钱。
  */
 .msg--order {
-  min-width: 190px;
+  min-width: 210px;
   padding: var(--space-3);
   border-radius: var(--radius-md);
   background: var(--c-surface);
   border: 1px solid var(--c-line);
   box-shadow: var(--shadow-card);
+}
+
+.order__row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.order__image {
+  flex: none;
+  width: 64px;
+  height: 64px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: var(--c-surface-2);
+}
+
+.order__body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
 }
 
 .msg--refund,
