@@ -1,32 +1,40 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed } from 'vue'
 import AppHeader from '@/components/AppHeader.vue'
 import { MUSIC_PLAYLISTS, MUSIC_TRACKS, type MusicTrack } from '@/data/music'
 import { playSound } from '@/app/sound'
+import {
+  currentTrack,
+  cycleRepeat,
+  musicState,
+  nextTrack,
+  previousTrack,
+  seekTo,
+  selectPlaylist as startPlaylist,
+  selectTrack as startTrack,
+  toggleMute,
+  togglePlay,
+  toggleShuffle,
+} from '@/app/musicPlayer'
 
 /**
  * 虚构音乐应用「青听音乐」。
  *
- * 曲库、歌手与歌单全部虚构，不加载任何真实音频或外部资源。
- * 播放器在界面内推进进度，切歌、暂停、拖动进度条都有即时反馈。
+ * 音频元素常驻在 PhoneShell，切到别的应用也会继续播放；
+ * 本页只显示状态、提供队列与播放控制。
  */
 const emit = defineEmits<{ (e: 'back'): void }>()
 
 const tracks = MUSIC_TRACKS
 const playlists = MUSIC_PLAYLISTS
 
-const currentId = ref(tracks[0]?.id ?? '')
-const playing = ref(false)
-const position = ref(0)
-
-const current = computed(() => tracks.find((track) => track.id === currentId.value) ?? tracks[0])
-const audio = ref<HTMLAudioElement | null>(null)
-
-let timer: ReturnType<typeof setInterval> | null = null
-
-function indexOf(id: string): number {
-  return tracks.findIndex((track) => track.id === id)
-}
+const current = currentTrack
+const playing = computed(() => musicState.playing)
+const position = computed(() => musicState.position)
+const duration = computed(() => musicState.duration || current.value.duration)
+const repeatLabel = computed(() =>
+  musicState.repeat === 'one' ? '单曲循环' : musicState.repeat === 'all' ? '列表循环' : '不循环',
+)
 
 function formatTime(seconds: number): string {
   const safe = Math.max(0, Math.floor(seconds))
@@ -35,108 +43,38 @@ function formatTime(seconds: number): string {
   return `${min}:${String(sec).padStart(2, '0')}`
 }
 
-function startAudio(): void {
-  const element = audio.value
-  if (!element) return
-  // 用户点击后才播放；移动端浏览器允许这种有手势的播放。
-  void element.play()
-}
-
 function selectTrack(track: MusicTrack): void {
   playSound('tap')
-  currentId.value = track.id
-  position.value = 0
-  playing.value = true
-  void nextTick(() => {
-    if (playing.value) startAudio()
-  })
+  startTrack(track.id)
 }
 
 function selectPlaylist(trackIds: string[]): void {
-  const first = tracks.find((track) => track.id === trackIds[0])
-  if (first) selectTrack(first)
-}
-
-function togglePlay(): void {
   playSound('tap')
-  if (playing.value) {
-    audio.value?.pause()
-    playing.value = false
-    return
-  }
-  if (position.value >= current.value.duration) position.value = 0
-  playing.value = true
-  startAudio()
+  startPlaylist(trackIds)
 }
 
-function nextTrack(autoPlay = false): void {
-  const next = tracks[(indexOf(currentId.value) + 1) % tracks.length]
-  if (!next) return
-  currentId.value = next.id
-  position.value = 0
-  playing.value = autoPlay || playing.value
-  if (!autoPlay) playSound('tap')
-  if (playing.value) void nextTick(startAudio)
-}
-
-function previousTrack(): void {
-  if (position.value > 4) {
-    position.value = 0
-    if (audio.value) audio.value.currentTime = 0
-    return
-  }
-  const previous = tracks[(indexOf(currentId.value) - 1 + tracks.length) % tracks.length]
-  if (!previous) return
+function onTogglePlay(): void {
   playSound('tap')
-  currentId.value = previous.id
-  position.value = 0
-  if (playing.value) void nextTick(startAudio)
+  togglePlay()
 }
 
-function seek(event: Event): void {
-  const input = event.target as HTMLInputElement
-  const next = Number(input.value)
-  position.value = next
-  if (audio.value) audio.value.currentTime = next
+function onNext(): void {
+  playSound('tap')
+  nextTrack()
 }
 
-function onAudioTime(): void {
-  if (audio.value) position.value = audio.value.currentTime
+function onPrevious(): void {
+  playSound('tap')
+  previousTrack()
 }
 
-function onAudioEnded(): void {
-  nextTrack(true)
+function onSeek(event: Event): void {
+  seekTo(Number((event.target as HTMLInputElement).value))
 }
-
-function tick(): void {
-  // 有真实音频时由 timeupdate 驱动；没有音频的旧数据才使用模拟进度。
-  if (current.value.audio) return
-  if (!playing.value) return
-  position.value += 1
-  if (position.value >= current.value.duration) nextTrack(true)
-}
-
-onMounted(() => {
-  timer = setInterval(tick, 1000)
-})
-
-onBeforeUnmount(() => {
-  audio.value?.pause()
-  if (timer) clearInterval(timer)
-  timer = null
-})
 </script>
 
 <template>
   <section class="music" aria-label="青听音乐">
-    <audio
-      ref="audio"
-      class="music__audio"
-      :src="current.audio"
-      preload="metadata"
-      @timeupdate="onAudioTime"
-      @ended="onAudioEnded"
-    ></audio>
     <AppHeader title="青听音乐" show-back @back="emit('back')" />
 
     <div class="music__body">
@@ -144,7 +82,7 @@ onBeforeUnmount(() => {
         <div class="hero__copy">
           <h2 class="hero__title">{{ current.title }}</h2>
           <p class="hero__sub">{{ current.artist }} · {{ current.album }}</p>
-          <button type="button" class="hero__play" @click="togglePlay">
+          <button type="button" class="hero__play" @click="onTogglePlay">
             <svg v-if="playing" viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true">
               <rect x="7" y="5" width="3.5" height="14" rx="1" />
               <rect x="13.5" y="5" width="3.5" height="14" rx="1" />
@@ -222,13 +160,13 @@ onBeforeUnmount(() => {
           <span class="player__sub">{{ current.artist }}</span>
         </div>
         <div class="player__controls">
-          <button type="button" class="player__btn" aria-label="上一首" @click="previousTrack">
+          <button type="button" class="player__btn" aria-label="上一首" @click="onPrevious">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M6 5v14" />
               <path d="M18 6.5 9.5 12 18 17.5Z" fill="currentColor" stroke="none" />
             </svg>
           </button>
-          <button type="button" class="player__btn player__btn--main" :aria-label="playing ? '暂停' : '播放'" @click="togglePlay">
+          <button type="button" class="player__btn player__btn--main" :aria-label="playing ? '暂停' : '播放'" @click="onTogglePlay">
             <svg v-if="playing" viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true">
               <rect x="7" y="5" width="3.5" height="14" rx="1" />
               <rect x="13.5" y="5" width="3.5" height="14" rx="1" />
@@ -237,7 +175,7 @@ onBeforeUnmount(() => {
               <path d="M8 5.5v13l10-6.5Z" />
             </svg>
           </button>
-          <button type="button" class="player__btn" aria-label="下一首" @click="nextTrack(false)">
+          <button type="button" class="player__btn" aria-label="下一首" @click="onNext">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M18 5v14" />
               <path d="M6 6.5 14.5 12 6 17.5Z" fill="currentColor" stroke="none" />
@@ -249,14 +187,70 @@ onBeforeUnmount(() => {
         class="player__range"
         type="range"
         min="0"
-        :max="current.duration"
+        :max="duration"
         :value="position"
         aria-label="播放进度"
-        @input="seek"
+        @input="onSeek"
       />
       <div class="player__times">
         <span>{{ formatTime(position) }}</span>
-        <span>{{ formatTime(current.duration) }}</span>
+        <span>{{ formatTime(duration) }}</span>
+      </div>
+      <div class="player__modes">
+        <button
+          type="button"
+          class="player__mode"
+          :class="{ 'player__mode--on': musicState.shuffle }"
+          :aria-pressed="musicState.shuffle"
+          aria-label="随机播放"
+          @click="toggleShuffle"
+        >
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 7h3.5c4.5 0 6.5 10 11 10H21" />
+            <path d="M18 4.5 21 7l-3 2.5" />
+            <path d="M3 17h3.5c1.7 0 3-1.4 4.2-3.1" />
+            <path d="M13.3 10.1C14.5 8.4 15.8 7 17.5 7H21" />
+            <path d="M18 4.5 21 7l-3 2.5" />
+          </svg>
+        </button>
+        <button
+          type="button"
+          class="player__mode"
+          :class="{ 'player__mode--on': musicState.repeat !== 'off' }"
+          :aria-pressed="musicState.repeat !== 'off'"
+          :aria-label="`循环模式：${repeatLabel}`"
+          @click="cycleRepeat"
+        >
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M17 3.5 20.5 7 17 10.5" />
+            <path d="M3.5 12V9.5A2.5 2.5 0 0 1 6 7h14" />
+            <path d="M7 20.5 3.5 17 7 13.5" />
+            <path d="M20.5 12v2.5a2.5 2.5 0 0 1-2.5 2.5H4" />
+          </svg>
+          <span v-if="musicState.repeat === 'one'" class="player__mode-badge" aria-hidden="true">1</span>
+        </button>
+        <button
+          type="button"
+          class="player__mode"
+          :class="{ 'player__mode--on': musicState.muted }"
+          :aria-pressed="musicState.muted"
+          :aria-label="musicState.muted ? '取消静音' : '静音'"
+          @click="toggleMute"
+        >
+          <svg v-if="musicState.muted" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M4 9.5v5h3l5 4v-13l-5 4Z" />
+            <path d="m17 9 4 6M21 9l-4 6" />
+          </svg>
+          <svg v-else viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M4 9.5v5h3l5 4v-13l-5 4Z" />
+            <path d="M16 9.5c1 .8 1.5 1.8 1.5 2.5S17 13.7 16 14.5" />
+          </svg>
+        </button>
+        <span v-if="musicState.loading" class="player__status" role="status">正在加载</span>
+        <span v-else-if="musicState.error" class="player__status player__status--error" role="status">
+          {{ musicState.error }}
+        </span>
+        <span v-else class="player__status">{{ repeatLabel }}</span>
       </div>
     </div>
   </section>
@@ -275,17 +269,13 @@ onBeforeUnmount(() => {
     var(--c-surface-2);
 }
 
-.music__audio {
-  display: none;
-}
-
 .music__body {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
   flex: 1;
   min-height: 0;
-  padding: var(--space-3) var(--space-4) 132px;
+  padding: var(--space-3) var(--space-4) 174px;
   overflow-y: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
@@ -667,6 +657,53 @@ onBeforeUnmount(() => {
   color: rgb(246 248 255 / 54%);
   font-size: 10px;
   font-variant-numeric: tabular-nums;
+}
+
+.player__modes {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.player__mode {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: rgb(246 248 255 / 56%);
+}
+
+.player__mode--on {
+  color: #d9f7f0;
+  background: rgb(255 255 255 / 8%);
+}
+
+.player__mode-badge {
+  position: absolute;
+  right: 2px;
+  bottom: 1px;
+  font-size: 8px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.player__status {
+  margin-left: auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: rgb(246 248 255 / 46%);
+  font-size: 10px;
+}
+
+.player__status--error {
+  color: #ffb4a8;
 }
 
 @media (prefers-reduced-motion: reduce) {

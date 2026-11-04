@@ -6,6 +6,7 @@ import NotificationBanner from '@/components/NotificationBanner.vue'
 import OverlaySheet from '@/components/OverlaySheet.vue'
 import PhoneStatusBar from '@/components/PhoneStatusBar.vue'
 import RecentsSheet from '@/components/RecentsSheet.vue'
+import MiniPlayer from '@/components/MiniPlayer.vue'
 import ChatScene from '@/scenes/ChatScene.vue'
 import EndingScene from '@/scenes/EndingScene.vue'
 import HomeScene from '@/scenes/HomeScene.vue'
@@ -37,6 +38,7 @@ import { resetChatReveal } from '@/app/chatReveal'
 import { resetClassGroupNews } from '@/app/classNews'
 import { codeMatches, generateCode, renderSms } from '@/app/smsCode'
 import { playSound, setSoundEnabled } from '@/app/sound'
+import { attachMusicAudio, musicState, stopMusic } from '@/app/musicPlayer'
 import { useGame } from '@/app/useGame'
 import { REMINDER_HEADLINE, REMINDER_TITLE, reminderFor } from '@/data/antifraud'
 import { BRAND } from '@/data/levels/shared'
@@ -124,6 +126,10 @@ function initialView(): ViewId {
 }
 
 const view = ref<ViewId>(initialView())
+const musicEl = ref<HTMLAudioElement | null>(null)
+const showMiniPlayer = computed(
+  () => musicState.playing && view.value !== 'music' && view.value !== 'intro',
+)
 /** 当前场景暴露的二级返回处理（会话/详情/通话/查看器/评论面板）。 */
 const sceneRef = ref<{ handleBack?: () => boolean } | null>(null)
 /** 短信已读状态放在手机壳里，退出短信应用再回来仍然保留。 */
@@ -745,6 +751,12 @@ function openPlain(target: PlainAppId): void {
   view.value = target
 }
 
+/** 迷你播放器点开后回到音乐页。 */
+function openMusic(): void {
+  playSound('tap')
+  view.value = 'music'
+}
+
 /** 打开通知中心（状态栏与桌面图标共用同一入口，避免两个「通知」界面）。 */
 function openNotificationCenter(): void {
   playSound('tap')
@@ -852,6 +864,7 @@ function onBeforeUnload(event: BeforeUnloadEvent): void {
 }
 
 onMounted(() => {
+  if (musicEl.value) attachMusicAudio(musicEl.value)
   globalThis.history.pushState({ phone: true }, '')
   historyGuardActive = true
   globalThis.addEventListener('popstate', onPopState)
@@ -859,6 +872,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  stopMusic()
   globalThis.removeEventListener('popstate', onPopState)
   globalThis.removeEventListener('beforeunload', onBeforeUnload)
   if (historyGuardActive) historyGuardActive = false
@@ -868,6 +882,7 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="phone__frame" role="application" aria-label="手机界面">
+    <audio ref="musicEl" class="phone__audio" preload="metadata" aria-hidden="true"></audio>
     <PhoneStatusBar
       v-if="!isIntro"
       clickable
@@ -1064,6 +1079,8 @@ onBeforeUnmount(() => {
       </div>
     </main>
 
+    <MiniPlayer v-if="showMiniPlayer" @open="openMusic" />
+
     <BottomNav
       v-if="!isIntro"
       :tone="chromeTone"
@@ -1137,6 +1154,14 @@ onBeforeUnmount(() => {
  * 大厅与手机两种形态共用同一套尺寸规则，避免两处各写一份后逐渐漂移。
  * 这里只负责手机**内部**的布局。
  */
+.phone__audio {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .phone__viewport {
   display: flex;
   flex-direction: column;
