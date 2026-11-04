@@ -175,7 +175,7 @@ const records = computed(() => props.level.walletRecords(props.state))
 }
 
 .balance__amount {
-  font-family: var(--font-display);
+  font-family: var(--font-sans);
   font-size: 40px;
   font-weight: 600;
   line-height: 1.15;

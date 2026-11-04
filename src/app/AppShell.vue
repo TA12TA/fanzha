@@ -6,6 +6,7 @@ import { getPlayableLevel, playableLevels } from '@/data/levels'
 import { clearAllSaves, loadActiveLevel, readSlotSummary, saveActiveLevel } from '@/game/storage'
 import { resetChatReveal } from '@/app/chatReveal'
 import { useTheme } from '@/app/theme'
+import { useIdleReset } from '@/app/idleReset'
 import type { LevelSlotSummary } from '@/game/storage'
 import type { LevelId } from '@/game/types'
 
@@ -82,8 +83,35 @@ const phoneKey = ref(0)
 const handoff = ref(false)
 let handoffTimer: ReturnType<typeof setTimeout> | null = null
 
+/** 闲置重置提示：重置后短暂显示，避免玩家以为进度自己消失。 */
+const idleNotice = ref(false)
+let idleNoticeTimer: ReturnType<typeof setTimeout> | null = null
+
+/** 25 分钟无操作：清空全部关卡进度，回到大厅，整部手机重挂载。 */
+function resetForInactivity(): void {
+  const hadSession = screen.value === 'phone' || enteredLevel.value
+  clearAllSaves()
+  resetChatReveal()
+  // 不写回 active level：新设备第一次打开时没有这个键。
+  activeLevelId.value = playableLevels()[0]?.meta.id ?? 'level-01'
+  phoneKey.value += 1
+  refreshSlots()
+  enteredLevel.value = false
+  screen.value = 'desk'
+  handoff.value = false
+  idleNotice.value = hadSession
+  if (idleNoticeTimer) clearTimeout(idleNoticeTimer)
+  idleNoticeTimer = setTimeout(() => {
+    idleNotice.value = false
+    idleNoticeTimer = null
+  }, 6000)
+}
+
+const idleReset = useIdleReset(resetForInactivity)
+
 /** 打开大厅（书桌）。 */
 function openHall(): void {
+  idleNotice.value = false
   refreshSlots()
   screen.value = 'desk'
 }
@@ -97,6 +125,7 @@ function closeHall(): void {
 /** 在大厅选定并进入某一关。 */
 function enterLevel(levelId: LevelId): void {
   if (!getPlayableLevel(levelId)) return
+  idleNotice.value = false
   enteredLevel.value = true
   if (levelId !== activeLevelId.value) {
     activeLevelId.value = levelId
@@ -151,12 +180,16 @@ onMounted(() => {
   globalThis.history.pushState({ hall: true }, '')
   hallGuardActive = true
   globalThis.addEventListener('popstate', onPopState)
+  idleReset.start()
 })
 
 onBeforeUnmount(() => {
   globalThis.removeEventListener('popstate', onPopState)
+  idleReset.stop()
   if (handoffTimer) clearTimeout(handoffTimer)
   handoffTimer = null
+  if (idleNoticeTimer) clearTimeout(idleNoticeTimer)
+  idleNoticeTimer = null
   hallGuardActive = false
 })
 
@@ -168,6 +201,10 @@ watch(screen, (value) => {
 
 <template>
   <div class="phone">
+    <p v-if="idleNotice" class="phone__idle" role="status">
+      已闲置 25 分钟，进度已清空
+    </p>
+
     <LevelDesk
       v-if="screen === 'desk'"
       class="phone__frame"
@@ -194,6 +231,7 @@ watch(screen, (value) => {
 
 <style scoped>
 .phone {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -258,5 +296,24 @@ watch(screen, (value) => {
   .phone :deep(.phone__frame) {
     height: 100dvh;
   }
+}
+
+/* 闲置重置提示：只解释一次，不参与交互 */
+.phone__idle {
+  position: absolute;
+  top: calc(var(--safe-top) + 12px);
+  left: 50%;
+  z-index: 120;
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 7px 14px;
+  border-radius: var(--radius-pill);
+  background: rgb(9 18 14 / 88%);
+  color: var(--c-text-invert);
+  font-size: var(--font-xs);
+  font-weight: 500;
+  white-space: nowrap;
+  box-shadow: 0 6px 18px rgb(3 8 5 / 32%);
+  pointer-events: none;
 }
 </style>

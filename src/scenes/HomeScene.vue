@@ -302,11 +302,11 @@ function badgeAria(id: string, badge: string): string {
 }
 
 .clock__time {
-  font-family: var(--font-display);
+  font-family: var(--font-sans);
   font-size: 34px;
-  font-weight: 600;
+  font-weight: 300;
   line-height: 1.15;
-  letter-spacing: 0.02em;
+  letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
 }
 
@@ -333,10 +333,11 @@ function badgeAria(id: string, badge: string): string {
 }
 
 .walletcard__amount {
-  font-family: var(--font-display);
+  font-family: var(--font-sans);
   font-size: 27px;
-  font-weight: 700;
+  font-weight: 600;
   line-height: 1.15;
+  letter-spacing: -0.01em;
   font-variant-numeric: tabular-nums;
 }
 
