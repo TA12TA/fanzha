@@ -87,7 +87,7 @@ defineProps<{
       -->
       <p class="msg__text">{{ message.text }}</p>
       <p v-if="annotate && message.variant === 'claim'" class="msg__note">他自己说的</p>
-      <p v-else-if="message.variant === 'failed'" class="msg__note">模拟账户</p>
+      <p v-else-if="message.variant === 'failed'" class="msg__note">交易失败</p>
     </template>
   </div>
 </template>
