@@ -279,6 +279,16 @@ const canViewProfile = computed(() =>
   props.session ? spec.value.profile.some((p) => p.session === props.session) : false,
 )
 
+/**
+ * 某条消息的头像是否可以点开资料。
+ * 私聊里对方的头像都能点；群聊只有群主有资料，群成员 A/B 不假装可核验。
+ */
+function canOpenProfileFor(message: ChatMessage): boolean {
+  if (message.from !== 'them' || !canViewProfile.value || !profile.value) return false
+  if (!isGroupChat.value) return true
+  return message.name === profile.value.nickname
+}
+
 /** 该会话在当前节点是否可打开详情弹层（订单等）。 */
 const detail = computed(() => {
   const sheet = spec.value.detailSheet
@@ -369,8 +379,21 @@ const detail = computed(() => {
             <MessageBubble v-if="message.from === 'system'" :message="message" />
 
             <template v-else>
+              <button
+                v-if="message.from === 'them' && canOpenProfileFor(message)"
+                type="button"
+                class="row__avatar"
+                :aria-label="profileLabel"
+                @click="emit('open-profile')"
+              >
+                <ChatAvatar
+                  :size="36"
+                  :text="senderAvatar(message).text"
+                  :tone="senderAvatar(message).tone"
+                />
+              </button>
               <ChatAvatar
-                v-if="message.from === 'them'"
+                v-else-if="message.from === 'them'"
                 :size="36"
                 :text="senderAvatar(message).text"
                 :tone="senderAvatar(message).tone"
@@ -699,6 +722,23 @@ const detail = computed(() => {
   display: flex;
   flex-direction: column;
   min-width: 0;
+}
+
+/* 可点开的对方头像：只增加可点区域，不改变头像尺寸和间距 */
+.row__avatar {
+  display: block;
+  flex: none;
+  padding: 0;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  line-height: 0;
+  cursor: pointer;
+}
+
+.row__avatar:focus-visible {
+  outline: 2px solid var(--c-primary);
+  outline-offset: 2px;
 }
 
 .row__name {

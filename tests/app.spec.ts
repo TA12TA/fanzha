@@ -432,6 +432,13 @@ describe('E. 整部手机的交互（B01–B14）', () => {
     await click(wrapper, '返回群聊')
     expect(wrapper.text()).toContain('接下任务')
 
+    // 群主头像本身也是资料入口
+    const avatar = wrapper.find('.row__avatar')
+    expect(avatar.exists(), '群主头像应可点击').toBe(true)
+    await avatar.trigger('click')
+    expect(wrapper.find('.profilesheet').exists(), '点头像也应打开资料').toBe(true)
+    await click(wrapper, '返回群聊')
+
     // 反复查看资料不改变余额、不重复推进
     // （资料入口现在是标题栏右侧的「···」，靠 aria-label 定位；
     //  真机消息应用里这个按钮的文案不会因为看过一次就变，因此断言保持不变即可）
