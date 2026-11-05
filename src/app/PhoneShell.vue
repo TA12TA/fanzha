@@ -592,10 +592,11 @@ function submit(optionId: OptionId): void {
     // 开场解锁：先让玩家看到桌面与开场通知，不直接跳进会话。
     if (optionId === startOptionOf(props.level)) {
       view.value = 'home'
-      // 先弹反诈预警，消息通知排在它之后自动接上（不打断、不覆盖）。
-      pushAntifraud(state.value.node)
+      // 先推消息通知（学姐/客服），再推反诈预警：
+      // 玩家先看到“正在发生什么”，再看到“为什么危险”。
       const notice = props.level.meta.startNotice
       if (notice) pushMessage(BRAND.chat, notice)
+      pushAntifraud(state.value.node)
     } else {
       syncViewToNode()
       pushAntifraud(state.value.node)

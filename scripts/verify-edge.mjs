@@ -1305,7 +1305,7 @@ async function main() {
       `${stable.first}(期望${stable.firstExpected}) → ${stable.second}(期望${stable.secondExpected})`,
     )
 
-    // 9) 顶部通知：预警在前、学姐邀请在后，逐条定时自动关闭
+    // 9) 顶部通知：学姐邀请在前、反诈预警在后，逐条定时自动关闭
     await cdp.send('Emulation.setTimezoneOverride', { timezoneId: '' })
     await cdp.eval(`localStorage.clear(); return true`)
     await cdp.send('Page.navigate', { url: BASE })
@@ -1819,10 +1819,10 @@ async function main() {
       return { cls: el.className, text: el.textContent };
     `)
     record(
-      '延迟结束后弹出反诈预警',
+      '延迟结束后先弹出学姐邀请',
       firstBanner !== null &&
-        firstBanner.cls.includes('banner--antifraud') &&
-        firstBanner.text.includes('国家反诈中心提醒您'),
+        firstBanner.cls.includes('banner--message') &&
+        firstBanner.text.includes('一位学姐邀请你加入兼职群'),
       firstBanner ? firstBanner.cls : '无横幅',
     )
 
@@ -1858,12 +1858,12 @@ async function main() {
       bannerBox ? `可见文本=${bannerBox.text} 字` : '无横幅',
     )
 
-    // 学姐邀请应排在预警之后等待（角标提示）
+    // 反诈预警应排在学姐邀请之后等待（角标提示）
     const queuedBadge = await cdp.eval(`
       const el = document.querySelector('.banner__queued');
       return el ? el.textContent.trim() : null;
     `)
-    record('学姐邀请排在预警之后等待（角标提示）', queuedBadge !== null, `角标=${queuedBadge}`)
+    record('反诈预警排在学姐邀请之后等待（角标提示）', queuedBadge !== null, `角标=${queuedBadge}`)
 
     // 桌面邀请卡仍然在（持久入口）
     // 桌面邀请卡片已移除（改为通知留存）
@@ -1883,8 +1883,8 @@ async function main() {
       resumeEntry.trim().slice(0, 40) || '未显示',
     )
 
-    // 预警播完后，学姐邀请横幅自动接上
-    // 时序：延迟 3s -> 预警展示 6s -> 退场 0.2s -> 邀请展示
+    // 学姐邀请播完后，反诈预警横幅自动接上
+    // 时序：延迟 3s -> 邀请展示 4s -> 退场 0.2s -> 预警展示
     await sleep(6600)
     const secondBanner = await cdp.eval(`
       const el = document.querySelector('.banner');
@@ -1892,10 +1892,10 @@ async function main() {
       return { cls: el.className, text: el.textContent };
     `)
     record(
-      '预警之后学姐邀请自动接上弹出',
+      '学姐邀请之后反诈预警自动接上弹出',
       secondBanner !== null &&
-        secondBanner.cls.includes('banner--message') &&
-        secondBanner.text.includes('一位学姐邀请你加入兼职群'),
+        secondBanner.cls.includes('banner--antifraud') &&
+        secondBanner.text.includes('国家反诈中心提醒您'),
       secondBanner ? secondBanner.cls : '无横幅',
     )
 
