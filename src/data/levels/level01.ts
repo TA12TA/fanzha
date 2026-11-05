@@ -210,6 +210,28 @@ const PROFILE_INFO_OWNER: ProfileInfo = {
   ],
 }
 
+/** 群成员 A 的资料（虚构；与群主分开，避免所有头像都显示同一个人）。 */
+const PROFILE_INFO_MEMBER_A: ProfileInfo = {
+  nickname: '群成员 A',
+  account: 'qx_****8421',
+  fields: [
+    { label: '注册时间', value: '最近 3 天内' },
+    { label: '资料完整度', value: '不完整：无学校、无实名信息' },
+    { label: '可核验线索', value: '无。' },
+  ],
+}
+
+/** 群成员 B 的资料（虚构）。 */
+const PROFILE_INFO_MEMBER_B: ProfileInfo = {
+  nickname: '群成员 B',
+  account: 'qx_****6530',
+  fields: [
+    { label: '注册时间', value: '最近 5 天内' },
+    { label: '资料完整度', value: '不完整：无学校、无实名信息' },
+    { label: '可核验线索', value: '无。' },
+  ],
+}
+
 export const level01 = defineLevel<L1Node, L1Option>({
   kind: 'playable',
 
@@ -758,6 +780,11 @@ export const level01 = defineLevel<L1Node, L1Option>({
     profiles: {
       senior: PROFILE_INFO,
       taskgroup: PROFILE_INFO_OWNER,
+    },
+
+    memberProfiles: {
+      '群成员 A': PROFILE_INFO_MEMBER_A,
+      '群成员 B': PROFILE_INFO_MEMBER_B,
     },
 
     /** 未处理的学姐邀请在列表里有未读角标。 */

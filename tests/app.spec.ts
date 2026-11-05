@@ -439,6 +439,19 @@ describe('E. 整部手机的交互（B01–B14）', () => {
     expect(wrapper.find('.profilesheet').exists(), '点头像也应打开资料').toBe(true)
     await click(wrapper, '返回群聊')
 
+    // 群消息默认逐条出现；先跳到全部消息，成员 A 的头像才会在 DOM 里
+    if (findButton(wrapper, '显示全部')) await click(wrapper, '显示全部')
+
+    // 群成员 A 的头像也要打开自己的资料，而不是群主资料
+    const memberAvatar = wrapper
+      .findAll('.row__avatar')
+      .find((a) => a.attributes('aria-label') === '群成员 A 的资料')
+    expect(memberAvatar, '群成员 A 头像应可点击').toBeTruthy()
+    await memberAvatar?.trigger('click')
+    expect(wrapper.find('.profilesheet__name').text()).toContain('群成员 A')
+    expect(wrapper.text()).toContain('qx_****8421')
+    await click(wrapper, '返回群聊')
+
     // 反复查看资料不改变余额、不重复推进
     // （资料入口现在是标题栏右侧的「···」，靠 aria-label 定位；
     //  真机消息应用里这个按钮的文案不会因为看过一次就变，因此断言保持不变即可）

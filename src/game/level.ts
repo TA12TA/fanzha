@@ -153,6 +153,8 @@ export interface LevelChatSpec<TNode extends string = string, TOption extends st
   profile: { session: string; option?: TOption }[]
   /** 资料弹层内容（key = 会话 id）。 */
   profiles: Record<string, ProfileInfo>
+  /** 群聊里按发言人显示名提供的成员资料（key = message.name）。 */
+  memberProfiles?: Record<string, ProfileInfo>
   /** 节点 → 该会话显示未读角标。 */
   unread?: Partial<Record<TNode, string>>
   /** 详情弹层（订单等）。 */
@@ -768,6 +770,11 @@ export function collectLevelText(level: PlayableLevel): string {
     }
   }
   for (const profile of Object.values(level.chat.profiles)) {
+    parts.push(profile.nickname, profile.account)
+    if (profile.notice) parts.push(profile.notice)
+    for (const field of profile.fields) parts.push(field.label, field.value)
+  }
+  for (const profile of Object.values(level.chat.memberProfiles ?? {})) {
     parts.push(profile.nickname, profile.account)
     if (profile.notice) parts.push(profile.notice)
     for (const field of profile.fields) parts.push(field.label, field.value)

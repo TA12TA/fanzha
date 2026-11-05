@@ -269,10 +269,25 @@ const pending = computed(() => {
   return request.amount
 })
 
-/** 资料弹层内容（按会话取）。 */
-const profile = computed(() => (props.session ? spec.value.profiles[props.session] : undefined))
+/** 资料弹层内容（默认按会话取，群成员可按姓名切换）。 */
+const profileName = ref<string | null>(null)
+const sessionProfile = computed(() => (props.session ? spec.value.profiles[props.session] : undefined))
+const profile = computed(() => {
+  if (profileName.value) {
+    const member = spec.value.memberProfiles?.[profileName.value]
+    if (member) return member
+  }
+  return sessionProfile.value
+})
 
-const profileLabel = computed(() => (isGroupChat.value ? '群主资料' : '对方资料'))
+const headerProfileLabel = computed(() => (isGroupChat.value ? '群主资料' : '对方资料'))
+const profileLabel = computed(() => {
+  if (!isGroupChat.value) return '对方资料'
+  if (profileName.value && profileName.value !== sessionProfile.value?.nickname) {
+    return `${profileName.value} 的资料`
+  }
+  return '群主资料'
+})
 
 /** 该会话是否提供「看资料」入口。 */
 const canViewProfile = computed(() =>
@@ -281,13 +296,44 @@ const canViewProfile = computed(() =>
 
 /**
  * 某条消息的头像是否可以点开资料。
- * 私聊里对方的头像都能点；群聊只有群主有资料，群成员 A/B 不假装可核验。
+ * 私聊里对方的头像都能点；群聊里群主和配置了 memberProfiles 的成员可点。
  */
 function canOpenProfileFor(message: ChatMessage): boolean {
   if (message.from !== 'them' || !canViewProfile.value || !profile.value) return false
   if (!isGroupChat.value) return true
-  return message.name === profile.value.nickname
+  return message.name === sessionProfile.value?.nickname || !!spec.value.memberProfiles?.[message.name ?? '']
 }
+
+/** 头像按钮的无障碍名称，群成员要能区分是谁的资料。 */
+function profileLabelFor(message: ChatMessage): string {
+  if (!isGroupChat.value) return '对方资料'
+  if (message.name === sessionProfile.value?.nickname) return '群主资料'
+  return message.name ? `${message.name} 的资料` : '成员资料'
+}
+
+/** 点开某条消息对应的资料卡；群主回落到会话资料。 */
+function openProfileFromAvatar(message: ChatMessage): void {
+  profileName.value = message.name && spec.value.memberProfiles?.[message.name] ? message.name : null
+  emit('open-profile')
+}
+
+/** 标题栏「···」固定打开群主/对方资料。 */
+function openSessionProfile(): void {
+  profileName.value = null
+  emit('open-profile')
+}
+
+function closeProfile(): void {
+  profileName.value = null
+  emit('close-profile')
+}
+
+watch(
+  () => props.session,
+  () => {
+    profileName.value = null
+  },
+)
 
 /** 该会话在当前节点是否可打开详情弹层（订单等）。 */
 const detail = computed(() => {
@@ -358,8 +404,8 @@ const detail = computed(() => {
             v-else-if="canViewProfile"
             type="button"
             class="appbar__action chat__more"
-            :aria-label="profileLabel"
-            @click="emit('open-profile')"
+            :aria-label="headerProfileLabel"
+            @click="openSessionProfile"
           >
             <span aria-hidden="true">···</span>
           </button>
@@ -383,8 +429,8 @@ const detail = computed(() => {
                 v-if="message.from === 'them' && canOpenProfileFor(message)"
                 type="button"
                 class="row__avatar"
-                :aria-label="profileLabel"
-                @click="emit('open-profile')"
+                :aria-label="profileLabelFor(message)"
+                @click="openProfileFromAvatar(message)"
               >
                 <ChatAvatar
                   :size="36"
@@ -493,7 +539,7 @@ const detail = computed(() => {
               type="button"
               class="profilesheet__close"
               aria-label="关闭资料"
-              @click="emit('close-profile')"
+              @click="closeProfile"
             >
               ✕
             </button>
@@ -510,7 +556,7 @@ const detail = computed(() => {
             <p v-if="profile.notice" class="profilesheet__notice">{{ profile.notice }}</p>
           </div>
           <footer class="profilesheet__foot">
-            <button type="button" class="btn btn--primary" @click="emit('close-profile')">
+            <button type="button" class="btn btn--primary" @click="closeProfile">
               {{ isGroupChat ? '返回群聊' : '返回聊天' }}
             </button>
           </footer>

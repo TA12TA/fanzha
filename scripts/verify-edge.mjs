@@ -943,6 +943,22 @@ async function main() {
     record('资料弹层显示不可核验线索', text.includes('最近 7 天内') && text.includes('可核验线索'))
     await cdp.click('返回群聊')
 
+    // 群成员头像也要打开自己的资料卡，而不是统一显示群主
+    const memberAvatarClicked = await cdp.eval(`
+      const b = [...document.querySelectorAll('.row__avatar')]
+        .find(x => (x.getAttribute('aria-label') || '').includes('群成员 A'));
+      if (b) { b.click(); return true; }
+      return false;
+    `)
+    await sleep(300)
+    const memberCardText = await cdp.text()
+    record(
+      '群成员头像也能展示自己的资料卡',
+      memberAvatarClicked === true && memberCardText.includes('群成员 A') && memberCardText.includes('qx_****8421'),
+      memberAvatarClicked ? '已打开' : '找不到成员头像',
+    )
+    await cdp.click('返回群聊')
+
     // 回桌面看余额，验证自由探索不改变数值
     await cdp.click('桌面')
     text = await cdp.text()
