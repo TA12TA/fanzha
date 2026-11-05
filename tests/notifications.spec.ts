@@ -158,6 +158,21 @@ describe('L. 通知队列的时序（自动关闭与手动关闭不竞态）', (
     expect(n.history.value[0].body).toBe('已记录')
   })
 
+  it('同一条通知内容只展示/留档一次', () => {
+    const n = useNotifications()
+    const item = { kind: 'message' as const, title: '青讯', body: '同一个通知' }
+
+    n.push(item)
+    n.push(item)
+    expect(n.pendingCount.value, '重复 push 不应入队').toBe(1)
+    expect(n.history.value, '重复 push 不应重复留档').toHaveLength(1)
+
+    // 已经展示过的同一条内容，也不能通过 record 再留一份
+    n.record(item)
+    expect(n.history.value).toHaveLength(1)
+    n.dispose()
+  })
+
   it('dropCurrent 清空整个展示队列且不播动画，历史仍保留', () => {
     vi.useFakeTimers()
     try {

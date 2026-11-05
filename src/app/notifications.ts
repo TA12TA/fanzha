@@ -140,6 +140,16 @@ export function useNotifications(): NotificationApi {
   const history = ref<PhoneNotification[]>([])
   const leaving = ref(false)
   const nextId = createIdFactory()
+  /**
+   * 已经收过的通知内容。
+   * 同一条通知只进队列/通知中心一次；用户已经看过，就不再重复打扰。
+   * `clear()` 会清空它，重新开局后仍可再次看到。
+   */
+  const seen = new Set<string>()
+
+  function contentKey(input: { kind: NotificationKind; title: string; body: string }): string {
+    return `${input.kind}\u0000${input.title}\u0000${input.body}`
+  }
 
   /** 队首的自动关闭倒计时。 */
   let autoTimer: ReturnType<typeof setTimeout> | null = null
@@ -245,6 +255,9 @@ export function useNotifications(): NotificationApi {
     body: string
     durationMs?: number
   }): void {
+    const key = contentKey(input)
+    if (seen.has(key)) return
+    seen.add(key)
     const item: PhoneNotification = {
       id: nextId(),
       kind: input.kind,
@@ -263,8 +276,12 @@ export function useNotifications(): NotificationApi {
    * 只记入通知中心，不弹横幅。
    * 用于「玩家关闭了顶部横幅」或「桌面已有同内容的持久提示」时，
    * 保证通知中心仍留档，同时不占用展示队列与定时器。
+   * 同一条内容已经收过时直接跳过。
    */
   function record(input: { kind: NotificationKind; title: string; body: string }): void {
+    const key = contentKey(input)
+    if (seen.has(key)) return
+    seen.add(key)
     const item: PhoneNotification = {
       id: nextId(),
       kind: input.kind,
@@ -298,6 +315,7 @@ export function useNotifications(): NotificationApi {
     leaving.value = false
     ready.value = false
     awaitingFirst = true
+    seen.clear()
     queue.value = []
     history.value = []
   }

@@ -244,6 +244,8 @@ const antifraudDialog = ref<{ body: string; countdownSeconds: number } | null>(n
  */
 const deferredPopupNodes = computed(() => new Set(props.level.deferredPopupNodes ?? []))
 const shownDeferredPopups = new Set<string>()
+/** 反诈弹窗按内容去重：同一条提醒只弹一次。 */
+const shownAntifraudDialogs = new Set<string>()
 /** 开场诈骗消息只触发一次反诈提醒；点击横幅或通知中心都算。 */
 const startReminderShown = ref(false)
 
@@ -272,7 +274,9 @@ function pushAntifraud(node = state.value.node, force = false): void {
   if (wantsReminderPopup(props.level, node)) {
     // 只记录 + 弹窗，不进横幅队列 —— 同一条内容不该在两个地方各说一遍。
     notices.record(item)
-    if (settings.value.banner) {
+    const dialogKey = `${REMINDER_TITLE}\u0000${body}`
+    if (settings.value.banner && !shownAntifraudDialogs.has(dialogKey)) {
+      shownAntifraudDialogs.add(dialogKey)
       antifraudDialog.value = {
         body,
         countdownSeconds: popupCountdownFor(props.level, node),
@@ -704,6 +708,7 @@ function doRestart(): void {
   game.restart()
   resumeReady.value = false
   shownDeferredPopups.clear()
+  shownAntifraudDialogs.clear()
   startReminderShown.value = false
   // 新的一局应当重新逐条播放每个会话，清掉这一关「看过哪些消息」的记忆
   resetChatReveal(props.level.meta.id)
