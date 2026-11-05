@@ -92,7 +92,8 @@ export interface ProfileInfo {
   nickname: string
   account: string
   fields: { label: string; value: string }[]
-  notice: string
+  /** 可选的补充提示；没有时不渲染空段落。 */
+  notice?: string
 }
 
 /* ============================ 会话规格 ============================ */
@@ -767,7 +768,8 @@ export function collectLevelText(level: PlayableLevel): string {
     }
   }
   for (const profile of Object.values(level.chat.profiles)) {
-    parts.push(profile.nickname, profile.account, profile.notice)
+    parts.push(profile.nickname, profile.account)
+    if (profile.notice) parts.push(profile.notice)
     for (const field of profile.fields) parts.push(field.label, field.value)
   }
   const sheet = level.chat.detailSheet

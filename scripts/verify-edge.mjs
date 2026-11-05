@@ -940,7 +940,7 @@ async function main() {
 
     await cdp.click('群主资料')
     text = await cdp.text()
-    record('资料弹层显示不可核验线索', text.includes('最近 7 天内') && text.includes('用别的渠道'))
+    record('资料弹层显示不可核验线索', text.includes('最近 7 天内') && text.includes('可核验线索'))
     await cdp.click('返回群聊')
 
     // 回桌面看余额，验证自由探索不改变数值

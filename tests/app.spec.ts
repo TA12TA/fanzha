@@ -426,7 +426,8 @@ describe('E. 整部手机的交互（B01–B14）', () => {
     await startAndEnterGroup(wrapper)
     await click(wrapper, '群主资料')
     expect(wrapper.text()).toContain('最近 7 天内')
-    expect(wrapper.text()).toContain('用别的渠道')
+    expect(wrapper.text()).toContain('可核验线索')
+    expect(wrapper.text()).not.toContain('用别的渠道')
 
     await click(wrapper, '返回群聊')
     expect(wrapper.text()).toContain('接下任务')

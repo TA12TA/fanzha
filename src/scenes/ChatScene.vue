@@ -484,7 +484,7 @@ const detail = computed(() => {
                 <dd>{{ field.value }}</dd>
               </div>
             </dl>
-            <p class="profilesheet__notice">{{ profile.notice }}</p>
+            <p v-if="profile.notice" class="profilesheet__notice">{{ profile.notice }}</p>
           </div>
           <footer class="profilesheet__foot">
             <button type="button" class="btn btn--primary" @click="emit('close-profile')">

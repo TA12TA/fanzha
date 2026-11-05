@@ -188,7 +188,7 @@ const VERIFY2_MESSAGES: ChatMessage[] = [
  */
 const PROFILE_INFO_SERVICE: ProfileInfo = {
   nickname: L2_BRAND.service,
-  account: 'qj_****6612',
+  account: 'qj_****2389',
   fields: [
     { label: '注册时间', value: '3 年前' },
     { label: '认证状态', value: '已通过企业认证（显示如此）' },

@@ -180,7 +180,7 @@ const PRESSURE_MESSAGES: ChatMessage[] = [
 /** 账号资料：看起来完整，但身份无法核验。 */
 const PROFILE_INFO_OFFICER: ProfileInfo = {
   nickname: L3_BRAND.officer,
-  account: 'qpg_****1108',
+  account: 'qpg_****7402',
   fields: [
     { label: '单位', value: '青屏市公安局刑侦支队（对方自称）' },
     { label: '警号', value: '无法在官方渠道核验' },
