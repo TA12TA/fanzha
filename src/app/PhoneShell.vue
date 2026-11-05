@@ -244,6 +244,8 @@ const antifraudDialog = ref<{ body: string; countdownSeconds: number } | null>(n
  */
 const deferredPopupNodes = computed(() => new Set(props.level.deferredPopupNodes ?? []))
 const shownDeferredPopups = new Set<string>()
+/** 开场诈骗消息只触发一次反诈提醒；点击横幅或通知中心都算。 */
+const startReminderShown = ref(false)
 
 /** 关闭弹窗：玩家已读完。 */
 function closeAntifraudDialog(): void {
@@ -592,11 +594,9 @@ function submit(optionId: OptionId): void {
     // 开场解锁：先让玩家看到桌面与开场通知，不直接跳进会话。
     if (optionId === startOptionOf(props.level)) {
       view.value = 'home'
-      // 先推消息通知（学姐/客服），再推反诈预警：
-      // 玩家先看到“正在发生什么”，再看到“为什么危险”。
+      // 开场只推诈骗消息；反诈提醒等玩家点开这条消息后再触发。
       const notice = props.level.meta.startNotice
       if (notice) pushMessage(BRAND.chat, notice)
-      pushAntifraud(state.value.node)
     } else {
       syncViewToNode()
       pushAntifraud(state.value.node)
@@ -704,6 +704,7 @@ function doRestart(): void {
   game.restart()
   resumeReady.value = false
   shownDeferredPopups.clear()
+  startReminderShown.value = false
   // 新的一局应当重新逐条播放每个会话，清掉这一关「看过哪些消息」的记忆
   resetChatReveal(props.level.meta.id)
   /*
@@ -765,10 +766,24 @@ function openNotificationCenter(): void {
   view.value = 'notifications'
 }
 
-/** 点击消息类通知：进入对应会话（当前消息都来自青讯）。 */
-function openNoticeTarget(): void {
+/** 点击消息类通知：进入对应会话；如果是开场诈骗消息，再触发反诈提醒。 */
+function openNoticeTarget(item?: { body: string }): void {
   playSound('tap')
+  maybeShowStartReminder(item)
   view.value = 'chat'
+}
+
+/**
+ * 开场诈骗消息被点开后再弹反诈提醒。
+ * 只认当前关卡的开场消息，并且只触发一次，避免从横幅和通知中心各点一次时重复弹。
+ */
+function maybeShowStartReminder(item?: { body: string } | null): void {
+  if (startReminderShown.value) return
+  const startNotice = props.level.meta.startNotice
+  if (!startNotice || state.value.node !== props.level.startNode) return
+  if (item && item.body !== startNotice) return
+  startReminderShown.value = true
+  pushAntifraud(state.value.node)
 }
 
 /**
@@ -829,6 +844,7 @@ function openBanner(): void {
   playSound('tap')
   // 消息类通知点开直接进对应应用；预警类进通知中心看全文。
   if (item?.kind === 'message') {
+    maybeShowStartReminder(item)
     view.value = 'chat'
     return
   }
@@ -1042,7 +1058,7 @@ onBeforeUnmount(() => {
                     <button
                       type="button"
                       class="center__item center__item--message center__item--action"
-                      @click="openNoticeTarget"
+                      @click="openNoticeTarget(item)"
                     >
                       <span class="center__itemtitle">{{ item.title }}</span>
                       <span class="center__itembody">{{ item.body }}</span>

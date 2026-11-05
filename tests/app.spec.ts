@@ -516,7 +516,7 @@ describe('E. 整部手机的交互（B01–B14）', () => {
     expect(wrapper.find('.banner').exists(), '延迟后应弹出通知').toBe(true)
   })
 
-  it('J 延迟后先弹学姐邀请，反诈预警排在它之后等待', async () => {
+  it('J 延迟后先弹学姐邀请，反诈预警不自动跟出', async () => {
     const wrapper = await mountApp()
     await swipeUnlockAndWaitNotices(wrapper)
 
@@ -526,12 +526,17 @@ describe('E. 整部手机的交互（B01–B14）', () => {
     expect(banner.classes()).toContain('banner--message')
     expect(banner.text()).toContain('一位学姐邀请你加入兼职群')
 
-    // 反诈预警排在后面等待（角标提示还有一条）
-    expect(wrapper.find('.banner__queued').exists(), '应提示还有一条通知在等待').toBe(true)
+    // 没有自动排队的反诈横幅
+    expect(wrapper.find('.banner__queued').exists(), '不应自动排入反诈提醒').toBe(false)
 
     // 消息记录在通知中心（不丢档）
     await clickDesktopApp(wrapper, '通知')
     expect(wrapper.text()).toContain('一位学姐邀请你加入兼职群')
+
+    // 点开这条诈骗消息之后，才弹反诈提醒
+    await click(wrapper, '一位学姐邀请你加入兼职群')
+    await new Promise((r) => setTimeout(r, 300))
+    expect(wrapper.find('.banner').classes(), '点击消息后应弹反诈预警').toContain('banner--antifraud')
   })
 
   it('J 邀请改为通知留存：横幅消失后仍能从通知中心找回并进入会话', async () => {
@@ -562,7 +567,7 @@ describe('E. 整部手机的交互（B01–B14）', () => {
     }
   })
 
-  it('K 通知自动关闭后，排在后面的反诈预警自动接上', async () => {
+  it('K 消息自动关闭后不会自动弹反诈', async () => {
     vi.useFakeTimers()
     try {
       const wrapper = await mountApp()
@@ -580,22 +585,15 @@ describe('E. 整部手机的交互（B01–B14）', () => {
       expect(first.classes()).toContain('banner--message')
       expect(first.text()).toContain('一位学姐邀请你加入兼职群')
 
-      // 邀请播完自动关闭后，反诈预警接上
+      // 邀请自动关闭后，队列里没有自动排队的反诈提醒
       await vi.advanceTimersByTimeAsync(DEFAULT_DURATIONS.message + LEAVE_MS + 60)
-      const second = wrapper.find('.banner')
-      expect(second.exists(), '邀请之后应轮到反诈预警').toBe(true)
-      expect(second.classes()).toContain('banner--antifraud')
-      expect(second.text()).toContain('国家反诈中心提醒您')
-
-      // 预警播完后队列清空，横幅不再出现
-      await vi.advanceTimersByTimeAsync(DEFAULT_DURATIONS.antifraud + LEAVE_MS + 60)
-      expect(wrapper.find('.banner').exists(), '两条都播完后应无横幅').toBe(false)
+      expect(wrapper.find('.banner').exists(), '不应自动弹出反诈预警').toBe(false)
     } finally {
       vi.useRealTimers()
     }
   })
 
-  it('K 手动关闭不会连带跳过下一条通知（关闭与自动关闭不竞态）', async () => {
+  it('K 手动关闭消息后不会自动弹反诈', async () => {
     vi.useFakeTimers()
     try {
       const wrapper = await mountApp()
@@ -603,9 +601,10 @@ describe('E. 整部手机的交互（B01–B14）', () => {
       // 跨过首条延迟
       await vi.advanceTimersByTimeAsync(FIRST_NOTICE_DELAY_MS + 50)
 
-      // 解锁后有两条排队：学姐邀请（当前）+ 反诈预警（等待）
+      // 解锁后只有学姐邀请一条，不再排队反诈
       expect(wrapper.find('.banner').exists()).toBe(true)
       expect(wrapper.find('.banner').classes()).toContain('banner--message')
+      expect(wrapper.find('.banner__queued').exists(), '不应自动排入反诈提醒').toBe(false)
 
       // 手动关闭第一条
       const close = wrapper
@@ -614,18 +613,8 @@ describe('E. 整部手机的交互（B01–B14）', () => {
       await close?.trigger('click')
       await vi.advanceTimersByTimeAsync(LEAVE_MS + 50)
 
-      // 第二条必须仍在展示，而不是被连带跳过
-      const second = wrapper.find('.banner')
-      expect(second.exists(), '手动关闭后应轮到第二条，而不是全部消失').toBe(true)
-      expect(second.classes()).toContain('banner--antifraud')
-
-      // 再推进到第一条原本的自动关闭时间点，不应造成二次出队
-      await vi.advanceTimersByTimeAsync(200)
-      expect(wrapper.find('.banner').classes()).toContain('banner--antifraud')
-
-      // 第二条播完后才清空
-      await vi.advanceTimersByTimeAsync(DEFAULT_DURATIONS.antifraud + LEAVE_MS + 60)
-      expect(wrapper.find('.banner').exists()).toBe(false)
+      // 不应出现自动跟出的反诈提醒
+      expect(wrapper.find('.banner').exists(), '手动关闭后不应自动弹反诈').toBe(false)
     } finally {
       vi.useRealTimers()
     }
@@ -637,6 +626,12 @@ describe('E. 整部手机的交互（B01–B14）', () => {
     await new Promise((r) => setTimeout(r, 50))
 
     await clickDesktopApp(wrapper, '通知')
+    // 反诈提醒现在要点击诈骗消息后才生成
+    await click(wrapper, '一位学姐邀请你加入兼职群')
+    await flush()
+    await click(wrapper, '桌面')
+    await clickDesktopApp(wrapper, '通知')
+
     expect(wrapper.text()).toContain('国家反诈中心')
     expect(wrapper.text()).toContain('消息')
     expect(wrapper.text()).toContain('国家反诈中心提醒您')
@@ -873,7 +868,7 @@ describe('E. 整部手机的交互（B01–B14）', () => {
     // 状态栏点击 → 真正的通知中心（不再有第二个只读面板）
     await click(wrapper, '打开通知')
     expect(wrapper.find('.center__list, .center__empty').exists()).toBe(true)
-    expect(wrapper.text()).toContain('国家反诈中心')
+    expect(wrapper.text()).toContain('一位学姐邀请你加入兼职群')
 
     await click(wrapper, '返回')
     await click(wrapper, '相册')

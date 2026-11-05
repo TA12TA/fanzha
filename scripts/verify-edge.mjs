@@ -1858,12 +1858,12 @@ async function main() {
       bannerBox ? `可见文本=${bannerBox.text} 字` : '无横幅',
     )
 
-    // 反诈预警应排在学姐邀请之后等待（角标提示）
+    // 反诈预警不应在消息之后自动排队
     const queuedBadge = await cdp.eval(`
       const el = document.querySelector('.banner__queued');
       return el ? el.textContent.trim() : null;
     `)
-    record('反诈预警排在学姐邀请之后等待（角标提示）', queuedBadge !== null, `角标=${queuedBadge}`)
+    record('反诈预警没有自动排入消息之后', queuedBadge === null, `角标=${queuedBadge ?? '无'}`)
 
     // 桌面邀请卡仍然在（持久入口）
     // 桌面邀请卡片已移除（改为通知留存）
@@ -1883,26 +1883,30 @@ async function main() {
       resumeEntry.trim().slice(0, 40) || '未显示',
     )
 
-    // 学姐邀请播完后，反诈预警横幅自动接上
-    // 时序：延迟 3s -> 邀请展示 4s -> 退场 0.2s -> 预警展示
-    await sleep(6600)
-    const secondBanner = await cdp.eval(`
+    // 点击学姐消息后才触发反诈预警；不点击则消息自动关闭即可
+    await cdp.eval(`
+      const el = document.querySelector('.banner__main');
+      if (el) el.click();
+      return true;
+    `)
+    await sleep(600)
+    const afterScamClick = await cdp.eval(`
       const el = document.querySelector('.banner');
       if (!el) return null;
       return { cls: el.className, text: el.textContent };
     `)
     record(
-      '学姐邀请之后反诈预警自动接上弹出',
-      secondBanner !== null &&
-        secondBanner.cls.includes('banner--antifraud') &&
-        secondBanner.text.includes('国家反诈中心提醒您'),
-      secondBanner ? secondBanner.cls : '无横幅',
+      '点击学姐消息后才弹出反诈预警',
+      afterScamClick !== null &&
+        afterScamClick.cls.includes('banner--antifraud') &&
+        afterScamClick.text.includes('国家反诈中心提醒您'),
+      afterScamClick ? afterScamClick.cls : '无横幅',
     )
 
-    // 邀请也定时自动关闭，两条都播完后顶部不再有横幅
-    await sleep(4600)
+    // 反诈预警同样定时自动关闭
+    await sleep(6600)
     const anyBanner = await cdp.eval(`return !!document.querySelector('.banner')`)
-    record('两条通知都定时自动关闭，无需手动点', anyBanner === false)
+    record('反诈预警也会定时自动关闭', anyBanner === false)
 
     // 两类通知在通知中心分组保留，且进入时横幅已收起、不遮挡标题
     await cdp.click('桌面')
