@@ -2685,6 +2685,20 @@ describe('Y. 关卡大厅（书桌选关）', () => {
     expect(readSave('level-01'), '取消后存档应还在').not.toBeNull()
   })
 
+  it('Y16b 桌面提供返回关卡大厅，并提示会重置所有关卡进度', async () => {
+    const wrapper = await mountApp()
+    await startAndEnterGroup(wrapper)
+    await click(wrapper, '回到桌面')
+
+    expect(wrapper.text()).toContain('返回关卡大厅')
+    expect(wrapper.text()).toContain('返回关卡大厅会重置所有关卡进度')
+
+    await click(wrapper, '返回关卡大厅')
+    expect(wrapper.text()).toContain('清空全部关卡？')
+    await click(wrapper, '算了，留着')
+    expect(wrapper.find('.home').exists(), '取消后仍停留在桌面').toBe(true)
+  })
+
   it('Y17 清空全部关卡：所有存档清掉并回到大厅', async () => {
     let wrapper = await mountApp()
     await swipeUnlock(wrapper)

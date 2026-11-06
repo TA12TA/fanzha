@@ -968,6 +968,7 @@ onBeforeUnmount(() => {
           @open-settings="openSettings"
           @resume="resume"
           @restart="requestRestart"
+          @return-hall="requestClearAll"
         />
 
         <ChatScene

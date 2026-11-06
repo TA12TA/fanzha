@@ -51,6 +51,8 @@ const emit = defineEmits<{
   (e: 'open-settings'): void
   (e: 'resume'): void
   (e: 'restart'): void
+  /** 返回关卡大厅：由外层清空全部关卡进度并回到大厅。 */
+  (e: 'return-hall'): void
 }>()
 
 /**
@@ -197,11 +199,21 @@ function badgeAria(id: string, badge: string): string {
         </li>
       </ul>
 
-      <!-- 重新开始：低存在感的幽灵按钮（挪到底部，不抢戏） -->
+      <!-- 重新开始 / 返回大厅：低存在感的幽灵按钮（挪到底部，不抢戏） -->
       <div class="home__foot">
-        <button type="button" class="home__restart" @click="emit('restart')">
-          重新开始本局
-        </button>
+        <div class="home__actions">
+          <button type="button" class="home__restart" @click="emit('restart')">
+            重新开始本局
+          </button>
+          <button
+            type="button"
+            class="home__restart home__restart--hall"
+            @click="emit('return-hall')"
+          >
+            返回关卡大厅
+          </button>
+        </div>
+        <p class="home__footnote">返回关卡大厅会重置所有关卡进度</p>
       </div>
     </div>
 
@@ -474,9 +486,18 @@ function badgeAria(id: string, badge: string): string {
  */
 .home__foot {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
   margin-top: auto;
   padding: var(--space-3) 0 var(--space-2);
+}
+
+.home__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-1);
 }
 
 .home__restart {
@@ -494,9 +515,21 @@ function badgeAria(id: string, badge: string): string {
     transform var(--dur-fast) ease;
 }
 
+.home__restart--hall {
+  color: var(--c-danger);
+}
+
 .home__restart:active {
   transform: scale(0.985);
   background: var(--c-wall-dock);
+}
+
+.home__footnote {
+  margin: 0;
+  color: var(--c-on-wall-dim);
+  font-size: var(--font-xs);
+  line-height: 1.4;
+  text-align: center;
 }
 
 /* ============ 程序坞（Dock） ============ */
