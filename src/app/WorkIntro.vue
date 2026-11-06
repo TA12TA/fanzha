@@ -27,7 +27,8 @@ function start(): void {
       </p>
 
       <p class="work-intro__guide">
-        选择一部手机进入关卡，上滑解锁。需要核对余额或查阅反诈知识时，可使用桌面上的「安心钱包」与「国家反诈中心」。
+        作者｜周述川<br />
+        指导老师｜骆大玲
       </p>
 
       <p class="work-intro__meta">预计体验时长：约 8 分钟</p>
