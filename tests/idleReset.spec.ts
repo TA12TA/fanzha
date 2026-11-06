@@ -1,5 +1,14 @@
 import { describe, expect, it, vi } from 'vitest'
-import { IDLE_CHECK_MS, IDLE_RESET_MS, isIdleExpired, useIdleReset } from '@/app/idleReset'
+import {
+  IDLE_CHECK_MS,
+  IDLE_RESET_MS,
+  LAST_ACTIVE_KEY,
+  isIdleExpired,
+  isLongAbsence,
+  readLastActive,
+  useIdleReset,
+  writeLastActive,
+} from '@/app/idleReset'
 
 describe('闲置重置判断', () => {
   it('25 分钟是阈值', () => {
@@ -44,5 +53,37 @@ describe('闲置重置判断', () => {
 
     idle.stop()
     vi.useRealTimers()
+  })
+
+  it('记录最后活动时间，超过阈值才算长时间未打开', () => {
+    globalThis.localStorage.removeItem(LAST_ACTIVE_KEY)
+    expect(readLastActive()).toBeNull()
+    expect(isLongAbsence(1_000_000), '没有记录时不能误判').toBe(false)
+
+    writeLastActive(1_000_000)
+    expect(readLastActive()).toBe(1_000_000)
+    expect(isLongAbsence(1_000_000 + IDLE_RESET_MS - 1)).toBe(false)
+    expect(isLongAbsence(1_000_000 + IDLE_RESET_MS)).toBe(true)
+
+    globalThis.localStorage.removeItem(LAST_ACTIVE_KEY)
+  })
+
+  it('用户活动会通过 onActivity 回调持久化', () => {
+    const target = new EventTarget()
+    let reported = 0
+    const idle = useIdleReset(
+      () => {},
+      {
+        target: target as unknown as Window,
+        onActivity: (time) => {
+          reported = time
+        },
+      },
+    )
+
+    idle.start()
+    target.dispatchEvent(new Event('pointerdown'))
+    expect(reported).toBeGreaterThan(0)
+    idle.stop()
   })
 })

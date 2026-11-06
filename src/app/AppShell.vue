@@ -6,7 +6,8 @@ import { getPlayableLevel, playableLevels } from '@/data/levels'
 import { clearAllSaves, loadActiveLevel, readSlotSummary, saveActiveLevel } from '@/game/storage'
 import { resetChatReveal } from '@/app/chatReveal'
 import { useTheme } from '@/app/theme'
-import { useIdleReset } from '@/app/idleReset'
+import { isLongAbsence, useIdleReset, writeLastActive } from '@/app/idleReset'
+import { resetWorkIntro } from '@/app/workIntro'
 import type { LevelSlotSummary } from '@/game/storage'
 import type { LevelId } from '@/game/types'
 
@@ -67,11 +68,29 @@ function refreshSlots(): void {
 
 refreshSlots()
 
+/**
+ * 浏览器重新打开时先判断“上次活动”：
+ * 超过 25 分钟没打开，就当作第一次打开——清空全部进度，
+ * 并清掉封面的已看过标记。必须在大厅子组件挂载前做，
+ * 否则 LevelDesk 已经按「看过封面」初始化了。
+ */
+if (isLongAbsence()) {
+  clearAllSaves()
+  resetChatReveal()
+  resetWorkIntro()
+  activeLevelId.value = playableLevels()[0]?.meta.id ?? 'level-01'
+  enteredLevel.value = false
+  screen.value = 'desk'
+  refreshSlots()
+}
+
 /** 当前关卡（一定是可玩关卡）。 */
 const activeLevel = computed(() => getPlayableLevel(activeLevelId.value) ?? playableLevels()[0])
 
 /** 手机挂载钥匙：切关时 +1，强制整部手机重挂载。 */
 const phoneKey = ref(0)
+/** 大厅挂载钥匙：闲置重置时 +1，让封面重新按新的 localStorage 状态挂载。 */
+const deskKey = ref(0)
 
 /**
  * 进入关卡时的壁纸交接层。
@@ -92,6 +111,8 @@ function resetForInactivity(): void {
   const hadSession = screen.value === 'phone' || enteredLevel.value
   clearAllSaves()
   resetChatReveal()
+  resetWorkIntro()
+  deskKey.value += 1
   // 不写回 active level：新设备第一次打开时没有这个键。
   activeLevelId.value = playableLevels()[0]?.meta.id ?? 'level-01'
   phoneKey.value += 1
@@ -107,7 +128,15 @@ function resetForInactivity(): void {
   }, 6000)
 }
 
-const idleReset = useIdleReset(resetForInactivity)
+/** 把最后活动时间持久化；5 秒节流，避免滚动时频繁写 localStorage。 */
+let lastPersisted = 0
+function rememberActivity(now: number): void {
+  if (now - lastPersisted < 5000) return
+  lastPersisted = now
+  writeLastActive(now)
+}
+
+const idleReset = useIdleReset(resetForInactivity, { onActivity: rememberActivity })
 
 /** 打开大厅（书桌）。 */
 function openHall(): void {
@@ -207,6 +236,7 @@ watch(screen, (value) => {
 
     <LevelDesk
       v-if="screen === 'desk'"
+      :key="deskKey"
       class="phone__frame"
       :current-level-id="activeLevelId"
       :slots="slots"

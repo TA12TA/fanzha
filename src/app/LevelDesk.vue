@@ -2,6 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import DeskPhone from '@/app/DeskPhone.vue'
 import WorkIntro from '@/app/WorkIntro.vue'
+import { hasSeenWorkIntro, markWorkIntroSeen } from '@/app/workIntro'
 import { playSound } from '@/app/sound'
 import { useBeijingClock } from '@/app/clock'
 import { LEVELS, getPlayableLevel } from '@/data/levels'
@@ -55,24 +56,12 @@ const entries = computed<LevelEntry[]>(() => LEVELS)
  * 作品封面只出现一次：玩家点「进入作品」或直接点手机后记为看过。
  * 这是首屏的「作品感」引导，不是免责声明，也不挡之后的书桌操作。
  */
-const WORK_INTRO_KEY = 'fj-juzhongju:work-intro:v1'
-function hasSeenWorkIntro(): boolean {
-  try {
-    return globalThis.localStorage?.getItem(WORK_INTRO_KEY) === 'seen'
-  } catch {
-    return false
-  }
-}
 const introOpen = ref(!hasSeenWorkIntro())
 
 function closeIntro(): void {
   if (!introOpen.value) return
   introOpen.value = false
-  try {
-    globalThis.localStorage?.setItem(WORK_INTRO_KEY, 'seen')
-  } catch {
-    // localStorage 不可用时只影响下次是否再展示，不影响进入。
-  }
+  markWorkIntroSeen()
 }
 
 /**

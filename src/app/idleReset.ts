@@ -11,6 +11,36 @@ export const IDLE_RESET_MS = 25 * 60 * 1000
 /** 检查间隔：30 秒。比每秒轮询便宜，也能在后台节流后及时补判。 */
 export const IDLE_CHECK_MS = 30 * 1000
 
+/** 最后一次用户活动时间的持久化 key（用于判断“隔了很久再打开链接”）。 */
+export const LAST_ACTIVE_KEY = 'fj-juzhongju:last-active:v1'
+
+/** 读取上次活动时间；没有记录或存储不可用时返回 null。 */
+export function readLastActive(): number | null {
+  try {
+    const raw = globalThis.localStorage?.getItem(LAST_ACTIVE_KEY)
+    if (!raw) return null
+    const value = Number(raw)
+    return Number.isFinite(value) ? value : null
+  } catch {
+    return null
+  }
+}
+
+/** 记录一次活动时间。 */
+export function writeLastActive(time = Date.now()): void {
+  try {
+    globalThis.localStorage?.setItem(LAST_ACTIVE_KEY, String(time))
+  } catch {
+    // 存储不可用时只影响“再次打开”的判断，不影响本次游戏。
+  }
+}
+
+/** 打开链接时判断：距离上次活动是否已经超过闲置阈值。 */
+export function isLongAbsence(now = Date.now(), timeout = IDLE_RESET_MS): boolean {
+  const last = readLastActive()
+  return last !== null && isIdleExpired(last, now, timeout)
+}
+
 /** 给定最后一次活动时间与当前时间，是否已经超过闲置阈值。 */
 export function isIdleExpired(
   lastActivity: number,
@@ -28,6 +58,8 @@ export interface IdleResetOptions {
   interval?: number
   /** 事件目标；测试或 SSR 时可注入。 */
   target?: Window | null
+  /** 每次有用户活动时回调（用于把最后活动时间持久化）。 */
+  onActivity?: (time: number) => void
 }
 
 /**
@@ -58,6 +90,7 @@ export function useIdleReset(onReset: () => void, options: IdleResetOptions = {}
 
   function markActive(): void {
     lastActivity = Date.now()
+    options.onActivity?.(lastActivity)
   }
 
   function check(): void {

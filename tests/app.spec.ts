@@ -4,6 +4,8 @@ import AppShell from '@/app/AppShell.vue'
 import AntiFraudDialog from '@/components/AntiFraudDialog.vue'
 import { resetChatReveal } from '@/app/chatReveal'
 import { DEFAULT_DURATIONS, FIRST_NOTICE_DELAY_MS, LEAVE_MS } from '@/app/notifications'
+import { IDLE_RESET_MS, LAST_ACTIVE_KEY } from '@/app/idleReset'
+import { WORK_INTRO_KEY } from '@/app/workIntro'
 import { reloadSettings } from '@/app/settings'
 import { __resetSoundForTests } from '@/app/sound'
 import { BRAND } from '@/data/levels/shared'
@@ -2189,6 +2191,16 @@ describe('Y. 关卡大厅（书桌选关）', () => {
     expect(wrapper.find('.work-intro').exists(), '进入作品后封面应关闭').toBe(false)
     expect(wrapper.find('.desk').exists()).toBe(true)
     expect(wrapper.text()).toContain('关卡大厅')
+  })
+
+  it('Y00b 隔了很久再打开链接：按新设备重新开始并弹回封面', async () => {
+    globalThis.localStorage.setItem(WORK_INTRO_KEY, 'seen')
+    globalThis.localStorage.setItem(LAST_ACTIVE_KEY, String(Date.now() - IDLE_RESET_MS - 1_000))
+
+    const wrapper = await mountApp({ atDesk: true, keepSave: true, keepIntro: true })
+
+    expect(wrapper.find('.work-intro').exists(), '长时间未打开后应重新弹出封面').toBe(true)
+    expect(globalThis.localStorage.getItem(WORK_INTRO_KEY), '封面标记应被重置').not.toBe('seen')
   })
 
   it('Y01 首屏是书桌：三部手机、没有手机外框', async () => {
